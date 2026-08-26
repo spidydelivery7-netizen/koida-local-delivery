@@ -32,7 +32,7 @@ button{border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:poin
 <label>Email<input id="email" type="email"></label><br><br>
 <label>Password<input id="password" type="password"></label>
 <div class="actions"><button id="loginBtn" class="primary">Login</button></div>
-</section>
+<div style="margin-top:14px;text-align:center;"><button id="forgotPasswordBtn" type="button">Forgot Password?</button></div></section>
 
 <section id="app" class="hidden">
 <div class="tabs"><button id="productsTab" class="active">Products</button><button id="ordersTab">Orders <span id="newCount"></span></button><button id="deliveryTab">Delivery</button></div>
@@ -190,7 +190,24 @@ async function checkAdmin(){
 if(!configured())setStatus("Supabase is not connected.");
 else{sb=createClient(cfg.supabaseUrl,cfg.supabaseAnonKey);await checkAdmin();sb.auth.onAuthStateChange(()=>checkAdmin())}
 
-$("loginBtn").onclick=async()=>{const {error}=await sb.auth.signInWithPassword({email:$("email").value.trim(),password:$("password").value});if(error)setStatus("Login failed: "+error.message)};
+$("loginBtn").onclick=async()=>{const {error}=await sb.auth.signInWithPassword({email:$("email").value.trim(),password:$("password").value});if(error)setStatus("Login failed: "+error.message)};$("forgotPasswordBtn").onclick=async()=>{
+  const email=$("email").value.trim().toLowerCase();
+
+  if(!email){
+    setStatus("Enter your admin email first.");
+    return;
+  }
+
+  const {error}=await sb.auth.resetPasswordForEmail(email,{
+    redirectTo:"https://koida-local-delivery.pages.dev/admin-reset-password.html"
+  });
+
+  if(error){
+    setStatus("Could not send reset email: "+error.message);
+  }else{
+    setStatus("Admin password reset link sent. Check your email.");
+  }
+};
 $("logout").onclick=()=>sb.auth.signOut();
 $("productsTab").onclick=()=>switchView("products");$("ordersTab").onclick=()=>switchView("orders");$("deliveryTab").onclick=()=>switchView("delivery");
 $("cancel").onclick=reset;$("refreshProducts").onclick=loadProducts;$("q").oninput=renderProducts;$("refreshOrders").onclick=loadOrders;$("oq").oninput=renderOrders;
