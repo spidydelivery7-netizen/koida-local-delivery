@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Koida Local Delivery - Shopkeeper</title>
+<style>
+:root{--dark:#111827;--bg:#f3f4f6;--card:#fff;--muted:#6b7280;--green:#16a34a;--red:#dc2626;--line:#e5e7eb;--blue:#2563eb}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:#111827}
+header{background:var(--dark);color:#fff;position:sticky;top:0;z-index:10}
+.head{max-width:900px;margin:auto;padding:15px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{font-weight:900;font-size:18px}.sub{font-size:12px;color:#cbd5e1;margin-top:2px}
+.wrap{max-width:900px;margin:auto;padding:18px 14px 40px}
+.card{background:var(--card);border-radius:16px;padding:16px;box-shadow:0 2px 12px #0001;margin-bottom:14px}
+.login{max-width:430px;margin:40px auto}
+.status{padding:11px 13px;border-radius:12px;background:#eef2ff;margin-bottom:14px;font-size:14px}
+.hidden{display:none!important}
+label{font-size:13px;font-weight:800;display:block;margin-bottom:12px}
+input{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;font-size:16px;margin-top:6px;background:#fff}
+button{border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:pointer;font-size:14px}
+.primary{background:var(--dark);color:#fff}.gray{background:#e5e7eb}.green{background:var(--green);color:#fff}.red{background:var(--red);color:#fff}
+.topbar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.shopname{font-size:20px;font-weight:900}.small{font-size:12px;color:var(--muted)}
+.search{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;font-size:16px;background:#fff}
+.cat{font-weight:900;font-size:16px;margin:20px 2px 8px}
+.row{background:#fff;border:1px solid var(--line);border-radius:14px;padding:13px 14px;margin-bottom:9px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.name{font-weight:800}.state{font-size:12px;font-weight:800;margin-top:4px}.state.ok{color:var(--green)}.state.out{color:var(--red)}
+.toggle{min-width:108px}.toggle.available{background:#dcfce7;color:#166534}.toggle.sold{background:#fee2e2;color:#991b1b}
+.count{display:inline-block;background:#e5e7eb;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:800}
+.empty{text-align:center;color:var(--muted);padding:30px 10px}
+@media(max-width:560px){.row{align-items:flex-start}.toggle{min-width:96px;padding:10px}.brand{font-size:16px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="head">
+    <div><div class="brand">KOIDA LOCAL DELIVERY</div><div class="sub">Shopkeeper Availability Panel</div></div>
+    <button id="logoutBtn" class="gray hidden">Logout</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="status" class="status">Checking setup...</div>
+
+  <section id="loginBox" class="card login hidden">
+    <h2 style="margin-top:0">Shopkeeper Login</h2>
+    <p class="small">Login with the email and password given for your shop.</p>
+    <label>Email<input id="email" type="email" autocomplete="username" placeholder="shop@example.com"></label>
+    <label>Password<input id="password" type="password" autocomplete="current-password" placeholder="Password"></label>
+    <button id="loginBtn" class="primary" style="width:100%">Login</button>
+  </section>
+
+  <section id="app" class="hidden">
+    <div class="card">
+      <div class="topbar">
+        <div><div id="shopName" class="shopname">My Shop</div><div class="small">You can only change Available / Sold Out.</div></div>
+        <span id="itemCount" class="count">0 items</span>
+      </div>
+    </div>
+
+    <div class="card"><input id="search" class="search" placeholder="Search item..."></div>
+    <div id="productList"></div>
+  </section>
+</main>
+
+<script src="config.js"></script>
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+const cfg=window.SPIDY_CONFIG||{};
+const $=id=>document.getElementById(id);
+let sb=null, sessionUser=null, shopId=null, shopName="", products=[];
+
+function configured(){return cfg.supabaseUrl&&cfg.supabaseAnonKey&&!String(cfg.supabaseUrl).includes("YOUR_")}
+function setStatus(msg){$("status").textContent=msg}
+function showLoggedOut(){
+  $("loginBox").classList.remove("hidden");
+  $("app").classList.add("hidden");
+  $("logoutBtn").classList.add("hidden");
+}
+function showLoggedIn(){
+  $("loginBox").classList.add("hidden");
+  $("app").classList.remove("hidden");
+  $("logoutBtn").classList.remove("hidden");
+}
+
+function effectiveAvailable(p){
+  if(typeof p.available==="boolean") return p.available;
+  return p.is_available!==false;
+}
+
+function render(){
+  const q=$("search").value.trim().toLowerCase();
+  const filtered=products.filter(p=>!q||String(p.name||"").toLowerCase().includes(q)||String(p.category||"").toLowerCase().includes(q));
+  $("itemCount").textContent=`${products.length} items`;
+  const box=$("productList"); box.innerHTML="";
+  if(!filtered.length){box.innerHTML='<div class="card empty">No items found.</div>';return}
+  const groups=new Map();
+  filtered.forEach(p=>{const c=p.category||"Other";if(!groups.has(c))groups.set(c,[]);groups.get(c).push(p)});
+  for(const [category,arr] of groups){
+    const h=document.createElement("div");h.className="cat";h.textContent=category;box.appendChild(h);
+    arr.forEach(p=>{
+      const on=effectiveAvailable(p);
+      const r=document.createElement("div");r.className="row";
+      r.innerHTML=`<div><div class="name"></div><div class="state ${on?"ok":"out"}">${on?"Available":"Sold Out"}</div></div><button class="toggle ${on?"available":"sold"}">${on?"Mark Sold Out":"Mark Available"}</button>`;
+      r.querySelector(".name").textContent=p.name||"Item";
+      const btn=r.querySelector(".toggle");
+      btn.onclick=()=>changeAvailability(p,!on,btn);
+      box.appendChild(r);
+    });
+  }
+}
+
+async function loadShopAndProducts(){
+  if(!sessionUser)return;
+  setStatus("Loading your shop...");
+  const {data:map,error:mapErr}=await sb.from("shopkeepers").select("shop_id").eq("user_id",sessionUser.id).maybeSingle();
+  if(mapErr){setStatus("Shop mapping error: "+mapErr.message);return}
+  if(!map||!map.shop_id){
+    showLoggedOut();
+    await sb.auth.signOut();
+    setStatus("This login is not assigned to a shop. Contact Koida Local Delivery admin.");
+    return;
+  }
+  shopId=map.shop_id;
+  const {data:shop,error:shopErr}=await sb.from("shops").select("id,name,active").eq("id",shopId).maybeSingle();
+  if(shopErr||!shop){setStatus("Shop details could not be loaded.");return}
+  shopName=shop.name||"My Shop";$("shopName").textContent=shopName;
+  const {data,error}=await sb.from("products").select("id,shop_id,name,category,available,is_available").eq("shop_id",shopId).order("category",{ascending:true}).order("name",{ascending:true});
+  if(error){setStatus("Products load error: "+error.message);return}
+  products=data||[];
+  setStatus(`${shopName}: ${products.length} products loaded.`);
+  render();
+}
+
+async function changeAvailability(product,newValue,btn){
+  btn.disabled=true;const oldText=btn.textContent;btn.textContent="Saving...";
+  const {error}=await sb.rpc("set_my_product_availability",{p_product_id:product.id,p_available:newValue});
+  if(error){
+    setStatus("Update failed: "+error.message);
+    btn.disabled=false;btn.textContent=oldText;return;
+  }
+  product.available=newValue;product.is_available=newValue;
+  setStatus(`${product.name} is now ${newValue?"Available":"Sold Out"}.`);
+  render();
+}
+
+async function checkSession(){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){sessionUser=null;showLoggedOut();setStatus("Shopkeeper login required.");return}
+  sessionUser=session.user;showLoggedIn();await loadShopAndProducts();
+}
+
+if(!configured()){
+  setStatus("Supabase is not connected. Keep this file beside your existing config.js.");
+}else{
+  sb=createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{storageKey:"kld-shopkeeper-auth",persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
+  await checkSession();
+  sb.auth.onAuthStateChange(async(_event,session)=>{sessionUser=session?.user||null;if(sessionUser){showLoggedIn();await loadShopAndProducts()}else showLoggedOut()});
+}
+
+$("loginBtn").onclick=async()=>{
+  if(!sb)return;
+  const email=$("email").value.trim(),password=$("password").value;
+  if(!email||!password){setStatus("Enter email and password.");return}
+  $("loginBtn").disabled=true;$("loginBtn").textContent="Logging in...";
+  const {error}=await sb.auth.signInWithPassword({email,password});
+  if(error)setStatus("Login failed: "+error.message);
+  $("loginBtn").disabled=false;$("loginBtn").textContent="Login";
+};
+$("logoutBtn").onclick=()=>sb?.auth.signOut();
+$("search").oninput=render;
+$("password").addEventListener("keydown",e=>{if(e.key==="Enter")$("loginBtn").click()});
+</script>
+</body>
+</html>
