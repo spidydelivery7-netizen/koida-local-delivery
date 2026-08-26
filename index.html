@@ -254,7 +254,7 @@ async function forgotCustomerPin(){
   const email=(existing||prompt("Enter the email registered with your Koida Local Delivery account:")||"").trim().toLowerCase();
   if(!validEmail(email)){alert("Please enter a valid registered email.");return}
   $("forgotPin").disabled=true;$("forgotPin").textContent="Sending...";
-  try{const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:"https://cheery-marshmallow-1e366d.netlify.app/reset-password.html"});if(error)throw error;alert("Password reset link sent. Check your email inbox and spam folder.")}catch(e){alert("Could not send reset email: "+e.message)}finally{$("forgotPin").disabled=false;$("forgotPin").textContent="Forgot PIN?"}
+  try{const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:"https://koida-local-delivery.pages.dev/reset-password.html"});if(error)throw error;alert("Password reset link sent. Check your email inbox and spam folder.")}catch(e){alert("Could not send reset email: "+e.message)}finally{$("forgotPin").disabled=false;$("forgotPin").textContent="Forgot PIN?"}
 }
 async function customerLogout(){await sb.auth.signOut();currentSession=null;currentCustomer=null;await refreshAccountState()}
 function addCart(p,v){if(p.available===false){alert("This item is Sold Out.");return}if(!v){alert("Price is not set for this item yet.");return}const key=p.id+"_"+v.key,found=cart.find(x=>x.key===key);if(found)found.qty++;else cart.push({key,product_id:p.id,name:p.name,variant:v.key,variant_label:v.label,unit_price:v.price,qty:1});updateCart()}
