@@ -341,13 +341,32 @@ async function startRazorpayPayment(ctx){
           alert("Payment was received but verification failed. Please contact Koida Local Delivery with your payment details. "+e.message);
         }
       },
-      modal:{ondismiss:function(){renderReceipt(ctx,"Pending");openModal($("successModal"));}}
+      modal:{ondismiss:async function(){
+  try{
+    await invokePaymentFunction({
+      action:"cancel",
+      local_order_id:ctx.r.order_id
+    });
+  }catch(e){
+    console.error("Payment cancel cleanup failed:",e);
+  }
+}}
     };
     new Razorpay(options).open();
-  }catch(e){
-    renderReceipt(ctx,"Pending");openModal($("successModal"));
-    alert("Order is saved, but online payment could not start: "+e.message);
-  }finally{$("payNow").disabled=false;$("payNow").textContent="Pay Now"}
+}catch(e){
+  try{
+    await invokePaymentFunction({
+      action:"cancel",
+      local_order_id:ctx.r.order_id
+    });
+  }catch(cleanupError){
+    console.error("Payment cleanup failed:",cleanupError);
+  }
+
+  alert("Payment could not be completed. Your order has not been placed.");
+}finally{
+  $("payNow").disabled=false;
+  $("payNow").textContent="Pay Now";
 }
 async function placeOrder(){
   if(!currentSession?.user){alert("Please login or create your customer account before placing an order.");closeModal($("checkoutModal"));openModal($("accountModal"));return}
