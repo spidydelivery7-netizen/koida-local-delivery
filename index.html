@@ -39,7 +39,16 @@ header{background:var(--dark);color:#fff;position:sticky;top:0;z-index:30}
 footer{background:var(--dark);color:#fff;text-align:center;padding:24px 18px;margin-top:24px}
 @media(max-width:900px){.grid{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:700px){.hero h1{font-size:31px}.grid{grid-template-columns:repeat(2,1fr);gap:12px}.img{height:130px}.toolbar{grid-template-columns:1fr}.sub{display:none}.name{font-size:17px}.form{grid-template-columns:1fr}.form .full{grid-column:auto}.cartin{align-items:flex-start}.cartin .btn{white-space:nowrap}}
-@media print{header,.hero,.wrap,.cartbar,footer,.modal-actions,.notice{display:none!important}.modal-bg{display:block!important;position:static;background:#fff;padding:0}.modal{max-height:none;overflow:visible;width:100%;box-shadow:none}.receipt{border:0}}
+@media print{
+  body>header,body>.hero,body>.wrap,body>.cartbar,body>footer,
+  #accountModal,#cartModal,#checkoutModal{display:none!important}
+  #successModal{display:block!important;position:static!important;background:#fff!important;padding:0!important}
+  #successModal .modal{display:block!important;max-height:none!important;overflow:visible!important;width:100%!important;box-shadow:none!important;padding:0!important}
+  #successModal .modal>h2,
+  #successModal .modal>p,
+  #successModal .modal>div:not(#receipt){display:none!important}
+  #successModal #receipt{display:block!important;border:0!important;border-radius:0!important;margin:0!important;padding:18px!important;width:100%!important}
+}
 </style>
 </head>
 <body>
