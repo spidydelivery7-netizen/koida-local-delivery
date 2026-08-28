@@ -39,16 +39,7 @@ header{background:var(--dark);color:#fff;position:sticky;top:0;z-index:30}
 footer{background:var(--dark);color:#fff;text-align:center;padding:24px 18px;margin-top:24px}
 @media(max-width:900px){.grid{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:700px){.hero h1{font-size:31px}.grid{grid-template-columns:repeat(2,1fr);gap:12px}.img{height:130px}.toolbar{grid-template-columns:1fr}.sub{display:none}.name{font-size:17px}.form{grid-template-columns:1fr}.form .full{grid-column:auto}.cartin{align-items:flex-start}.cartin .btn{white-space:nowrap}}
-@media print{
-  body>header,body>.hero,body>.wrap,body>.cartbar,body>footer,
-  #accountModal,#cartModal,#checkoutModal{display:none!important}
-  #successModal{display:block!important;position:static!important;background:#fff!important;padding:0!important}
-  #successModal .modal{display:block!important;max-height:none!important;overflow:visible!important;width:100%!important;box-shadow:none!important;padding:0!important}
-  #successModal .modal>h2,
-  #successModal .modal>p,
-  #successModal .modal>div:not(#receipt){display:none!important}
-  #successModal #receipt{display:block!important;border:0!important;border-radius:0!important;margin:0!important;padding:18px!important;width:100%!important}
-}
+@media print{header,.hero,.wrap,.cartbar,footer,.modal-actions,.notice{display:none!important}.modal-bg{display:block!important;position:static;background:#fff;padding:0}.modal{max-height:none;overflow:visible;width:100%;box-shadow:none}.receipt{border:0}}
 </style>
 </head>
 <body>
@@ -500,7 +491,53 @@ async function placeOrder(){
 $("helpWa").href="https://wa.me/"+cfg.whatsappNumber+"?text="+encodeURIComponent("Hello Koida Local Delivery, I need help with an order.");
 $("accountBtn").onclick=async()=>{await refreshAccountState();openModal($("accountModal"))};$("closeAccount").onclick=()=>closeModal($("accountModal"));$("loginTab").onclick=()=>switchAuthTab("login");$("signupTab").onclick=()=>switchAuthTab("signup");$("loginCustomer").onclick=customerLogin;$("signupCustomer").onclick=customerSignup;$("logoutCustomer").onclick=customerLogout;$("refreshMyOrders").onclick=loadMyOrders;
 sb.auth.onAuthStateChange(()=>{setTimeout(()=>refreshAccountState(),0)});
-$("search").oninput=renderProducts;$("addressBtn").onclick=()=>{fillAddress();renderCheckoutSummary();openModal($("checkoutModal"))};$("openCart").onclick=()=>{renderCart();openModal($("cartModal"))};$("closeCart").onclick=()=>closeModal($("cartModal"));$("checkoutBtn").onclick=()=>{if(!cart.length)return;closeModal($("cartModal"));fillAddress();renderCheckoutSummary();openModal($("checkoutModal"))};$("backToCart").onclick=()=>{closeModal($("checkoutModal"));renderCart();openModal($("cartModal"))};$("detectLocation").onclick=detectLocation;$("placeOrder").onclick=placeOrder;$("payNow").onclick=()=>{if(lastOrderCtx)startRazorpayPayment(lastOrderCtx)};$("printBill").onclick=()=>window.print();$("closeSuccess").onclick=()=>closeModal($("successModal"));[$("accountModal"),$("cartModal"),$("checkoutModal"),$("successModal")].forEach(m=>m.addEventListener("click",e=>{if(e.target===m)closeModal(m)}));$("placeOrder").textContent=cfg.onlinePaymentEnabled?"Place Order & Pay":"Place Order";refreshSavedAddress();switchAuthTab("login");await refreshAccountState();await loadSettings();loadProducts();
+$("search").oninput=renderProducts;$("addressBtn").onclick=()=>{fillAddress();renderCheckoutSummary();openModal($("checkoutModal"))};$("openCart").onclick=()=>{renderCart();openModal($("cartModal"))};$("closeCart").onclick=()=>closeModal($("cartModal"));$("checkoutBtn").onclick=()=>{if(!cart.length)return;closeModal($("cartModal"));fillAddress();renderCheckoutSummary();openModal($("checkoutModal"))};$("backToCart").onclick=()=>{closeModal($("checkoutModal"));renderCart();openModal($("cartModal"))};$("detectLocation").onclick=detectLocation;$("placeOrder").onclick=placeOrder;$("payNow").onclick=()=>{if(lastOrderCtx)startRazorpayPayment(lastOrderCtx)};$("printBill").onclick=()=>{
+  const receipt=$("receipt");
+  if(!receipt||!receipt.innerHTML.trim()){
+    alert("Invoice is not ready yet.");
+    return;
+  }
+  const w=window.open("","_blank","width=720,height=900");
+  if(!w){
+    alert("Please allow pop-ups to save the invoice.");
+    return;
+  }
+  w.document.open();
+  w.document.write(`<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Koida Local Delivery Invoice</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;padding:24px;font-family:Arial,Helvetica,sans-serif;color:#111;background:#fff}
+  .invoice{max-width:720px;margin:0 auto}
+  .receipt{border:1px solid #e5e7eb;border-radius:14px;padding:18px}
+  .receipt h3{margin:0 0 12px;font-size:24px}
+  .sum-row{display:flex;justify-content:space-between;gap:16px;margin:8px 0;align-items:flex-start}
+  .sum-row span:last-child,.sum-row b:last-child{text-align:right}
+  .sum-row.total{font-size:20px;font-weight:900;border-top:1px solid #e5e7eb;padding-top:12px;margin-top:12px}
+  .small{font-size:12px}
+  hr{border:0;border-top:1px solid #e5e7eb}
+  @page{size:auto;margin:12mm}
+  @media print{
+    body{padding:0}
+    .receipt{border:0;border-radius:0;padding:0}
+  }
+</style>
+</head>
+<body>
+  <div class="invoice">${receipt.outerHTML}</div>
+<script>
+  window.onload=function(){
+    setTimeout(function(){window.print();},250);
+  };
+<\/script>
+</body>
+</html>`);
+  w.document.close();
+};$("closeSuccess").onclick=()=>closeModal($("successModal"));[$("accountModal"),$("cartModal"),$("checkoutModal"),$("successModal")].forEach(m=>m.addEventListener("click",e=>{if(e.target===m)closeModal(m)}));$("placeOrder").textContent=cfg.onlinePaymentEnabled?"Place Order & Pay":"Place Order";refreshSavedAddress();switchAuthTab("login");await refreshAccountState();await loadSettings();loadProducts();
 </script>
 </body>
 </html>
