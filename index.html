@@ -108,7 +108,7 @@ footer{background:var(--dark);color:#fff;text-align:center;padding:24px 18px;mar
       <div class="drawer-avatar">👤</div>
       <div><b id="drawerName">Guest</b><div id="drawerPhone" class="drawer-phone">Login to view your orders</div></div>
     </div>
-    <button id="drawerAccount" class="drawer-item"><span class="ico">👤</span><span class="txt"><b>My Account</b><small>View your profile & orders</small></span><span class="arrow">›</span></button>
+    <button id="drawerAccount" class="drawer-item"><span class="ico">👤</span><span class="txt"><b id="drawerAccountTitle">My Account</b><small id="drawerAccountDesc">View your profile & orders</small></span><span class="arrow">›</span></button>
     <button id="drawerAddress" class="drawer-item"><span class="ico">📍</span><span class="txt"><b>Saved Address</b><small>Manage your delivery address</small></span><span class="arrow">›</span></button>
     <button id="drawerOrders" class="drawer-item"><span class="ico">📋</span><span class="txt"><b>My Orders</b><small>View your order history</small></span><span class="arrow">›</span></button>
     <hr class="drawer-divider">
@@ -286,9 +286,18 @@ async function refreshAccountState(){
   const {data:{session}}=await sb.auth.getSession();currentSession=session;await loadCustomerProfile();
   const logged=!!currentSession?.user;$("accountBtn").textContent=logged?"👤 My Account":"👤 Login";$("authGuest").style.display=logged?"none":"block";$("authAccount").style.display=logged?"block":"none";
   $("drawerName").textContent=logged?(currentCustomer?.full_name||"Customer"):"Guest";
-  $("drawerPhone").textContent=logged?(currentCustomer?.phone?`+91 ${currentCustomer.phone}`:"Customer account"):"Login to view your orders";
+  $("drawerPhone").textContent=logged?(currentCustomer?.phone?`+91 ${currentCustomer.phone}`:"Customer account"):"Login or create an account";
+  $("drawerAccountTitle").textContent=logged?"My Account":"Login / Create Account";
+  $("drawerAccountDesc").textContent=logged?"View your profile & orders":"Login to continue ordering";
   $("drawerLogout").style.display=logged?"flex":"none";
-  if(logged){$("accountName").textContent=currentCustomer?.full_name||"Customer";$("accountPhone").textContent=currentCustomer?.phone?`+91 ${currentCustomer.phone}`:"";await loadMyOrders()}
+  if(logged){
+    $("accountName").textContent=currentCustomer?.full_name||"Customer";
+    $("accountPhone").textContent=currentCustomer?.phone?`+91 ${currentCustomer.phone}`:"";
+    await loadMyOrders();
+  }else{
+    $("loginPin").value="";
+    switchAuthTab("login");
+  }
 }
 async function customerSignup(){
   const name=$("signupName").value.trim(),phone=normalizePhone($("signupPhone").value),pin=$("signupPin").value.trim(),pin2=$("signupPin2").value.trim();
@@ -307,7 +316,16 @@ async function customerLogin(){
   $("loginCustomer").disabled=true;$("loginCustomer").textContent="Logging in...";
   try{const {error}=await sb.auth.signInWithPassword({email:customerEmail(phone),password:customerPassword(phone,pin)});if(error)throw error;await refreshAccountState();alert("Login successful.")}catch(e){alert("Login failed. Check your mobile number and PIN.")}finally{$("loginCustomer").disabled=false;$("loginCustomer").textContent="Login"}
 }
-async function customerLogout(){await sb.auth.signOut();currentSession=null;currentCustomer=null;await refreshAccountState()}
+async function customerLogout(){
+  await sb.auth.signOut();
+  currentSession=null;
+  currentCustomer=null;
+  localStorage.removeItem(ADDRESS_KEY);
+  deliveryInfo=null;
+  refreshSavedAddress();
+  await refreshAccountState();
+  updateCart();
+}
 function addCart(p,v){if(!v){alert("Price is not set for this item yet.");return}const key=p.id+"_"+v.key,found=cart.find(x=>x.key===key);if(found)found.qty++;else cart.push({key,product_id:p.id,name:p.name,variant:v.key,variant_label:v.label,unit_price:v.price,qty:1});updateCart()}
 function updateCart(){
   const count=cartItemCount();
@@ -557,11 +575,25 @@ function closeMenuDrawer(){$("menuDrawerBg").classList.remove("show");$("menuDra
 $("menuBtn").onclick=openMenuDrawer;
 $("menuClose").onclick=closeMenuDrawer;
 $("menuDrawerBg").addEventListener("click",e=>{if(e.target===$("menuDrawerBg"))closeMenuDrawer()});
-$("drawerAccount").onclick=async()=>{closeMenuDrawer();await refreshAccountState();openModal($("accountModal"))};
-$("drawerOrders").onclick=async()=>{closeMenuDrawer();await refreshAccountState();openModal($("accountModal"))};
+$("drawerAccount").onclick=async()=>{
+  closeMenuDrawer();
+  await refreshAccountState();
+  if(!currentSession?.user)switchAuthTab("login");
+  openModal($("accountModal"));
+};
+$("drawerOrders").onclick=async()=>{
+  closeMenuDrawer();
+  await refreshAccountState();
+  if(!currentSession?.user)switchAuthTab("login");
+  openModal($("accountModal"));
+};
 $("drawerAddress").onclick=()=>{closeMenuDrawer();fillAddress();renderCheckoutSummary();openModal($("checkoutModal"))};
 $("homeAddressEdit").onclick=()=>{fillAddress();renderCheckoutSummary();openModal($("checkoutModal"))};
-$("drawerLogout").onclick=async()=>{closeMenuDrawer();await customerLogout()};
+$("drawerLogout").onclick=async()=>{
+  closeMenuDrawer();
+  await customerLogout();
+  openMenuDrawer();
+};
 
 $("helpWa").href="https://wa.me/"+cfg.whatsappNumber+"?text="+encodeURIComponent("Hello Koida Local Delivery, I need help with an order.");$("drawerWa").href=$("helpWa").href;
 $("accountBtn").onclick=async()=>{await refreshAccountState();openModal($("accountModal"))};$("closeAccount").onclick=()=>closeModal($("accountModal"));$("loginTab").onclick=()=>switchAuthTab("login");$("signupTab").onclick=()=>switchAuthTab("signup");$("loginCustomer").onclick=customerLogin;$("signupCustomer").onclick=customerSignup;$("logoutCustomer").onclick=customerLogout;$("refreshMyOrders").onclick=loadMyOrders;
