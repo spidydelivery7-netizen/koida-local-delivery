@@ -23,7 +23,7 @@ header{background:var(--dark);color:#fff;position:sticky;top:0;z-index:30}
 .cat{font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase}.name{font-size:19px;font-weight:900;margin:5px 0 6px}.desc{font-size:13px;color:var(--muted);line-height:1.45;min-height:38px}
 .price{font-size:17px;font-weight:900;margin:9px 0}.variant{width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;background:#fff;font-size:15px;margin-bottom:9px}
 .stock{font-size:12px;color:var(--green);font-weight:800;margin-bottom:9px}.stock.out{color:var(--red)}
-.card-actions{display:grid;grid-template-columns:1fr 48px;gap:8px;margin-top:auto}.add{font-size:20px}.card-actions button:disabled{opacity:.45;cursor:not-allowed;pointer-events:none;filter:grayscale(1)}
+.card-actions{display:grid;grid-template-columns:1fr 48px;gap:8px;margin-top:auto}.add{font-size:20px}
 .cartbar{position:sticky;bottom:0;background:#fff;border-top:1px solid var(--line);padding:12px 18px;display:none;z-index:25;box-shadow:0 -6px 20px #0001}.cartbar.show{display:block}
 .cartin{max-width:1180px;margin:auto;display:flex;justify-content:space-between;align-items:center;gap:12px}
 .empty{padding:34px;text-align:center;color:var(--muted)}
@@ -73,22 +73,14 @@ footer{background:var(--dark);color:#fff;text-align:center;padding:24px 18px;mar
       <button id="loginTab" class="btn dark">Login</button>
       <button id="signupTab" class="btn gray">Create Account</button>
     </div>
-    <div class="auth-note">New accounts use your real email + 6-digit PIN so you can recover a forgotten PIN by email. Do not use a PIN you use for banking or UPI.</div>
+    <div class="auth-note">Phone OTP is not enabled yet. This account uses your mobile number + 6-digit PIN. Do not use a PIN you use for banking or UPI.</div>
     <div id="loginBox" class="form">
-      <label class="full">Email<input id="loginEmail" type="email" autocomplete="email" placeholder="your@email.com"></label>
-      <label class="full">6-digit PIN<input id="loginPin" inputmode="numeric" type="password" maxlength="6" autocomplete="current-password" placeholder="••••••"></label>
-      <div class="full" style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap"><button id="forgotPin" class="btn gray" type="button">Forgot PIN?</button><button id="loginCustomer" class="btn dark">Login</button></div>
-      <div class="full small">Older mobile-only test accounts can continue using the legacy login link below.</div>
-      <div class="full" style="display:flex;justify-content:flex-start"><button id="legacyLogin" class="btn gray" type="button">Legacy Mobile Login</button></div>
-    </div>
-    <div id="legacyLoginBox" class="form" style="display:none">
       <label class="full">Mobile Number<input id="loginPhone" inputmode="numeric" placeholder="10-digit mobile number"></label>
-      <label class="full">6-digit PIN<input id="legacyLoginPin" inputmode="numeric" type="password" maxlength="6" placeholder="••••••"></label>
-      <div class="full" style="display:flex;justify-content:space-between;gap:8px"><button id="backEmailLogin" class="btn gray" type="button">Back to Email Login</button><button id="legacyLoginCustomer" class="btn dark">Login</button></div>
+      <label class="full">6-digit PIN<input id="loginPin" inputmode="numeric" type="password" maxlength="6" placeholder="••••••"></label>
+      <div class="full" style="display:flex;justify-content:flex-end"><button id="loginCustomer" class="btn dark">Login</button></div>
     </div>
     <div id="signupBox" class="form" style="display:none">
       <label class="full">Full Name<input id="signupName" placeholder="Your name"></label>
-      <label class="full">Email<input id="signupEmail" type="email" autocomplete="email" placeholder="your@email.com"></label>
       <label class="full">Mobile Number<input id="signupPhone" inputmode="numeric" placeholder="10-digit mobile number"></label>
       <label class="full">Create 6-digit PIN<input id="signupPin" inputmode="numeric" type="password" maxlength="6" placeholder="••••••"></label>
       <label class="full">Confirm PIN<input id="signupPin2" inputmode="numeric" type="password" maxlength="6" placeholder="••••••"></label>
@@ -180,11 +172,16 @@ function cartSubtotal(){return cart.reduce((s,x)=>s+x.qty*x.unit_price,0)}
 function calculatedDelivery(){
   if(!deliveryInfo||!deliverySettings)return null;
   const d=deliveryInfo.distance_km,s=deliverySettings;
-  let charge=Number(s.base_charge||30);
-  if(d>Number(s.base_distance_km||2)){
-    charge+=Math.ceil((d-Number(s.base_distance_km||2))/Number(s.step_distance_km||2))*Number(s.step_charge||10);
+  if(s.free_delivery_enabled===true)return 0;
+  const baseDistance=Number(s.base_distance_km ?? 2);
+  const baseCharge=Number(s.base_charge ?? 30);
+  const stepDistance=Number(s.step_distance_km ?? 2);
+  const stepCharge=Number(s.step_charge ?? 10);
+  let charge=baseCharge;
+  if(d>baseDistance && stepDistance>0){
+    charge+=Math.ceil((d-baseDistance)/stepDistance)*stepCharge;
   }
-  if(s.rain_mode)charge+=Number(s.rain_extra||0);
+  if(s.rain_mode)charge+=Number(s.rain_extra ?? 0);
   return charge;
 }
 function cartTotal(){const dc=calculatedDelivery();return cartSubtotal()+(dc==null?0:dc)}
@@ -197,12 +194,10 @@ function refreshSavedAddress(){const a=loadAddress();$("savedAddress").textConte
 function fillAddress(){const a=loadAddress()||{};$("custName").value=a.name||currentCustomer?.full_name||"";$("custPhone").value=a.phone||currentCustomer?.phone||"";$("custAddress").value=a.address||"";$("custLandmark").value=a.landmark||"";$("custArea").value=a.area||"";$("custNote").value=a.note||""}
 function readAddress(){return {name:$("custName").value.trim(),phone:$("custPhone").value.trim(),address:$("custAddress").value.trim(),landmark:$("custLandmark").value.trim(),area:$("custArea").value.trim(),note:$("custNote").value.trim()}}
 function normalizePhone(v){let d=String(v||"").replace(/\D/g,"");if(d.length===12&&d.startsWith("91"))d=d.slice(2);return d}
-function legacyCustomerEmail(phone){return `91${phone}@phone.koidalocaldelivery.in`}
-function legacyCustomerPassword(phone,pin){return `KLD#${phone}#${pin}`}
-function customerPinPassword(pin){return `KLD#PIN#${pin}`}
+function customerEmail(phone){return `91${phone}@phone.koidalocaldelivery.in`}
+function customerPassword(phone,pin){return `KLD#${phone}#${pin}`}
 function validPin(pin){return /^\d{6}$/.test(pin)}
-function validEmail(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||"").trim())}
-function switchAuthTab(tab){const login=tab==="login";$("loginBox").style.display=login?"grid":"none";$("legacyLoginBox").style.display="none";$("signupBox").style.display=login?"none":"grid";$("loginTab").className="btn "+(login?"dark":"gray");$("signupTab").className="btn "+(login?"gray":"dark")}
+function switchAuthTab(tab){const login=tab==="login";$("loginBox").style.display=login?"grid":"none";$("signupBox").style.display=login?"none":"grid";$("loginTab").className="btn "+(login?"dark":"gray");$("signupTab").className="btn "+(login?"gray":"dark")}
 async function loadCustomerProfile(){
   if(!currentSession?.user){currentCustomer=null;return}
   const {data,error}=await sb.from("customers").select("id,phone,full_name,created_at").eq("id",currentSession.user.id).maybeSingle();
@@ -227,41 +222,28 @@ async function refreshAccountState(){
   if(logged){$("accountName").textContent=currentCustomer?.full_name||"Customer";$("accountPhone").textContent=currentCustomer?.phone?`+91 ${currentCustomer.phone}`:"";await loadMyOrders()}
 }
 async function customerSignup(){
-  const name=$("signupName").value.trim(),email=$("signupEmail").value.trim().toLowerCase(),phone=normalizePhone($("signupPhone").value),pin=$("signupPin").value.trim(),pin2=$("signupPin2").value.trim();
-  if(!name){alert("Please enter your name.");return}if(!validEmail(email)){alert("Please enter a valid email address.");return}if(!/^\d{10}$/.test(phone)){alert("Please enter a valid 10-digit mobile number.");return}if(!validPin(pin)){alert("PIN must be exactly 6 digits.");return}if(pin!==pin2){alert("PINs do not match.");return}
+  const name=$("signupName").value.trim(),phone=normalizePhone($("signupPhone").value),pin=$("signupPin").value.trim(),pin2=$("signupPin2").value.trim();
+  if(!name){alert("Please enter your name.");return}if(!/^\d{10}$/.test(phone)){alert("Please enter a valid 10-digit mobile number.");return}if(!validPin(pin)){alert("PIN must be exactly 6 digits.");return}if(pin!==pin2){alert("PINs do not match.");return}
   $("signupCustomer").disabled=true;$("signupCustomer").textContent="Creating...";
   try{
-    const {data,error}=await sb.auth.signUp({email,password:customerPinPassword(pin),options:{data:{phone,full_name:name}}});if(error)throw error;
+    const {data,error}=await sb.auth.signUp({email:customerEmail(phone),password:customerPassword(phone,pin),options:{data:{phone,full_name:name}}});if(error)throw error;
     if(data.user){await sb.from("customers").upsert({id:data.user.id,phone,full_name:name,updated_at:new Date().toISOString()},{onConflict:"id"})}
     await refreshAccountState();
-    if(!currentSession){alert("Account created. Check your email if confirmation is required, then login with your email and PIN.");switchAuthTab("login");$("loginEmail").value=email}else alert("Account created and logged in.");
-  }catch(e){const m=String(e.message||e);alert(m.toLowerCase().includes("already")?"An account already exists for this email. Please use Login or Forgot PIN.":"Could not create account: "+m)}finally{$("signupCustomer").disabled=false;$("signupCustomer").textContent="Create Account"}
+    if(!currentSession){alert("Account created. Please login with your mobile number and PIN.");switchAuthTab("login");$("loginPhone").value=phone}else alert("Account created and logged in.");
+  }catch(e){const m=String(e.message||e);alert(m.toLowerCase().includes("already")?"An account already exists for this mobile number. Please use Login.":"Could not create account: "+m)}finally{$("signupCustomer").disabled=false;$("signupCustomer").textContent="Create Account"}
 }
 async function customerLogin(){
-  const email=$("loginEmail").value.trim().toLowerCase(),pin=$("loginPin").value.trim();
-  if(!validEmail(email)){alert("Please enter your registered email.");return}if(!validPin(pin)){alert("Please enter your 6-digit PIN.");return}
-  $("loginCustomer").disabled=true;$("loginCustomer").textContent="Logging in...";
-  try{const {error}=await sb.auth.signInWithPassword({email,password:customerPinPassword(pin)});if(error)throw error;await refreshAccountState();alert("Login successful.")}catch(e){alert("Login failed. Check your email and PIN.")}finally{$("loginCustomer").disabled=false;$("loginCustomer").textContent="Login"}
-}
-async function legacyCustomerLogin(){
-  const phone=normalizePhone($("loginPhone").value),pin=$("legacyLoginPin").value.trim();
+  const phone=normalizePhone($("loginPhone").value),pin=$("loginPin").value.trim();
   if(!/^\d{10}$/.test(phone)){alert("Please enter a valid 10-digit mobile number.");return}if(!validPin(pin)){alert("Please enter your 6-digit PIN.");return}
-  $("legacyLoginCustomer").disabled=true;$("legacyLoginCustomer").textContent="Logging in...";
-  try{const {error}=await sb.auth.signInWithPassword({email:legacyCustomerEmail(phone),password:legacyCustomerPassword(phone,pin)});if(error)throw error;await refreshAccountState();alert("Login successful.")}catch(e){alert("Legacy login failed. Check your mobile number and PIN.")}finally{$("legacyLoginCustomer").disabled=false;$("legacyLoginCustomer").textContent="Login"}
-}
-async function forgotCustomerPin(){
-  const existing=$("loginEmail").value.trim().toLowerCase();
-  const email=(existing||prompt("Enter the email registered with your Koida Local Delivery account:")||"").trim().toLowerCase();
-  if(!validEmail(email)){alert("Please enter a valid registered email.");return}
-  $("forgotPin").disabled=true;$("forgotPin").textContent="Sending...";
-  try{const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:"https://koida-local-delivery.pages.dev/reset-password.html"});if(error)throw error;alert("Password reset link sent. Check your email inbox and spam folder.")}catch(e){alert("Could not send reset email: "+e.message)}finally{$("forgotPin").disabled=false;$("forgotPin").textContent="Forgot PIN?"}
+  $("loginCustomer").disabled=true;$("loginCustomer").textContent="Logging in...";
+  try{const {error}=await sb.auth.signInWithPassword({email:customerEmail(phone),password:customerPassword(phone,pin)});if(error)throw error;await refreshAccountState();alert("Login successful.")}catch(e){alert("Login failed. Check your mobile number and PIN.")}finally{$("loginCustomer").disabled=false;$("loginCustomer").textContent="Login"}
 }
 async function customerLogout(){await sb.auth.signOut();currentSession=null;currentCustomer=null;await refreshAccountState()}
-function addCart(p,v){if(p.available===false){alert("This item is Sold Out.");return}if(!v){alert("Price is not set for this item yet.");return}const key=p.id+"_"+v.key,found=cart.find(x=>x.key===key);if(found)found.qty++;else cart.push({key,product_id:p.id,name:p.name,variant:v.key,variant_label:v.label,unit_price:v.price,qty:1});updateCart()}
-function updateCart(){const count=cart.reduce((s,x)=>s+x.qty,0);$("cartCount").textContent=count+" item"+(count===1?"":"s");const dc=calculatedDelivery();$("cartTotal").textContent=count?(dc==null?"Detect location at checkout":"₹"+cartTotal()+" including ₹"+dc+" delivery"):"";$("cartbar").classList.toggle("show",count>0)}
+function addCart(p,v){if(!v){alert("Price is not set for this item yet.");return}const key=p.id+"_"+v.key,found=cart.find(x=>x.key===key);if(found)found.qty++;else cart.push({key,product_id:p.id,name:p.name,variant:v.key,variant_label:v.label,unit_price:v.price,qty:1});updateCart()}
+function updateCart(){const count=cart.reduce((s,x)=>s+x.qty,0);$("cartCount").textContent=count+" item"+(count===1?"":"s");const dc=calculatedDelivery();$("cartTotal").textContent=count?(dc==null?"Detect location at checkout":(dc===0?"₹"+cartTotal()+" · FREE DELIVERY":"₹"+cartTotal()+" including ₹"+dc+" delivery")):"";$("cartbar").classList.toggle("show",count>0)}
 function changeQty(key,delta){const x=cart.find(i=>i.key===key);if(!x)return;x.qty+=delta;if(x.qty<=0)cart=cart.filter(i=>i.key!==key);updateCart();renderCart()}
-function renderCart(){const box=$("cartItems");box.innerHTML="";if(!cart.length)box.innerHTML='<div class="empty">Your cart is empty.</div>';cart.forEach(x=>{const row=document.createElement("div");row.className="cart-row";row.innerHTML=`<div><b>${x.name}</b><div class="small">${x.variant_label} · ₹${x.unit_price} each</div></div><div class="qty"><button class="gray minus">−</button><b>${x.qty}</b><button class="yellow plus">+</button></div>`;row.querySelector(".minus").onclick=()=>changeQty(x.key,-1);row.querySelector(".plus").onclick=()=>changeQty(x.key,1);box.appendChild(row)});const dc=calculatedDelivery();$("cartSummary").innerHTML=`<div class="sum-row"><span>Subtotal</span><b>₹${cartSubtotal()}</b></div><div class="sum-row"><span>Delivery charge</span><b>${dc==null?"Detect at checkout":"₹"+dc}</b></div><div class="sum-row total"><span>Total</span><span>${dc==null?"—":"₹"+cartTotal()}</span></div>`}
-function renderCheckoutSummary(){const dc=calculatedDelivery();$("checkoutSummary").innerHTML=`<div class="sum-row"><span>Items</span><b>${cart.reduce((s,x)=>s+x.qty,0)}</b></div><div class="sum-row"><span>Subtotal</span><b>₹${cartSubtotal()}</b></div><div class="sum-row"><span>Delivery charge</span><b>${dc==null?"Detect location":"₹"+dc}</b></div><div class="sum-row total"><span>Payable</span><span>${dc==null?"—":"₹"+cartTotal()}</span></div>`}
+function renderCart(){const box=$("cartItems");box.innerHTML="";if(!cart.length)box.innerHTML='<div class="empty">Your cart is empty.</div>';cart.forEach(x=>{const row=document.createElement("div");row.className="cart-row";row.innerHTML=`<div><b>${x.name}</b><div class="small">${x.variant_label} · ₹${x.unit_price} each</div></div><div class="qty"><button class="gray minus">−</button><b>${x.qty}</b><button class="yellow plus">+</button></div>`;row.querySelector(".minus").onclick=()=>changeQty(x.key,-1);row.querySelector(".plus").onclick=()=>changeQty(x.key,1);box.appendChild(row)});const dc=calculatedDelivery();$("cartSummary").innerHTML=`<div class="sum-row"><span>Subtotal</span><b>₹${cartSubtotal()}</b></div><div class="sum-row"><span>Delivery charge</span><b>${dc==null?"Detect at checkout":(dc===0?"FREE":"₹"+dc)}</b></div><div class="sum-row total"><span>Total</span><span>${dc==null?"—":"₹"+cartTotal()}</span></div>`}
+function renderCheckoutSummary(){const dc=calculatedDelivery();$("checkoutSummary").innerHTML=`<div class="sum-row"><span>Items</span><b>${cart.reduce((s,x)=>s+x.qty,0)}</b></div><div class="sum-row"><span>Subtotal</span><b>₹${cartSubtotal()}</b></div><div class="sum-row"><span>Delivery charge</span><b>${dc==null?"Detect location":(dc===0?"FREE":"₹"+dc)}</b></div><div class="sum-row total"><span>Payable</span><span>${dc==null?"—":"₹"+cartTotal()}</span></div>`}
 function renderCats(){const arr=["All",...new Set(products.map(p=>p.category).filter(Boolean))];$("cats").innerHTML="";arr.forEach(c=>{const b=document.createElement("button");b.className="chip"+(c===activeCat?" active":"");b.textContent=c;b.onclick=()=>{activeCat=c;renderCats();renderProducts()};$("cats").appendChild(b)})}
 function renderProducts(){const q=$("search").value.trim().toLowerCase();const arr=products.filter(p=>(activeCat==="All"||p.category===activeCat)&&(!q||p.name.toLowerCase().includes(q)||(p.description||"").toLowerCase().includes(q)));$("grid").innerHTML="";if(!arr.length){$("grid").innerHTML='<div class="empty" style="grid-column:1/-1">No items found.</div>';return}arr.forEach(p=>{const v=variants(p),selector=v.length>1?`<select class="variant">${v.map(x=>`<option value="${x.key}">${x.label} — ₹${x.price}</option>`).join("")}</select>`:"";const c=document.createElement("article");c.className="card";c.innerHTML=`<img class="img" src="${p.image_url||ph(p.name)}" alt="${p.name}"><div class="body"><div class="cat">${p.category||"Food"}</div><div class="name">${p.name}</div><div class="desc">${p.description||""}</div><div class="price">${priceText(p)}</div>${selector}<div class="stock ${p.available===false?"out":""}">${p.available===false?"Out of Stock":"Available"}</div><div class="card-actions"><button class="btn dark buy" ${p.available===false?"disabled":""}>Add to Cart</button><button class="btn yellow add" ${p.available===false?"disabled":""}>＋</button></div></div>`;c.querySelector(".img").onerror=e=>e.currentTarget.src=ph(p.name);if(p.available!==false){c.querySelector(".buy").onclick=()=>addCart(p,selectedVariant(c,p));c.querySelector(".add").onclick=()=>addCart(p,selectedVariant(c,p))}$("grid").appendChild(c)})}
 async function loadProducts(){const {data,error}=await sb.from("products").select("*").order("sort_order",{ascending:true}).order("name",{ascending:true});if(error){$("grid").innerHTML='<div class="empty" style="grid-column:1/-1">Could not load menu.</div>';return}products=data||[];renderCats();renderProducts()}
@@ -288,7 +270,9 @@ async function detectLocation(){
       deliveryInfo={distance_km:Number(r.km.toFixed(2)),lat,lng,route_source:r.source};
       const dc=calculatedDelivery();
       $("distanceBox").classList.remove("warn");
-      $("distanceResult").innerHTML=`Distance: <b>${deliveryInfo.distance_km} km</b> · Delivery charge: <b>₹${dc}</b>${deliverySettings.rain_mode?` · Rain extra included ₹${Number(deliverySettings.rain_extra||0)}`:""}`;
+      $("distanceResult").innerHTML=deliverySettings.free_delivery_enabled===true
+        ? `Distance: <b>${deliveryInfo.distance_km} km</b> · Delivery charge: <b>FREE</b> 🎁`
+        : `Distance: <b>${deliveryInfo.distance_km} km</b> · Delivery charge: <b>₹${dc}</b>${deliverySettings.rain_mode?` · Rain extra included ₹${Number(deliverySettings.rain_extra ?? 0)}`:""}`;
       renderCheckoutSummary();updateCart();
     }finally{$("detectLocation").disabled=false;$("detectLocation").textContent="Detect My Location"}
   },err=>{alert("Location permission is required to calculate delivery charge.");$("detectLocation").disabled=false;$("detectLocation").textContent="Detect My Location"},{enableHighAccuracy:true,timeout:15000,maximumAge:60000});
@@ -307,320 +291,69 @@ async function invokePaymentFunction(body){
   return data;
 }
 async function startRazorpayPayment(ctx){
-  if(!cfg.onlinePaymentEnabled){
-    return;
-  }
-
-  if(!window.Razorpay){
-    alert("Razorpay Checkout could not load. Please try again.");
-    return;
-  }
-
-  $("payNow").disabled=true;
-  $("payNow").textContent="Opening payment...";
-
-  let attemptId=null;
-  let paymentCompleted=false;
-
+  if(!cfg.onlinePaymentEnabled){renderReceipt(ctx,"Pending");openModal($("successModal"));return}
+  if(!window.Razorpay){renderReceipt(ctx,"Pending");openModal($("successModal"));alert("Razorpay Checkout could not load. Order is saved; payment is pending.");return}
+  $("payNow").disabled=true;$("payNow").textContent="Opening payment...";
   try{
-    const p_items=ctx.items.map(x=>({
-      product_id:x.product_id,
-      variant:x.variant,
-      qty:x.qty
-    }));
-
-    const p_delivery={
-      distance_km:deliveryInfo.distance_km,
-      lat:deliveryInfo.lat,
-      lng:deliveryInfo.lng,
-      route_source:deliveryInfo.route_source
-    };
-
-    const created=await invokePaymentFunction({
-      action:"create",
-      customer:ctx.a,
-      items:p_items,
-      delivery:p_delivery
-    });
-
-    attemptId=created.attempt_id;
-
-    if(!attemptId || !created.order){
-      throw new Error("Payment could not be started");
-    }
-
-    const rzOrder=created.order;
-
+    const created=await invokePaymentFunction({action:"create",local_order_id:ctx.r.order_id});
+    if(created.already_paid){renderReceipt(ctx,"Paid",created.payment_id||"");openModal($("successModal"));return}
+    const rzOrder=created.order||{};
     const options={
       key:created.key_id,
       amount:rzOrder.amount,
-      currency:rzOrder.currency || "INR",
+      currency:rzOrder.currency||"INR",
       name:"Koida Local Delivery",
-      description:"Order Payment",
+      description:`Order ${ctx.r.order_number}`,
       order_id:rzOrder.id,
-
-      prefill:{
-        name:ctx.a.name,
-        contact:ctx.a.phone
-      },
-
-      notes:{
-        payment_attempt_id:attemptId
-      },
-
+      prefill:{name:ctx.a.name,contact:ctx.a.phone},
+      notes:{local_order_id:ctx.r.order_id,order_number:ctx.r.order_number},
       theme:{},
-
       handler:async function(resp){
         try{
           const verified=await invokePaymentFunction({
             action:"verify",
-            attempt_id:attemptId,
+            local_order_id:ctx.r.order_id,
             razorpay_order_id:resp.razorpay_order_id,
             razorpay_payment_id:resp.razorpay_payment_id,
             razorpay_signature:resp.razorpay_signature
           });
-
-          if(!verified.verified){
-            throw new Error("Payment verification failed");
-          }
-
-          paymentCompleted=true;
-
-          const finalOrder=verified.order;
-
-          if(!finalOrder){
-            throw new Error("Final order was not returned");
-          }
-
-          lastOrderCtx={
-            r:finalOrder,
-            a:ctx.a,
-            items:ctx.items
-          };
-
-          cart=[];
-          deliveryInfo=null;
-          updateCart();
-
-          renderReceipt(
-            lastOrderCtx,
-            "Paid",
-            resp.razorpay_payment_id
-          );
-
-          closeModal($("checkoutModal"));
+          if(!verified.verified)throw new Error("Payment verification failed");
+          renderReceipt(ctx,"Paid",resp.razorpay_payment_id);
           openModal($("successModal"));
-
         }catch(e){
-          alert(
-            "Payment was received but final order confirmation failed. " +
-            "Please contact Koida Local Delivery with your payment details. " +
-            e.message
-          );
+          renderReceipt(ctx,"Pending");openModal($("successModal"));
+          alert("Payment was received but verification failed. Please contact Koida Local Delivery with your payment details. "+e.message);
         }
       },
-
-      modal:{
-        ondismiss:async function(){
-          if(paymentCompleted) return;
-
-          if(attemptId){
-            try{
-              await invokePaymentFunction({
-                action:"cancel",
-                attempt_id:attemptId
-              });
-            }catch(e){
-              console.error("Payment cancel cleanup failed:",e);
-            }
-          }
-
-          alert(
-            "Payment was cancelled. Your order has not been placed."
-          );
-        }
-      }
+      modal:{ondismiss:function(){renderReceipt(ctx,"Pending");openModal($("successModal"));}}
     };
-
-    const rzp=new Razorpay(options);
-
-    rzp.on("payment.failed",async function(){
-      if(attemptId){
-        try{
-          await invokePaymentFunction({
-            action:"failed",
-            attempt_id:attemptId
-          });
-        }catch(e){
-          console.error("Payment failed cleanup failed:",e);
-        }
-      }
-
-      alert(
-        "Payment failed. Your order has not been placed. Please try again."
-      );
-    });
-
-    rzp.open();
-
+    new Razorpay(options).open();
   }catch(e){
-
-    if(attemptId && !paymentCompleted){
-      try{
-        await invokePaymentFunction({
-          action:"cancel",
-          attempt_id:attemptId
-        });
-      }catch(cleanupError){
-        console.error("Payment cleanup failed:",cleanupError);
-      }
-    }
-
-    alert(
-      "Payment could not be started. Your order has not been placed. " +
-      e.message
-    );
-
-  }finally{
-    $("payNow").disabled=false;
-    $("payNow").textContent="Pay Now";
-  }
+    renderReceipt(ctx,"Pending");openModal($("successModal"));
+    alert("Order is saved, but online payment could not start: "+e.message);
+  }finally{$("payNow").disabled=false;$("payNow").textContent="Pay Now"}
 }
-
-
 async function placeOrder(){
-
-  if(!currentSession?.user){
-    alert(
-      "Please login or create your customer account before placing an order."
-    );
-    closeModal($("checkoutModal"));
-    openModal($("accountModal"));
-    return;
-  }
-
-  if(!cart.length){
-    alert("Your cart is empty.");
-    return;
-  }
-
-  if(!deliveryInfo){
-    alert("Please detect your delivery location first.");
-    return;
-  }
-
-  const a=readAddress();
-
-  if(!a.name || !a.phone || !a.address || !a.area){
-    alert(
-      "Name, mobile, full address and area are required."
-    );
-    return;
-  }
-
-  if(!/^[0-9]{10}$/.test(a.phone)){
-    alert("Please enter a valid mobile number.");
-    return;
-  }
-
-  saveAddress(a);
-
-  $("placeOrder").disabled=true;
-
-  $("placeOrder").textContent=
-    cfg.onlinePaymentEnabled
-      ? "Opening payment..."
-      : "Saving order...";
-
+  if(!currentSession?.user){alert("Please login or create your customer account before placing an order.");closeModal($("checkoutModal"));openModal($("accountModal"));return}
+  if(!cart.length){alert("Your cart is empty.");return}
+  if(!deliveryInfo){alert("Please detect your delivery location first.");return}
+  const a=readAddress();if(!a.name||!a.phone||!a.address||!a.area){alert("Name, mobile, full address and area are required.");return}
+  if(!/^[0-9+ -]{8,15}$/.test(a.phone)){alert("Please enter a valid mobile number.");return}
+  saveAddress(a);$("placeOrder").disabled=true;$("placeOrder").textContent="Saving order...";
   try{
-
     const items=cart.map(x=>({...x}));
-
-    lastOrderCtx={
-      a,
-      items
-    };
-
-    closeModal($("checkoutModal"));
-
-    if(cfg.onlinePaymentEnabled){
-
-      await startRazorpayPayment({
-        a,
-        items
-      });
-
-      return;
-    }
-
-    const p_items=cart.map(x=>({
-      product_id:x.product_id,
-      variant:x.variant,
-      qty:x.qty
-    }));
-
-    const p_delivery={
-      distance_km:deliveryInfo.distance_km,
-      lat:deliveryInfo.lat,
-      lng:deliveryInfo.lng,
-      route_source:deliveryInfo.route_source
-    };
-
-    const {data,error}=await sb.rpc(
-      "place_order",
-      {
-        p_customer:a,
-        p_items,
-        p_delivery
-      }
-    );
-
-    if(error) throw error;
-
-    const r=Array.isArray(data)
-      ? data[0]
-      : data;
-
-    if(!r || !r.order_id){
-      throw new Error("Order ID was not returned.");
-    }
-
-    lastOrderCtx={
-      r,
-      a,
-      items
-    };
-
-    cart=[];
-    deliveryInfo=null;
-    updateCart();
-
-    renderReceipt(
-      lastOrderCtx,
-      "Pending"
-    );
-
-    openModal($("successModal"));
-
-  }catch(e){
-
-    alert(
-      "Order could not be processed: " +
-      e.message
-    );
-
-  }finally{
-
-    $("placeOrder").disabled=false;
-
-    $("placeOrder").textContent=
-      cfg.onlinePaymentEnabled
-        ? "Place Order & Pay"
-        : "Place Order";
-  }
+    const p_items=cart.map(x=>({product_id:x.product_id,variant:x.variant,qty:x.qty}));
+    const p_delivery={distance_km:deliveryInfo.distance_km,lat:deliveryInfo.lat,lng:deliveryInfo.lng,route_source:deliveryInfo.route_source};
+    const {data,error}=await sb.rpc("place_order",{p_customer:a,p_items,p_delivery});if(error)throw error;
+    const r=Array.isArray(data)?data[0]:data;
+    lastOrderCtx={r,a,items};
+    cart=[];deliveryInfo=null;updateCart();closeModal($("checkoutModal"));
+    renderReceipt(lastOrderCtx,"Pending");
+    await startRazorpayPayment(lastOrderCtx);
+  }catch(e){alert("Order could not be placed: "+e.message)}finally{$("placeOrder").disabled=false;$("placeOrder").textContent=cfg.onlinePaymentEnabled?"Place Order & Pay":"Place Order"}
 }
 $("helpWa").href="https://wa.me/"+cfg.whatsappNumber+"?text="+encodeURIComponent("Hello Koida Local Delivery, I need help with an order.");
-$("accountBtn").onclick=async()=>{await refreshAccountState();openModal($("accountModal"))};$("closeAccount").onclick=()=>closeModal($("accountModal"));$("loginTab").onclick=()=>switchAuthTab("login");$("signupTab").onclick=()=>switchAuthTab("signup");$("loginCustomer").onclick=customerLogin;$("signupCustomer").onclick=customerSignup;$("forgotPin").onclick=forgotCustomerPin;$("legacyLogin").onclick=()=>{$("loginBox").style.display="none";$("legacyLoginBox").style.display="grid"};$("backEmailLogin").onclick=()=>{$("legacyLoginBox").style.display="none";$("loginBox").style.display="grid"};$("legacyLoginCustomer").onclick=legacyCustomerLogin;$("logoutCustomer").onclick=customerLogout;$("refreshMyOrders").onclick=loadMyOrders;
+$("accountBtn").onclick=async()=>{await refreshAccountState();openModal($("accountModal"))};$("closeAccount").onclick=()=>closeModal($("accountModal"));$("loginTab").onclick=()=>switchAuthTab("login");$("signupTab").onclick=()=>switchAuthTab("signup");$("loginCustomer").onclick=customerLogin;$("signupCustomer").onclick=customerSignup;$("logoutCustomer").onclick=customerLogout;$("refreshMyOrders").onclick=loadMyOrders;
 sb.auth.onAuthStateChange(()=>{setTimeout(()=>refreshAccountState(),0)});
 $("search").oninput=renderProducts;$("addressBtn").onclick=()=>{fillAddress();renderCheckoutSummary();openModal($("checkoutModal"))};$("openCart").onclick=()=>{renderCart();openModal($("cartModal"))};$("closeCart").onclick=()=>closeModal($("cartModal"));$("checkoutBtn").onclick=()=>{if(!cart.length)return;closeModal($("cartModal"));fillAddress();renderCheckoutSummary();openModal($("checkoutModal"))};$("backToCart").onclick=()=>{closeModal($("checkoutModal"));renderCart();openModal($("cartModal"))};$("detectLocation").onclick=detectLocation;$("placeOrder").onclick=placeOrder;$("payNow").onclick=()=>{if(lastOrderCtx)startRazorpayPayment(lastOrderCtx)};$("printBill").onclick=()=>window.print();$("closeSuccess").onclick=()=>closeModal($("successModal"));[$("accountModal"),$("cartModal"),$("checkoutModal"),$("successModal")].forEach(m=>m.addEventListener("click",e=>{if(e.target===m)closeModal(m)}));$("placeOrder").textContent=cfg.onlinePaymentEnabled?"Place Order & Pay":"Place Order";refreshSavedAddress();switchAuthTab("login");await refreshAccountState();await loadSettings();loadProducts();
 </script>
