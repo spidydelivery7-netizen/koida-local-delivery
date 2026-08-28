@@ -72,6 +72,8 @@ button{border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:poin
       <label>Every Next (km)<input id="step_distance_km" type="number" min="0.1" step="0.1"></label>
       <label>Add Charge (₹)<input id="step_charge" type="number" min="0"></label>
       <label>Free Delivery Offer<select id="free_delivery"><option value="false">OFF — Normal Delivery Charge</option><option value="true">ON — FREE DELIVERY</option></select></label>
+      <label>Platform Fee<select id="platform_fee_enabled"><option value="false">OFF — No Platform Fee</option><option value="true">ON — Charge Platform Fee</option></select></label>
+      <label>Platform Fee Per Item (₹)<input id="platform_fee_per_item" type="number" min="0" step="1" value="5"></label>
       <label>Rain Mode<select id="rain_mode"><option value="false">OFF</option><option value="true">ON</option></select></label>
       <label>Rain Extra (₹)<input id="rain_extra" type="number" min="0"></label>
       <label>Shop Latitude<input id="store_lat" type="number" step="0.000001" placeholder="Set automatically below"></label>
@@ -176,18 +178,23 @@ async function loadDeliverySettings(){
  $("base_distance_km").value=data.base_distance_km??2;$("base_charge").value=data.base_charge??30;
  $("step_distance_km").value=data.step_distance_km??2;$("step_charge").value=data.step_charge??10;
  $("free_delivery").value=String(data.free_delivery_enabled===true);
+ $("platform_fee_enabled").value=String(data.platform_fee_enabled===true);
+ $("platform_fee_per_item").value=data.platform_fee_per_item??5;
  $("rain_mode").value=String(data.rain_mode===true);$("rain_extra").value=data.rain_extra??0;
  $("store_lat").value=data.store_lat??"";$("store_lng").value=data.store_lng??"";
  renderDeliveryPreview();
 }
 function renderDeliveryPreview(){
  const free=$("free_delivery").value==="true";
+ const platformOn=$("platform_fee_enabled").value==="true";
+ const platformAmount=Number($("platform_fee_per_item").value||0);
+ const platformText=platformOn?` · Platform fee ₹${platformAmount} per item`:" · Platform fee OFF";
  if(free){
-  $("deliveryPreview").innerHTML="🎁 Free Delivery Offer is ON · Customer delivery charge = ₹0";
+  $("deliveryPreview").innerHTML=`🎁 Free Delivery Offer is ON · Customer delivery charge = ₹0${platformText}`;
   return;
  }
  const b=Number($("base_distance_km").value||2),bc=Number($("base_charge").value||30),s=Number($("step_distance_km").value||2),sc=Number($("step_charge").value||10);
- $("deliveryPreview").innerHTML=`Example: 0–${b} km = ₹${bc} · ${b}–${b+s} km = ₹${bc+sc} · ${b+s}–${b+2*s} km = ₹${bc+2*sc}${$("rain_mode").value==="true"?" · Rain extra ₹"+Number($("rain_extra").value||0):""}`;
+ $("deliveryPreview").innerHTML=`Example: 0–${b} km = ₹${bc} · ${b}–${b+s} km = ₹${bc+sc} · ${b+s}–${b+2*s} km = ₹${bc+2*sc}${$("rain_mode").value==="true"?" · Rain extra ₹"+Number($("rain_extra").value||0):""}${platformText}`;
 }
 async function checkAdmin(){
  const {data:{session}}=await sb.auth.getSession();
@@ -219,7 +226,7 @@ $("logout").onclick=()=>sb.auth.signOut();
 $("productsTab").onclick=()=>switchView("products");$("ordersTab").onclick=()=>switchView("orders");$("deliveryTab").onclick=()=>switchView("delivery");
 $("cancel").onclick=reset;$("refreshProducts").onclick=loadProducts;$("q").oninput=renderProducts;$("refreshOrders").onclick=loadOrders;$("oq").oninput=renderOrders;
 
-["base_distance_km","base_charge","step_distance_km","step_charge","free_delivery","rain_mode","rain_extra"].forEach(id=>$(id).addEventListener("input",renderDeliveryPreview));
+["base_distance_km","base_charge","step_distance_km","step_charge","free_delivery","platform_fee_enabled","platform_fee_per_item","rain_mode","rain_extra"].forEach(id=>$(id).addEventListener("input",renderDeliveryPreview));
 $("detectShopLocation").onclick=()=>{
  if(!navigator.geolocation){setStatus("Location is not supported on this browser.");return}
  $("detectShopLocation").disabled=true;$("detectShopLocation").textContent="Detecting...";
@@ -236,6 +243,8 @@ $("saveDelivery").onclick=async()=>{
   step_distance_km:Number($("step_distance_km").value||2),
   step_charge:Number($("step_charge").value||10),
   free_delivery_enabled:$("free_delivery").value==="true",
+  platform_fee_enabled:$("platform_fee_enabled").value==="true",
+  platform_fee_per_item:Number($("platform_fee_per_item").value||0),
   rain_mode:$("rain_mode").value==="true",
   rain_extra:Number($("rain_extra").value||0),
   store_lat:$("store_lat").value===""?null:Number($("store_lat").value),
