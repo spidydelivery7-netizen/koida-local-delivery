@@ -40,10 +40,40 @@ footer{background:var(--dark);color:#fff;text-align:center;padding:24px 18px;mar
 @media(max-width:900px){.grid{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:700px){.hero h1{font-size:31px}.grid{grid-template-columns:repeat(2,1fr);gap:12px}.img{height:130px}.toolbar{grid-template-columns:1fr}.sub{display:none}.name{font-size:17px}.form{grid-template-columns:1fr}.form .full{grid-column:auto}.cartin{align-items:flex-start}.cartin .btn{white-space:nowrap}}
 @media print{header,.hero,.wrap,.cartbar,footer,.modal-actions,.notice{display:none!important}.modal-bg{display:block!important;position:static;background:#fff;padding:0}.modal{max-height:none;overflow:visible;width:100%;box-shadow:none}.receipt{border:0}}
+
+/* ===== Koida Local Delivery — customer UI refresh ===== */
+.menu-btn{width:48px;height:48px;border:1px solid #334155;border-radius:15px;background:#172033;color:#fff;font-size:27px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.nav-actions{display:flex;align-items:center;gap:10px}
+.mobile-drawer-bg{position:fixed;inset:0;background:#0009;z-index:100;display:none}
+.mobile-drawer-bg.show{display:block}
+.mobile-drawer{position:absolute;right:0;top:0;height:100%;width:min(390px,88vw);background:#071426;color:#fff;padding:22px 18px;overflow:auto;box-shadow:-12px 0 35px #0005}
+.drawer-close{position:absolute;right:16px;top:14px;border:0;background:transparent;color:#fff;font-size:34px;cursor:pointer}
+.drawer-profile{display:flex;align-items:center;gap:13px;padding:38px 8px 18px;border-bottom:1px solid #334155;margin-bottom:12px}
+.drawer-avatar{width:54px;height:54px;border-radius:50%;background:#2563eb;display:flex;align-items:center;justify-content:center;font-size:28px}
+.drawer-profile b{font-size:20px}.drawer-phone{color:#cbd5e1;margin-top:3px}
+.drawer-item{width:100%;border:1px solid #1f3047;background:#102037;color:#fff;border-radius:14px;padding:14px 13px;margin:8px 0;display:flex;align-items:center;gap:12px;text-align:left;cursor:pointer}
+.drawer-item .ico{font-size:23px;width:30px;text-align:center}.drawer-item .txt{flex:1}.drawer-item b{display:block;font-size:16px}.drawer-item small{display:block;color:#cbd5e1;margin-top:3px}.drawer-item .arrow{font-size:24px;color:#cbd5e1}
+.drawer-divider{border:0;border-top:1px solid #334155;margin:14px 4px}
+.drawer-footer{text-align:center;color:#94a3b8;font-size:12px;padding:22px 8px}
+.drawer-footer b{color:#fbbf24}
+.home-tools{display:grid;grid-template-columns:1fr;gap:10px}
+.home-address-card{display:none;background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:13px 15px;margin-top:10px;align-items:center;justify-content:space-between;gap:10px}
+.home-address-card.show{display:flex}.home-address-card .addr-main{min-width:0}.home-address-card .addr-title{font-weight:900}.home-address-card .addr-text{font-size:13px;color:#6b7280;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.home-address-card button{border:0;background:transparent;color:#2563eb;font-weight:800;cursor:pointer}
+#addressBtn,#accountBtn,#savedAddress{display:none!important}
+.hero{background:linear-gradient(135deg,#071426,#17304d)}
+.hero h1{max-width:760px}
+@media(max-width:700px){
+  .nav{padding:13px 16px}.brand{font-size:21px;line-height:1.05}.nav-actions{gap:8px}
+  #helpWa{padding:10px 12px;font-size:13px}.menu-btn{width:44px;height:44px;border-radius:14px}
+  .hero{padding:34px 18px 38px}.hero h1{font-size:34px;line-height:1.08}
+  .wrap{padding-top:20px}.toolbar{display:block}
+}
+
 </style>
 </head>
 <body>
-<header><div class="nav"><div><div class="brand">KOIDA <span>LOCAL DELIVERY</span></div><div class="sub">ORDER • ADDRESS • BILL • DELIVERY</div></div><a id="helpWa" class="btn wa" href="#">WhatsApp Help</a></div></header>
+<header><div class="nav"><div><div class="brand">KOIDA <span>LOCAL DELIVERY</span></div><div class="sub">ORDER • ADDRESS • BILL • DELIVERY</div></div><div class="nav-actions"><a id="helpWa" class="btn wa" href="#">WhatsApp Help</a><button id="menuBtn" class="menu-btn" aria-label="Open menu">⋮</button></div></div></header>
 
 <section class="hero"><div class="hero-in">
 <h1>Order from the website 🛵</h1>
@@ -57,6 +87,10 @@ footer{background:var(--dark);color:#fff;text-align:center;padding:24px 18px;mar
   <button id="accountBtn" class="btn dark">👤 Login</button>
 </div>
 <div id="savedAddress" class="saved"></div>
+<div id="homeAddressCard" class="home-address-card">
+  <div class="addr-main"><div class="addr-title">📍 Saved Address</div><div id="homeAddressText" class="addr-text"></div></div>
+  <button id="homeAddressEdit">Edit ›</button>
+</div>
 <div id="cats" class="cats"></div>
 <div id="grid" class="grid"></div>
 </main>
@@ -65,6 +99,26 @@ footer{background:var(--dark);color:#fff;text-align:center;padding:24px 18px;mar
   <div><b id="cartCount">0 items</b><div id="cartTotal" class="small"></div></div>
   <button id="openCart" class="btn yellow">View Cart & Checkout</button>
 </div></div>
+
+
+<div id="menuDrawerBg" class="mobile-drawer-bg" aria-hidden="true">
+  <aside class="mobile-drawer">
+    <button id="menuClose" class="drawer-close" aria-label="Close menu">×</button>
+    <div class="drawer-profile">
+      <div class="drawer-avatar">👤</div>
+      <div><b id="drawerName">Guest</b><div id="drawerPhone" class="drawer-phone">Login to view your orders</div></div>
+    </div>
+    <button id="drawerAccount" class="drawer-item"><span class="ico">👤</span><span class="txt"><b>My Account</b><small>View your profile & orders</small></span><span class="arrow">›</span></button>
+    <button id="drawerAddress" class="drawer-item"><span class="ico">📍</span><span class="txt"><b>Saved Address</b><small>Manage your delivery address</small></span><span class="arrow">›</span></button>
+    <button id="drawerOrders" class="drawer-item"><span class="ico">📋</span><span class="txt"><b>My Orders</b><small>View your order history</small></span><span class="arrow">›</span></button>
+    <hr class="drawer-divider">
+    <a id="drawerWa" class="drawer-item" href="#"><span class="ico">🎧</span><span class="txt"><b>WhatsApp Help</b><small>Chat with Koida Local Delivery</small></span><span class="arrow">›</span></a>
+    <a class="drawer-item" href="about.html"><span class="ico">ℹ️</span><span class="txt"><b>About Us</b><small>Learn more about us</small></span><span class="arrow">›</span></a>
+    <a class="drawer-item" href="privacy.html"><span class="ico">🛡️</span><span class="txt"><b>Privacy Policy</b><small>Your privacy matters</small></span><span class="arrow">›</span></a>
+    <button id="drawerLogout" class="drawer-item" style="display:none"><span class="ico">🚪</span><span class="txt"><b>Logout</b><small>Sign out from your account</small></span><span class="arrow">›</span></button>
+    <div class="drawer-footer">Koida <b>Local Delivery</b><br>© 2026 All rights reserved.</div>
+  </aside>
+</div>
 
 <div id="accountModal" class="modal-bg" aria-hidden="true"><div class="modal">
   <h2>My Account</h2>
@@ -196,7 +250,13 @@ function closeModal(el){el.classList.remove("show");el.setAttribute("aria-hidden
 function loadAddress(){try{return JSON.parse(localStorage.getItem(ADDRESS_KEY)||"null")}catch{return null}}
 function saveAddress(a){localStorage.setItem(ADDRESS_KEY,JSON.stringify(a));refreshSavedAddress()}
 function validAddress(a){return !!(a&&a.name&&a.phone&&a.address&&a.area)}
-function refreshSavedAddress(){const a=loadAddress();$("savedAddress").textContent=validAddress(a)?"✓ Saved delivery address: "+a.area+" — tap Saved Address to edit":""}
+function refreshSavedAddress(){
+  const a=loadAddress();
+  $("savedAddress").textContent=validAddress(a)?"✓ Saved delivery address: "+a.area+" — tap Saved Address to edit":"";
+  const card=$("homeAddressCard"),txt=$("homeAddressText");
+  if(validAddress(a)){txt.textContent=[a.address,a.landmark,a.area].filter(Boolean).join(" · ");card.classList.add("show")}
+  else{txt.textContent="";card.classList.remove("show")}
+}
 function fillAddress(){const a=loadAddress()||{};$("custName").value=a.name||currentCustomer?.full_name||"";$("custPhone").value=a.phone||currentCustomer?.phone||"";$("custAddress").value=a.address||"";$("custLandmark").value=a.landmark||"";$("custArea").value=a.area||"";$("custNote").value=a.note||""}
 function readAddress(){return {name:$("custName").value.trim(),phone:$("custPhone").value.trim(),address:$("custAddress").value.trim(),landmark:$("custLandmark").value.trim(),area:$("custArea").value.trim(),note:$("custNote").value.trim()}}
 function normalizePhone(v){let d=String(v||"").replace(/\D/g,"");if(d.length===12&&d.startsWith("91"))d=d.slice(2);return d}
@@ -225,6 +285,9 @@ async function loadMyOrders(){
 async function refreshAccountState(){
   const {data:{session}}=await sb.auth.getSession();currentSession=session;await loadCustomerProfile();
   const logged=!!currentSession?.user;$("accountBtn").textContent=logged?"👤 My Account":"👤 Login";$("authGuest").style.display=logged?"none":"block";$("authAccount").style.display=logged?"block":"none";
+  $("drawerName").textContent=logged?(currentCustomer?.full_name||"Customer"):"Guest";
+  $("drawerPhone").textContent=logged?(currentCustomer?.phone?`+91 ${currentCustomer.phone}`:"Customer account"):"Login to view your orders";
+  $("drawerLogout").style.display=logged?"flex":"none";
   if(logged){$("accountName").textContent=currentCustomer?.full_name||"Customer";$("accountPhone").textContent=currentCustomer?.phone?`+91 ${currentCustomer.phone}`:"";await loadMyOrders()}
 }
 async function customerSignup(){
@@ -488,7 +551,19 @@ async function placeOrder(){
     p_delivery
   });
 }
-$("helpWa").href="https://wa.me/"+cfg.whatsappNumber+"?text="+encodeURIComponent("Hello Koida Local Delivery, I need help with an order.");
+
+function openMenuDrawer(){$("menuDrawerBg").classList.add("show");$("menuDrawerBg").setAttribute("aria-hidden","false")}
+function closeMenuDrawer(){$("menuDrawerBg").classList.remove("show");$("menuDrawerBg").setAttribute("aria-hidden","true")}
+$("menuBtn").onclick=openMenuDrawer;
+$("menuClose").onclick=closeMenuDrawer;
+$("menuDrawerBg").addEventListener("click",e=>{if(e.target===$("menuDrawerBg"))closeMenuDrawer()});
+$("drawerAccount").onclick=async()=>{closeMenuDrawer();await refreshAccountState();openModal($("accountModal"))};
+$("drawerOrders").onclick=async()=>{closeMenuDrawer();await refreshAccountState();openModal($("accountModal"))};
+$("drawerAddress").onclick=()=>{closeMenuDrawer();fillAddress();renderCheckoutSummary();openModal($("checkoutModal"))};
+$("homeAddressEdit").onclick=()=>{fillAddress();renderCheckoutSummary();openModal($("checkoutModal"))};
+$("drawerLogout").onclick=async()=>{closeMenuDrawer();await customerLogout()};
+
+$("helpWa").href="https://wa.me/"+cfg.whatsappNumber+"?text="+encodeURIComponent("Hello Koida Local Delivery, I need help with an order.");$("drawerWa").href=$("helpWa").href;
 $("accountBtn").onclick=async()=>{await refreshAccountState();openModal($("accountModal"))};$("closeAccount").onclick=()=>closeModal($("accountModal"));$("loginTab").onclick=()=>switchAuthTab("login");$("signupTab").onclick=()=>switchAuthTab("signup");$("loginCustomer").onclick=customerLogin;$("signupCustomer").onclick=customerSignup;$("logoutCustomer").onclick=customerLogout;$("refreshMyOrders").onclick=loadMyOrders;
 sb.auth.onAuthStateChange(()=>{setTimeout(()=>refreshAccountState(),0)});
 $("search").oninput=renderProducts;$("addressBtn").onclick=()=>{fillAddress();renderCheckoutSummary();openModal($("checkoutModal"))};$("openCart").onclick=()=>{renderCart();openModal($("cartModal"))};$("closeCart").onclick=()=>closeModal($("cartModal"));$("checkoutBtn").onclick=()=>{if(!cart.length)return;closeModal($("cartModal"));fillAddress();renderCheckoutSummary();openModal($("checkoutModal"))};$("backToCart").onclick=()=>{closeModal($("checkoutModal"));renderCart();openModal($("cartModal"))};$("detectLocation").onclick=detectLocation;$("placeOrder").onclick=placeOrder;$("payNow").onclick=()=>{if(lastOrderCtx)startRazorpayPayment(lastOrderCtx)};$("printBill").onclick=()=>{
