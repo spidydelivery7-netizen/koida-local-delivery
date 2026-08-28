@@ -291,66 +291,161 @@ async function invokePaymentFunction(body){
   return data;
 }
 async function startRazorpayPayment(ctx){
-  if(!cfg.onlinePaymentEnabled){renderReceipt(ctx,"Pending");openModal($("successModal"));return}
-  if(!window.Razorpay){renderReceipt(ctx,"Pending");openModal($("successModal"));alert("Razorpay Checkout could not load. Order is saved; payment is pending.");return}
-  $("payNow").disabled=true;$("payNow").textContent="Opening payment...";
+  if(!cfg.onlinePaymentEnabled){
+    const {data,error}=await sb.rpc("place_order",{p_customer:ctx.a,p_items:ctx.p_items,p_delivery:ctx.p_delivery});
+    if(error)throw error;
+    const r=Array.isArray(data)?data[0]:data;
+    lastOrderCtx={r,a:ctx.a,items:ctx.items};
+    cart=[];deliveryInfo=null;updateCart();closeModal($("checkoutModal"));
+    renderReceipt(lastOrderCtx,"Pending");
+    openModal($("successModal"));
+    return;
+  }
+
+  if(!window.Razorpay){
+    alert("Razorpay Checkout could not load. Your order has not been placed.");
+    return;
+  }
+
+  $("placeOrder").disabled=true;
+  $("placeOrder").textContent="Opening payment...";
+
+  let attemptId="";
+
   try{
-    const created=await invokePaymentFunction({action:"create",local_order_id:ctx.r.order_id});
-    if(created.already_paid){renderReceipt(ctx,"Paid",created.payment_id||"");openModal($("successModal"));return}
+    const created=await invokePaymentFunction({
+      action:"create",
+      customer:ctx.a,
+      items:ctx.p_items,
+      delivery:ctx.p_delivery
+    });
+
+    attemptId=String(created.attempt_id||"");
     const rzOrder=created.order||{};
+
+    if(!attemptId||!rzOrder.id){
+      throw new Error("Payment order could not be created");
+    }
+
+    closeModal($("checkoutModal"));
+
     const options={
       key:created.key_id,
       amount:rzOrder.amount,
       currency:rzOrder.currency||"INR",
       name:"Koida Local Delivery",
-      description:`Order ${ctx.r.order_number}`,
+      description:"Koida Local Delivery order payment",
       order_id:rzOrder.id,
       prefill:{name:ctx.a.name,contact:ctx.a.phone},
-      notes:{local_order_id:ctx.r.order_id,order_number:ctx.r.order_number},
+      notes:{payment_attempt_id:attemptId},
       theme:{},
+
       handler:async function(resp){
         try{
           const verified=await invokePaymentFunction({
             action:"verify",
-            local_order_id:ctx.r.order_id,
+            attempt_id:attemptId,
             razorpay_order_id:resp.razorpay_order_id,
             razorpay_payment_id:resp.razorpay_payment_id,
             razorpay_signature:resp.razorpay_signature
           });
-          if(!verified.verified)throw new Error("Payment verification failed");
-          renderReceipt(ctx,"Paid",resp.razorpay_payment_id);
+
+          if(!verified.verified||!verified.order){
+            throw new Error("Payment verification failed");
+          }
+
+          const r=verified.order;
+          lastOrderCtx={r,a:ctx.a,items:ctx.items};
+
+          cart=[];
+          deliveryInfo=null;
+          updateCart();
+
+          renderReceipt(lastOrderCtx,"Paid",resp.razorpay_payment_id);
           openModal($("successModal"));
+
         }catch(e){
-          renderReceipt(ctx,"Pending");openModal($("successModal"));
-          alert("Payment was received but verification failed. Please contact Koida Local Delivery with your payment details. "+e.message);
+          alert("Payment may have been received, but order confirmation failed. Please contact Koida Local Delivery with your payment details. "+e.message);
         }
       },
-      modal:{ondismiss:function(){renderReceipt(ctx,"Pending");openModal($("successModal"));}}
+
+      modal:{
+        ondismiss:async function(){
+          try{
+            if(attemptId){
+              await invokePaymentFunction({
+                action:"cancel",
+                attempt_id:attemptId
+              });
+            }
+          }catch(_){}
+          alert("Payment was cancelled. Your order has not been placed.");
+        }
+      }
     };
+
     new Razorpay(options).open();
+
   }catch(e){
-    renderReceipt(ctx,"Pending");openModal($("successModal"));
-    alert("Order is saved, but online payment could not start: "+e.message);
-  }finally{$("payNow").disabled=false;$("payNow").textContent="Pay Now"}
+    alert("Online payment could not start. Your order has not been placed: "+e.message);
+  }finally{
+    $("placeOrder").disabled=false;
+    $("placeOrder").textContent=cfg.onlinePaymentEnabled?"Place Order & Pay":"Place Order";
+  }
 }
+
 async function placeOrder(){
-  if(!currentSession?.user){alert("Please login or create your customer account before placing an order.");closeModal($("checkoutModal"));openModal($("accountModal"));return}
-  if(!cart.length){alert("Your cart is empty.");return}
-  if(!deliveryInfo){alert("Please detect your delivery location first.");return}
-  const a=readAddress();if(!a.name||!a.phone||!a.address||!a.area){alert("Name, mobile, full address and area are required.");return}
-  if(!/^[0-9+ -]{8,15}$/.test(a.phone)){alert("Please enter a valid mobile number.");return}
-  saveAddress(a);$("placeOrder").disabled=true;$("placeOrder").textContent="Saving order...";
-  try{
-    const items=cart.map(x=>({...x}));
-    const p_items=cart.map(x=>({product_id:x.product_id,variant:x.variant,qty:x.qty}));
-    const p_delivery={distance_km:deliveryInfo.distance_km,lat:deliveryInfo.lat,lng:deliveryInfo.lng,route_source:deliveryInfo.route_source};
-    const {data,error}=await sb.rpc("place_order",{p_customer:a,p_items,p_delivery});if(error)throw error;
-    const r=Array.isArray(data)?data[0]:data;
-    lastOrderCtx={r,a,items};
-    cart=[];deliveryInfo=null;updateCart();closeModal($("checkoutModal"));
-    renderReceipt(lastOrderCtx,"Pending");
-    await startRazorpayPayment(lastOrderCtx);
-  }catch(e){alert("Order could not be placed: "+e.message)}finally{$("placeOrder").disabled=false;$("placeOrder").textContent=cfg.onlinePaymentEnabled?"Place Order & Pay":"Place Order"}
+  if(!currentSession?.user){
+    alert("Please login or create your customer account before placing an order.");
+    closeModal($("checkoutModal"));
+    openModal($("accountModal"));
+    return;
+  }
+
+  if(!cart.length){
+    alert("Your cart is empty.");
+    return;
+  }
+
+  if(!deliveryInfo){
+    alert("Please detect your delivery location first.");
+    return;
+  }
+
+  const a=readAddress();
+
+  if(!a.name||!a.phone||!a.address||!a.area){
+    alert("Name, mobile, full address and area are required.");
+    return;
+  }
+
+  if(!/^[0-9+ -]{8,15}$/.test(a.phone)){
+    alert("Please enter a valid mobile number.");
+    return;
+  }
+
+  saveAddress(a);
+
+  const items=cart.map(x=>({...x}));
+  const p_items=cart.map(x=>({
+    product_id:x.product_id,
+    variant:x.variant,
+    qty:x.qty
+  }));
+
+  const p_delivery={
+    distance_km:deliveryInfo.distance_km,
+    lat:deliveryInfo.lat,
+    lng:deliveryInfo.lng,
+    route_source:deliveryInfo.route_source
+  };
+
+  await startRazorpayPayment({
+    a,
+    items,
+    p_items,
+    p_delivery
+  });
 }
 $("helpWa").href="https://wa.me/"+cfg.whatsappNumber+"?text="+encodeURIComponent("Hello Koida Local Delivery, I need help with an order.");
 $("accountBtn").onclick=async()=>{await refreshAccountState();openModal($("accountModal"))};$("closeAccount").onclick=()=>closeModal($("accountModal"));$("loginTab").onclick=()=>switchAuthTab("login");$("signupTab").onclick=()=>switchAuthTab("signup");$("loginCustomer").onclick=customerLogin;$("signupCustomer").onclick=customerSignup;$("logoutCustomer").onclick=customerLogout;$("refreshMyOrders").onclick=loadMyOrders;
