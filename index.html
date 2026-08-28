@@ -127,7 +127,7 @@ footer{background:var(--dark);color:#fff;text-align:center;padding:24px 18px;mar
       <div id="distanceResult" class="small" style="margin-top:8px">Distance not detected yet.</div>
     </div>
     <div id="checkoutSummary" class="summary"></div>
-  <div id="paymentNotice" class="notice" style="background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe">Online payment is enabled. After the order is saved, Razorpay will open with the exact payable amount. If payment is cancelled, the order remains saved with payment status <b>Pending</b>.</div>
+  <div id="paymentNotice" class="notice" style="background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe">Online payment is enabled. Razorpay will open with the exact payable amount. Your order will be created only after successful payment verification. If payment is cancelled, your order will not be placed.</div>
   <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap">
     <button id="backToCart" class="btn gray">Back</button>
     <button id="placeOrder" class="btn dark">Place Order</button>
@@ -169,6 +169,12 @@ function variants(p){
 function priceText(p){const v=variants(p);return v.length?v.map(x=>x.key==="regular"?"₹"+x.price:x.label+" ₹"+x.price).join(" · "):"Price coming soon"}
 function selectedVariant(card,p){const v=variants(p);if(!v.length)return null;const sel=card.querySelector(".variant");return v.find(x=>x.key===(sel?sel.value:v[0].key))||v[0]}
 function cartSubtotal(){return cart.reduce((s,x)=>s+x.qty*x.unit_price,0)}
+function cartItemCount(){return cart.reduce((s,x)=>s+x.qty,0)}
+function calculatedPlatformFee(){
+  if(!deliverySettings||deliverySettings.platform_fee_enabled!==true)return 0;
+  const perItem=Number(deliverySettings.platform_fee_per_item ?? 0);
+  return Math.max(0,perItem)*cartItemCount();
+}
 function calculatedDelivery(){
   if(!deliveryInfo||!deliverySettings)return null;
   const d=deliveryInfo.distance_km,s=deliverySettings;
@@ -184,7 +190,7 @@ function calculatedDelivery(){
   if(s.rain_mode)charge+=Number(s.rain_extra ?? 0);
   return charge;
 }
-function cartTotal(){const dc=calculatedDelivery();return cartSubtotal()+(dc==null?0:dc)}
+function cartTotal(){const dc=calculatedDelivery();return cartSubtotal()+calculatedPlatformFee()+(dc==null?0:dc)}
 function openModal(el){el.classList.add("show");el.setAttribute("aria-hidden","false")}
 function closeModal(el){el.classList.remove("show");el.setAttribute("aria-hidden","true")}
 function loadAddress(){try{return JSON.parse(localStorage.getItem(ADDRESS_KEY)||"null")}catch{return null}}
@@ -210,7 +216,7 @@ async function loadMyOrders(){
   const box=$("myOrders");
   if(!currentSession?.user){box.innerHTML='<div class="small">Please login first.</div>';return}
   box.innerHTML='<div class="small">Loading orders...</div>';
-  const {data,error}=await sb.from("orders").select("id,order_number,created_at,subtotal,delivery_charge,total,payment_status,status,distance_km,order_items(product_name,variant_label,qty,line_total)").order("created_at",{ascending:false}).limit(50);
+  const {data,error}=await sb.from("orders").select("id,order_number,created_at,subtotal,delivery_charge,platform_fee,total,payment_status,status,distance_km,order_items(product_name,variant_label,qty,line_total)").order("created_at",{ascending:false}).limit(50);
   if(error){box.innerHTML=`<div class="notice">Could not load orders: ${error.message}</div>`;return}
   const orders=data||[];
   if(!orders.length){box.innerHTML='<div class="account-card"><b>No orders yet</b><div class="small" style="margin-top:4px">Orders placed after you login will appear here.</div></div>';return}
@@ -240,10 +246,40 @@ async function customerLogin(){
 }
 async function customerLogout(){await sb.auth.signOut();currentSession=null;currentCustomer=null;await refreshAccountState()}
 function addCart(p,v){if(!v){alert("Price is not set for this item yet.");return}const key=p.id+"_"+v.key,found=cart.find(x=>x.key===key);if(found)found.qty++;else cart.push({key,product_id:p.id,name:p.name,variant:v.key,variant_label:v.label,unit_price:v.price,qty:1});updateCart()}
-function updateCart(){const count=cart.reduce((s,x)=>s+x.qty,0);$("cartCount").textContent=count+" item"+(count===1?"":"s");const dc=calculatedDelivery();$("cartTotal").textContent=count?(dc==null?"Detect location at checkout":(dc===0?"₹"+cartTotal()+" · FREE DELIVERY":"₹"+cartTotal()+" including ₹"+dc+" delivery")):"";$("cartbar").classList.toggle("show",count>0)}
+function updateCart(){
+  const count=cartItemCount();
+  $("cartCount").textContent=count+" item"+(count===1?"":"s");
+  const dc=calculatedDelivery(),pf=calculatedPlatformFee();
+  if(!count)$("cartTotal").textContent="";
+  else if(dc==null)$("cartTotal").textContent="Detect location at checkout";
+  else{
+    const parts=["₹"+cartTotal()];
+    if(dc===0)parts.push("FREE DELIVERY");
+    if(pf>0)parts.push("₹"+pf+" platform fee");
+    $("cartTotal").textContent=parts.join(" · ");
+  }
+  $("cartbar").classList.toggle("show",count>0)
+}
 function changeQty(key,delta){const x=cart.find(i=>i.key===key);if(!x)return;x.qty+=delta;if(x.qty<=0)cart=cart.filter(i=>i.key!==key);updateCart();renderCart()}
-function renderCart(){const box=$("cartItems");box.innerHTML="";if(!cart.length)box.innerHTML='<div class="empty">Your cart is empty.</div>';cart.forEach(x=>{const row=document.createElement("div");row.className="cart-row";row.innerHTML=`<div><b>${x.name}</b><div class="small">${x.variant_label} · ₹${x.unit_price} each</div></div><div class="qty"><button class="gray minus">−</button><b>${x.qty}</b><button class="yellow plus">+</button></div>`;row.querySelector(".minus").onclick=()=>changeQty(x.key,-1);row.querySelector(".plus").onclick=()=>changeQty(x.key,1);box.appendChild(row)});const dc=calculatedDelivery();$("cartSummary").innerHTML=`<div class="sum-row"><span>Subtotal</span><b>₹${cartSubtotal()}</b></div><div class="sum-row"><span>Delivery charge</span><b>${dc==null?"Detect at checkout":(dc===0?"FREE":"₹"+dc)}</b></div><div class="sum-row total"><span>Total</span><span>${dc==null?"—":"₹"+cartTotal()}</span></div>`}
-function renderCheckoutSummary(){const dc=calculatedDelivery();$("checkoutSummary").innerHTML=`<div class="sum-row"><span>Items</span><b>${cart.reduce((s,x)=>s+x.qty,0)}</b></div><div class="sum-row"><span>Subtotal</span><b>₹${cartSubtotal()}</b></div><div class="sum-row"><span>Delivery charge</span><b>${dc==null?"Detect location":(dc===0?"FREE":"₹"+dc)}</b></div><div class="sum-row total"><span>Payable</span><span>${dc==null?"—":"₹"+cartTotal()}</span></div>`}
+function renderCart(){
+  const box=$("cartItems");
+  box.innerHTML="";
+  if(!cart.length)box.innerHTML='<div class="empty">Your cart is empty.</div>';
+  cart.forEach(x=>{
+    const row=document.createElement("div");
+    row.className="cart-row";
+    row.innerHTML=`<div><b>${x.name}</b><div class="small">${x.variant_label} · ₹${x.unit_price} each</div></div><div class="qty"><button class="gray minus">−</button><b>${x.qty}</b><button class="yellow plus">+</button></div>`;
+    row.querySelector(".minus").onclick=()=>changeQty(x.key,-1);
+    row.querySelector(".plus").onclick=()=>changeQty(x.key,1);
+    box.appendChild(row)
+  });
+  const dc=calculatedDelivery(),pf=calculatedPlatformFee();
+  $("cartSummary").innerHTML=`<div class="sum-row"><span>Subtotal</span><b>₹${cartSubtotal()}</b></div>${pf>0?`<div class="sum-row"><span>Platform fee (${cartItemCount()} item${cartItemCount()===1?"":"s"})</span><b>₹${pf}</b></div>`:""}<div class="sum-row"><span>Delivery charge</span><b>${dc==null?"Detect at checkout":(dc===0?"FREE":"₹"+dc)}</b></div><div class="sum-row total"><span>Total</span><span>${dc==null?"—":"₹"+cartTotal()}</span></div>`
+}
+function renderCheckoutSummary(){
+  const dc=calculatedDelivery(),pf=calculatedPlatformFee(),count=cartItemCount();
+  $("checkoutSummary").innerHTML=`<div class="sum-row"><span>Items</span><b>${count}</b></div><div class="sum-row"><span>Subtotal</span><b>₹${cartSubtotal()}</b></div>${pf>0?`<div class="sum-row"><span>Platform fee (${count} item${count===1?"":"s"})</span><b>₹${pf}</b></div>`:""}<div class="sum-row"><span>Delivery charge</span><b>${dc==null?"Detect location":(dc===0?"FREE":"₹"+dc)}</b></div><div class="sum-row total"><span>Payable</span><span>${dc==null?"—":"₹"+cartTotal()}</span></div>`
+}
 function renderCats(){const arr=["All",...new Set(products.map(p=>p.category).filter(Boolean))];$("cats").innerHTML="";arr.forEach(c=>{const b=document.createElement("button");b.className="chip"+(c===activeCat?" active":"");b.textContent=c;b.onclick=()=>{activeCat=c;renderCats();renderProducts()};$("cats").appendChild(b)})}
 function renderProducts(){const q=$("search").value.trim().toLowerCase();const arr=products.filter(p=>(activeCat==="All"||p.category===activeCat)&&(!q||p.name.toLowerCase().includes(q)||(p.description||"").toLowerCase().includes(q)));$("grid").innerHTML="";if(!arr.length){$("grid").innerHTML='<div class="empty" style="grid-column:1/-1">No items found.</div>';return}arr.forEach(p=>{const v=variants(p),selector=v.length>1?`<select class="variant">${v.map(x=>`<option value="${x.key}">${x.label} — ₹${x.price}</option>`).join("")}</select>`:"";const c=document.createElement("article");c.className="card";c.innerHTML=`<img class="img" src="${p.image_url||ph(p.name)}" alt="${p.name}"><div class="body"><div class="cat">${p.category||"Food"}</div><div class="name">${p.name}</div><div class="desc">${p.description||""}</div><div class="price">${priceText(p)}</div>${selector}<div class="stock ${p.available===false?"out":""}">${p.available===false?"Out of Stock":"Available"}</div><div class="card-actions"><button class="btn dark buy" ${p.available===false?"disabled":""}>Add to Cart</button><button class="btn yellow add" ${p.available===false?"disabled":""}>＋</button></div></div>`;c.querySelector(".img").onerror=e=>e.currentTarget.src=ph(p.name);if(p.available!==false){c.querySelector(".buy").onclick=()=>addCart(p,selectedVariant(c,p));c.querySelector(".add").onclick=()=>addCart(p,selectedVariant(c,p))}$("grid").appendChild(c)})}
 async function loadProducts(){const {data,error}=await sb.from("products").select("*").order("sort_order",{ascending:true}).order("name",{ascending:true});if(error){$("grid").innerHTML='<div class="empty" style="grid-column:1/-1">Could not load menu.</div>';return}products=data||[];renderCats();renderProducts()}
@@ -281,7 +317,7 @@ let lastOrderCtx=null;
 function renderReceipt(ctx,paymentStatus="Pending",paymentId=""){
   const {r,a,items}=ctx;
   const paid=paymentStatus.toLowerCase()==="paid";
-  $("receipt").innerHTML=`<h3>Koida Local Delivery</h3><div class="sum-row"><span>Order ID</span><b>${r.order_number}</b></div><div class="sum-row"><span>Name</span><span>${a.name}</span></div><div class="sum-row"><span>Phone</span><span>${a.phone}</span></div><div class="sum-row"><span>Distance</span><b>${r.distance_km} km</b></div><div class="sum-row"><span>Address</span><span style="text-align:right">${a.address}${a.landmark?" · "+a.landmark:""}, ${a.area}</span></div><hr style="border:0;border-top:1px solid #e5e7eb">${items.map(x=>`<div class="sum-row"><span>${x.name} (${x.variant_label}) × ${x.qty}</span><b>₹${x.unit_price*x.qty}</b></div>`).join("")}<div class="sum-row"><span>Subtotal</span><b>₹${r.subtotal}</b></div><div class="sum-row"><span>Delivery</span><b>₹${r.delivery_charge}</b></div><div class="sum-row total"><span>Total</span><span>₹${r.total}</span></div><div class="small" style="color:${paid?'#15803d':'#9a3412'};font-weight:800">Payment status: ${paymentStatus} · Order status: New${paymentId?` · Payment ID: ${paymentId}`:""}</div>`;
+  $("receipt").innerHTML=`<h3>Koida Local Delivery</h3><div class="sum-row"><span>Order ID</span><b>${r.order_number}</b></div><div class="sum-row"><span>Name</span><span>${a.name}</span></div><div class="sum-row"><span>Phone</span><span>${a.phone}</span></div><div class="sum-row"><span>Distance</span><b>${r.distance_km} km</b></div><div class="sum-row"><span>Address</span><span style="text-align:right">${a.address}${a.landmark?" · "+a.landmark:""}, ${a.area}</span></div><hr style="border:0;border-top:1px solid #e5e7eb">${items.map(x=>`<div class="sum-row"><span>${x.name} (${x.variant_label}) × ${x.qty}</span><b>₹${x.unit_price*x.qty}</b></div>`).join("")}<div class="sum-row"><span>Subtotal</span><b>₹${r.subtotal}</b></div>${Number(r.platform_fee||0)>0?`<div class="sum-row"><span>Platform fee</span><b>₹${r.platform_fee}</b></div>`:""}<div class="sum-row"><span>Delivery</span><b>${Number(r.delivery_charge||0)===0?"FREE":"₹"+r.delivery_charge}</b></div><div class="sum-row total"><span>Total</span><span>₹${r.total}</span></div><div class="small" style="color:${paid?'#15803d':'#9a3412'};font-weight:800">Payment status: ${paymentStatus} · Order status: New${paymentId?` · Payment ID: ${paymentId}`:""}</div>`;
   $("payNow").style.display=paid?"none":"inline-flex";
 }
 async function invokePaymentFunction(body){
@@ -425,6 +461,10 @@ async function placeOrder(){
   }
 
   saveAddress(a);
+
+  await loadSettings();
+  renderCheckoutSummary();
+  updateCart();
 
   const items=cart.map(x=>({...x}));
   const p_items=cart.map(x=>({
