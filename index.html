@@ -144,11 +144,13 @@ footer{background:var(--dark);color:#fff;text-align:center;padding:24px 18px;mar
   </div>
   <div id="authAccount" style="display:none">
     <div class="account-card">
-      <div class="account-head"><div><b id="accountName">Customer</b><div id="accountPhone" class="small"></div></div><button id="logoutCustomer" class="btn gray">Logout</button></div>
+      <div class="account-head"><div><b id="accountName">Customer</b><div id="accountPhone" class="small"></div><div id="accountEmail" class="small"></div></div><button id="logoutCustomer" class="btn gray">Logout</button></div>
     </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:16px"><h3 style="margin:0">My Orders</h3><button id="refreshMyOrders" class="btn gray">Refresh</button></div>
-    <div id="myOrders" style="margin-top:8px"><div class="small">Loading orders...</div></div>
-    <div class="small" style="margin-top:12px">Only orders placed while logged in to this account are shown here.</div>
+    <div id="accountOrdersSection" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:16px"><h3 style="margin:0">My Orders</h3><button id="refreshMyOrders" class="btn gray">Refresh</button></div>
+      <div id="myOrders" style="margin-top:8px"><div class="small">Loading orders...</div></div>
+      <div class="small" style="margin-top:12px">Only orders placed while logged in to this account are shown here.</div>
+    </div>
   </div>
   <div style="display:flex;justify-content:flex-end;margin-top:14px"><button id="closeAccount" class="btn gray">Close</button></div>
 </div></div>
@@ -294,6 +296,7 @@ async function refreshAccountState(){
   if(logged){
     $("accountName").textContent=currentCustomer?.full_name||"Customer";
     $("accountPhone").textContent=currentCustomer?.phone?`+91 ${currentCustomer.phone}`:"";
+    $("accountEmail").textContent=currentSession?.user?.email||"";
     await loadMyOrders();
   }else{
     $("loginPin").value="";
@@ -323,14 +326,14 @@ async function customerLogin(){
   if(!validEmail(email)){alert("Please enter your registered email address.");return}
   if(!validPin(pin)){alert("Please enter your 6-digit PIN.");return}
   $("loginCustomer").disabled=true;$("loginCustomer").textContent="Logging in...";
-  try{const {error}=await sb.auth.signInWithPassword({email,password:pin});if(error)throw error;await refreshAccountState();alert("Login successful.")}catch(e){alert("Login failed. Check your email and PIN.")}finally{$("loginCustomer").disabled=false;$("loginCustomer").textContent="Login"}
+  try{const {error}=await sb.auth.signInWithPassword({email,password:pin});if(error)throw error;await refreshAccountState();closeModal($("accountModal"));alert("Login successful.")}catch(e){alert("Login failed. Check your email and PIN.")}finally{$("loginCustomer").disabled=false;$("loginCustomer").textContent="Login"}
 }
 async function customerForgotPin(){
   const email=normalizeEmail($("loginEmail").value);
   if(!validEmail(email)){alert("Enter your registered email address first.");return}
   $("forgotCustomer").disabled=true;$("forgotCustomer").textContent="Sending...";
   try{
-    const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:"https://hunkart.com/reset-password.html"});
+    const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:"https://koida-local-delivery.pages.dev/reset-password.html"});
     if(error)throw error;
     alert("Reset link sent. Please check your email.");
   }catch(e){alert("Could not send reset link: "+String(e.message||e))}
@@ -598,13 +601,24 @@ $("menuDrawerBg").addEventListener("click",e=>{if(e.target===$("menuDrawerBg"))c
 $("drawerAccount").onclick=async()=>{
   closeMenuDrawer();
   await refreshAccountState();
-  if(!currentSession?.user)switchAuthTab("login");
+  if(!currentSession?.user){
+    switchAuthTab("login");
+    $("accountOrdersSection").style.display="none";
+  }else{
+    $("accountOrdersSection").style.display="none";
+  }
   openModal($("accountModal"));
 };
 $("drawerOrders").onclick=async()=>{
   closeMenuDrawer();
   await refreshAccountState();
-  if(!currentSession?.user)switchAuthTab("login");
+  if(!currentSession?.user){
+    switchAuthTab("login");
+    $("accountOrdersSection").style.display="none";
+  }else{
+    $("accountOrdersSection").style.display="block";
+    await loadMyOrders();
+  }
   openModal($("accountModal"));
 };
 $("drawerAddress").onclick=()=>{closeMenuDrawer();fillAddress();renderCheckoutSummary();openModal($("checkoutModal"))};
