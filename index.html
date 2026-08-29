@@ -330,7 +330,7 @@ async function customerForgotPin(){
   if(!validEmail(email)){alert("Enter your registered email address first.");return}
   $("forgotCustomer").disabled=true;$("forgotCustomer").textContent="Sending...";
   try{
-    const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:"https://koida-local-delivery.pages.dev/reset-password.html"});
+    const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:"https://hunkart.com/reset-password.html"});
     if(error)throw error;
     alert("Reset link sent. Please check your email.");
   }catch(e){alert("Could not send reset link: "+String(e.message||e))}
