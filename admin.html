@@ -94,7 +94,7 @@ button{border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:poin
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 const cfg=window.SPIDY_CONFIG||{}, $=id=>document.getElementById(id);
-let sb=null,editing=null,items=[],orders=[],activeView="products",poll=null;
+let sb=null,editing=null,items=[],orders=[],deliveryBoys=[],activeView="products",poll=null;
 
 function configured(){return cfg.supabaseUrl&&cfg.supabaseAnonKey&&!cfg.supabaseUrl.includes("YOUR_")}
 function setStatus(t){$("status").textContent=t}
@@ -128,6 +128,13 @@ function edit(p){
 async function del(p){if(!confirm("Delete "+p.name+"?"))return;const {error}=await sb.from("products").delete().eq("id",p.id);if(error)setStatus(error.message);else{setStatus("Product deleted.");loadProducts()}}
 
 function fmtDate(v){return new Date(v).toLocaleString()}
+
+async function loadDeliveryBoys(){
+  const {data,error}=await sb.from("delivery_boys").select("id,full_name,is_active").eq("is_active",true).order("full_name",{ascending:true});
+  if(error){setStatus("Delivery boy load error: "+error.message);deliveryBoys=[];return}
+  deliveryBoys=data||[];
+}
+
 function renderOrders(){
  const q=$("oq").value.trim().toLowerCase(), box=$("ordersList");box.innerHTML="";
  const filtered=orders.filter(o=>!q||o.order_number.toLowerCase().includes(q)||o.customer_name.toLowerCase().includes(q)||o.phone.includes(q));
@@ -136,6 +143,14 @@ function renderOrders(){
  filtered.forEach(o=>{
   const card=document.createElement("div");card.className="panel order-card";
   const itemsHtml=(o.order_items||[]).map(i=>`<div class="itemline"><span>${i.product_name} (${i.variant_label||i.variant}) × ${i.qty}</span><b>₹${i.line_total}</b></div>`).join("");
+  const boyOptions=['<option value="">Select delivery boy</option>']
+    .concat(deliveryBoys.map(b=>`<option value="${b.id}">${b.full_name}</option>`)).join("");
+  const assigned=o.delivery_tracking&&o.delivery_tracking.length?o.delivery_tracking[0]:null;
+  const assignedName=assigned&&assigned.delivery_boys?assigned.delivery_boys.full_name:"";
+  const trackingStatus=assigned?assigned.status:"";
+  const liveMap=assigned&&assigned.current_lat!=null&&assigned.current_lng!=null
+    ? `https://www.google.com/maps/search/?api=1&query=${assigned.current_lat},${assigned.current_lng}`
+    : "";
   card.innerHTML=`<div class="order-head"><div><b>${o.order_number}</b><div class="small">${fmtDate(o.created_at)}</div></div>
     <div><span class="badge ${o.status==="new"?"new":""}">${o.status}</span> <span class="badge ${o.payment_status==="paid"?"paid":"pending"}">${o.payment_status}</span></div></div>
     <div class="order-grid">
@@ -147,17 +162,37 @@ function renderOrders(){
       <label style="min-width:180px">Order Status<select class="statusSel"><option value="new">New</option><option value="confirmed">Confirmed</option><option value="preparing">Preparing</option><option value="out_for_delivery">Out for Delivery</option><option value="delivered">Delivered</option><option value="cancelled">Cancelled</option></select></label>
       <label style="min-width:160px">Payment<select class="paySel"><option value="pending">Pending</option><option value="paid">Paid</option><option value="failed">Failed</option><option value="refunded">Refunded</option></select></label>
       <button class="green saveOrder">Save Status</button>
+    </div>
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid #e5e7eb">
+      <b>Delivery Assignment</b>
+      <div class="small" style="margin-top:4px">${assignedName?`Assigned to ${assignedName} · ${trackingStatus.replaceAll("_"," ")}`:"Not assigned yet"}</div>
+      <div class="actions">
+        <select class="boySel" style="min-width:190px">${boyOptions}</select>
+        <button class="yellow assignBtn">Assign Delivery Boy</button>
+        ${liveMap?`<a class="primary liveMapBtn" href="${liveMap}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center">📍 Live Location</a>`:""}
+      </div>
+      ${assigned&&assigned.location_updated_at?`<div class="small" style="margin-top:6px">Last location: ${fmtDate(assigned.location_updated_at)}</div>`:""}
     </div>`;
   card.querySelector(".statusSel").value=o.status;card.querySelector(".paySel").value=o.payment_status;
+  if(assigned)card.querySelector(".boySel").value=assigned.delivery_boy_id||"";
   card.querySelector(".saveOrder").onclick=async()=>{
     const payload={status:card.querySelector(".statusSel").value,payment_status:card.querySelector(".paySel").value,updated_at:new Date().toISOString()};
     const {error}=await sb.from("orders").update(payload).eq("id",o.id);if(error)setStatus("Order update error: "+error.message);else{setStatus("Order updated.");loadOrders()}
+  };
+  card.querySelector(".assignBtn").onclick=async()=>{
+    const boyId=card.querySelector(".boySel").value;
+    if(!boyId){setStatus("Select a delivery boy first.");return}
+    const {data,error}=await sb.rpc("assign_delivery_boy",{p_order_id:o.id,p_delivery_boy_id:boyId});
+    if(error){setStatus("Assign delivery boy error: "+error.message);return}
+    setStatus(`Order assigned to ${data?.delivery_boy||"delivery boy"}.`);
+    await loadOrders();
   };
   box.appendChild(card);
  });
 }
 async function loadOrders(){
- const {data,error}=await sb.from("orders").select("*,order_items(*)").order("created_at",{ascending:false}).limit(100);
+ if(!deliveryBoys.length)await loadDeliveryBoys();
+ const {data,error}=await sb.from("orders").select("*,order_items(*),delivery_tracking(*,delivery_boys(full_name))").order("created_at",{ascending:false}).limit(100);
  if(error){setStatus("Orders load error: "+error.message);return}orders=data||[];renderOrders();
 }
 function switchView(v){
