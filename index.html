@@ -127,17 +127,18 @@ footer{background:var(--dark);color:#fff;text-align:center;padding:24px 18px;mar
       <button id="loginTab" class="btn dark">Login</button>
       <button id="signupTab" class="btn gray">Create Account</button>
     </div>
-    <div class="auth-note">Phone OTP is not enabled yet. This account uses your mobile number + 6-digit PIN. Do not use a PIN you use for banking or UPI.</div>
+    <div class="auth-note">Your account uses your real email + 6-digit PIN. Your mobile number is also required for delivery. Do not use a PIN you use for banking or UPI.</div>
     <div id="loginBox" class="form">
-      <label class="full">Mobile Number<input id="loginPhone" inputmode="numeric" placeholder="10-digit mobile number"></label>
-      <label class="full">6-digit PIN<input id="loginPin" inputmode="numeric" type="password" maxlength="6" placeholder="••••••"></label>
-      <div class="full" style="display:flex;justify-content:flex-end"><button id="loginCustomer" class="btn dark">Login</button></div>
+      <label class="full">Email Address<input id="loginEmail" type="email" autocomplete="email" placeholder="you@example.com"></label>
+      <label class="full">6-digit PIN<input id="loginPin" inputmode="numeric" type="password" maxlength="6" autocomplete="current-password" placeholder="••••••"></label>
+      <div class="full" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><button id="forgotCustomer" class="btn gray" type="button">Forgot PIN?</button><button id="loginCustomer" class="btn dark">Login</button></div>
     </div>
     <div id="signupBox" class="form" style="display:none">
-      <label class="full">Full Name<input id="signupName" placeholder="Your name"></label>
-      <label class="full">Mobile Number<input id="signupPhone" inputmode="numeric" placeholder="10-digit mobile number"></label>
-      <label class="full">Create 6-digit PIN<input id="signupPin" inputmode="numeric" type="password" maxlength="6" placeholder="••••••"></label>
-      <label class="full">Confirm PIN<input id="signupPin2" inputmode="numeric" type="password" maxlength="6" placeholder="••••••"></label>
+      <label class="full">Full Name<input id="signupName" autocomplete="name" placeholder="Your name"></label>
+      <label class="full">Mobile Number<input id="signupPhone" inputmode="numeric" autocomplete="tel" placeholder="10-digit mobile number"></label>
+      <label class="full">Email Address<input id="signupEmail" type="email" autocomplete="email" placeholder="you@example.com"></label>
+      <label class="full">Create 6-digit PIN<input id="signupPin" inputmode="numeric" type="password" maxlength="6" autocomplete="new-password" placeholder="••••••"></label>
+      <label class="full">Confirm PIN<input id="signupPin2" inputmode="numeric" type="password" maxlength="6" autocomplete="new-password" placeholder="••••••"></label>
       <div class="full" style="display:flex;justify-content:flex-end"><button id="signupCustomer" class="btn dark">Create Account</button></div>
     </div>
   </div>
@@ -260,8 +261,8 @@ function refreshSavedAddress(){
 function fillAddress(){const a=loadAddress()||{};$("custName").value=a.name||currentCustomer?.full_name||"";$("custPhone").value=a.phone||currentCustomer?.phone||"";$("custAddress").value=a.address||"";$("custLandmark").value=a.landmark||"";$("custArea").value=a.area||"";$("custNote").value=a.note||""}
 function readAddress(){return {name:$("custName").value.trim(),phone:$("custPhone").value.trim(),address:$("custAddress").value.trim(),landmark:$("custLandmark").value.trim(),area:$("custArea").value.trim(),note:$("custNote").value.trim()}}
 function normalizePhone(v){let d=String(v||"").replace(/\D/g,"");if(d.length===12&&d.startsWith("91"))d=d.slice(2);return d}
-function customerEmail(phone){return `91${phone}@phone.koidalocaldelivery.in`}
-function customerPassword(phone,pin){return `KLD#${phone}#${pin}`}
+function normalizeEmail(v){return String(v||"").trim().toLowerCase()}
+function validEmail(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmail(v))}
 function validPin(pin){return /^\d{6}$/.test(pin)}
 function switchAuthTab(tab){const login=tab==="login";$("loginBox").style.display=login?"grid":"none";$("signupBox").style.display=login?"none":"grid";$("loginTab").className="btn "+(login?"dark":"gray");$("signupTab").className="btn "+(login?"gray":"dark")}
 async function loadCustomerProfile(){
@@ -300,21 +301,40 @@ async function refreshAccountState(){
   }
 }
 async function customerSignup(){
-  const name=$("signupName").value.trim(),phone=normalizePhone($("signupPhone").value),pin=$("signupPin").value.trim(),pin2=$("signupPin2").value.trim();
-  if(!name){alert("Please enter your name.");return}if(!/^\d{10}$/.test(phone)){alert("Please enter a valid 10-digit mobile number.");return}if(!validPin(pin)){alert("PIN must be exactly 6 digits.");return}if(pin!==pin2){alert("PINs do not match.");return}
+  const name=$("signupName").value.trim(),phone=normalizePhone($("signupPhone").value),email=normalizeEmail($("signupEmail").value),pin=$("signupPin").value.trim(),pin2=$("signupPin2").value.trim();
+  if(!name){alert("Please enter your name.");return}
+  if(!/^\d{10}$/.test(phone)){alert("Please enter a valid 10-digit mobile number.");return}
+  if(!validEmail(email)){alert("Please enter a valid email address.");return}
+  if(!validPin(pin)){alert("PIN must be exactly 6 digits.");return}
+  if(pin!==pin2){alert("PINs do not match.");return}
   $("signupCustomer").disabled=true;$("signupCustomer").textContent="Creating...";
   try{
-    const {data,error}=await sb.auth.signUp({email:customerEmail(phone),password:customerPassword(phone,pin),options:{data:{phone,full_name:name}}});if(error)throw error;
+    const {data,error}=await sb.auth.signUp({email,password:pin,options:{data:{phone,full_name:name}}});if(error)throw error;
     if(data.user){await sb.from("customers").upsert({id:data.user.id,phone,full_name:name,updated_at:new Date().toISOString()},{onConflict:"id"})}
     await refreshAccountState();
-    if(!currentSession){alert("Account created. Please login with your mobile number and PIN.");switchAuthTab("login");$("loginPhone").value=phone}else alert("Account created and logged in.");
-  }catch(e){const m=String(e.message||e);alert(m.toLowerCase().includes("already")?"An account already exists for this mobile number. Please use Login.":"Could not create account: "+m)}finally{$("signupCustomer").disabled=false;$("signupCustomer").textContent="Create Account"}
+    if(!currentSession){
+      alert("Account created. Please check your email if confirmation is required, then login with your email and PIN.");
+      switchAuthTab("login");$("loginEmail").value=email;
+    }else alert("Account created and logged in.");
+  }catch(e){const m=String(e.message||e);alert(m.toLowerCase().includes("already")?"An account already exists for this email. Please use Login or Forgot PIN.":"Could not create account: "+m)}finally{$("signupCustomer").disabled=false;$("signupCustomer").textContent="Create Account"}
 }
 async function customerLogin(){
-  const phone=normalizePhone($("loginPhone").value),pin=$("loginPin").value.trim();
-  if(!/^\d{10}$/.test(phone)){alert("Please enter a valid 10-digit mobile number.");return}if(!validPin(pin)){alert("Please enter your 6-digit PIN.");return}
+  const email=normalizeEmail($("loginEmail").value),pin=$("loginPin").value.trim();
+  if(!validEmail(email)){alert("Please enter your registered email address.");return}
+  if(!validPin(pin)){alert("Please enter your 6-digit PIN.");return}
   $("loginCustomer").disabled=true;$("loginCustomer").textContent="Logging in...";
-  try{const {error}=await sb.auth.signInWithPassword({email:customerEmail(phone),password:customerPassword(phone,pin)});if(error)throw error;await refreshAccountState();alert("Login successful.")}catch(e){alert("Login failed. Check your mobile number and PIN.")}finally{$("loginCustomer").disabled=false;$("loginCustomer").textContent="Login"}
+  try{const {error}=await sb.auth.signInWithPassword({email,password:pin});if(error)throw error;await refreshAccountState();alert("Login successful.")}catch(e){alert("Login failed. Check your email and PIN.")}finally{$("loginCustomer").disabled=false;$("loginCustomer").textContent="Login"}
+}
+async function customerForgotPin(){
+  const email=normalizeEmail($("loginEmail").value);
+  if(!validEmail(email)){alert("Enter your registered email address first.");return}
+  $("forgotCustomer").disabled=true;$("forgotCustomer").textContent="Sending...";
+  try{
+    const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:"https://koida-local-delivery.pages.dev/reset-password.html"});
+    if(error)throw error;
+    alert("Reset link sent. Please check your email.");
+  }catch(e){alert("Could not send reset link: "+String(e.message||e))}
+  finally{$("forgotCustomer").disabled=false;$("forgotCustomer").textContent="Forgot PIN?"}
 }
 async function customerLogout(){
   await sb.auth.signOut();
@@ -596,7 +616,7 @@ $("drawerLogout").onclick=async()=>{
 };
 
 $("helpWa").href="https://wa.me/"+cfg.whatsappNumber+"?text="+encodeURIComponent("Hello Koida Local Delivery, I need help with an order.");$("drawerWa").href=$("helpWa").href;
-$("accountBtn").onclick=async()=>{await refreshAccountState();openModal($("accountModal"))};$("closeAccount").onclick=()=>closeModal($("accountModal"));$("loginTab").onclick=()=>switchAuthTab("login");$("signupTab").onclick=()=>switchAuthTab("signup");$("loginCustomer").onclick=customerLogin;$("signupCustomer").onclick=customerSignup;$("logoutCustomer").onclick=customerLogout;$("refreshMyOrders").onclick=loadMyOrders;
+$("accountBtn").onclick=async()=>{await refreshAccountState();openModal($("accountModal"))};$("closeAccount").onclick=()=>closeModal($("accountModal"));$("loginTab").onclick=()=>switchAuthTab("login");$("signupTab").onclick=()=>switchAuthTab("signup");$("loginCustomer").onclick=customerLogin;$("forgotCustomer").onclick=customerForgotPin;$("signupCustomer").onclick=customerSignup;$("logoutCustomer").onclick=customerLogout;$("refreshMyOrders").onclick=loadMyOrders;
 sb.auth.onAuthStateChange(()=>{setTimeout(()=>refreshAccountState(),0)});
 $("search").oninput=renderProducts;$("addressBtn").onclick=()=>{fillAddress();renderCheckoutSummary();openModal($("checkoutModal"))};$("openCart").onclick=()=>{renderCart();openModal($("cartModal"))};$("closeCart").onclick=()=>closeModal($("cartModal"));$("checkoutBtn").onclick=()=>{if(!cart.length)return;closeModal($("cartModal"));fillAddress();renderCheckoutSummary();openModal($("checkoutModal"))};$("backToCart").onclick=()=>{closeModal($("checkoutModal"));renderCart();openModal($("cartModal"))};$("detectLocation").onclick=detectLocation;$("placeOrder").onclick=placeOrder;$("payNow").onclick=()=>{if(lastOrderCtx)startRazorpayPayment(lastOrderCtx)};$("printBill").onclick=()=>{
   const receipt=$("receipt");
