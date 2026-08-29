@@ -121,7 +121,7 @@ footer{background:var(--dark);color:#fff;text-align:center;padding:24px 18px;mar
 </div>
 
 <div id="accountModal" class="modal-bg" aria-hidden="true"><div class="modal">
-  <h2>My Account</h2>
+  <h2 id="accountModalTitle">My Account</h2>
   <div id="authGuest">
     <div class="tabs">
       <button id="loginTab" class="btn dark">Login</button>
@@ -143,7 +143,7 @@ footer{background:var(--dark);color:#fff;text-align:center;padding:24px 18px;mar
     </div>
   </div>
   <div id="authAccount" style="display:none">
-    <div class="account-card">
+    <div id="accountProfileCard" class="account-card">
       <div class="account-head"><div><b id="accountName">Customer</b><div id="accountPhone" class="small"></div><div id="accountEmail" class="small"></div></div><button id="logoutCustomer" class="btn gray">Logout</button></div>
     </div>
     <div id="accountOrdersSection" style="display:none">
@@ -294,9 +294,13 @@ async function refreshAccountState(){
   $("drawerAccountDesc").textContent=logged?"View your profile & orders":"Login to continue ordering";
   $("drawerLogout").style.display=logged?"flex":"none";
   if(logged){
-    $("accountName").textContent=currentCustomer?.full_name||"Customer";
-    $("accountPhone").textContent=currentCustomer?.phone?`+91 ${currentCustomer.phone}`:"";
-    $("accountEmail").textContent=currentSession?.user?.email||"";
+    const savedProfileAddress=loadAddress()||{};
+    const profileName=currentCustomer?.full_name||currentSession?.user?.user_metadata?.full_name||savedProfileAddress.name||"Customer";
+    const profilePhone=currentCustomer?.phone||currentSession?.user?.user_metadata?.phone||normalizePhone(savedProfileAddress.phone||"");
+    const profileEmail=currentSession?.user?.email||"";
+    $("accountName").textContent=profileName;
+    $("accountPhone").textContent=profilePhone?`Mobile: +91 ${normalizePhone(profilePhone)}`:"Mobile: Not added";
+    $("accountEmail").textContent=profileEmail?`Email: ${profileEmail}`:"Email: Not added";
     await loadMyOrders();
   }else{
     $("loginPin").value="";
@@ -333,7 +337,7 @@ async function customerForgotPin(){
   if(!validEmail(email)){alert("Enter your registered email address first.");return}
   $("forgotCustomer").disabled=true;$("forgotCustomer").textContent="Sending...";
   try{
-    const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:"https://koida-local-delivery.pages.dev/reset-password.html"});
+    const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:"https://hunkart.com/reset-password.html"});
     if(error)throw error;
     alert("Reset link sent. Please check your email.");
   }catch(e){alert("Could not send reset link: "+String(e.message||e))}
@@ -603,8 +607,12 @@ $("drawerAccount").onclick=async()=>{
   await refreshAccountState();
   if(!currentSession?.user){
     switchAuthTab("login");
+    $("accountModalTitle").textContent="My Account";
+    $("accountProfileCard").style.display="none";
     $("accountOrdersSection").style.display="none";
   }else{
+    $("accountModalTitle").textContent="My Account";
+    $("accountProfileCard").style.display="block";
     $("accountOrdersSection").style.display="none";
   }
   openModal($("accountModal"));
@@ -614,8 +622,12 @@ $("drawerOrders").onclick=async()=>{
   await refreshAccountState();
   if(!currentSession?.user){
     switchAuthTab("login");
+    $("accountModalTitle").textContent="Login to view orders";
+    $("accountProfileCard").style.display="none";
     $("accountOrdersSection").style.display="none";
   }else{
+    $("accountModalTitle").textContent="My Orders";
+    $("accountProfileCard").style.display="none";
     $("accountOrdersSection").style.display="block";
     await loadMyOrders();
   }
@@ -630,7 +642,13 @@ $("drawerLogout").onclick=async()=>{
 };
 
 $("helpWa").href="https://wa.me/"+cfg.whatsappNumber+"?text="+encodeURIComponent("Hello Koida Local Delivery, I need help with an order.");$("drawerWa").href=$("helpWa").href;
-$("accountBtn").onclick=async()=>{await refreshAccountState();openModal($("accountModal"))};$("closeAccount").onclick=()=>closeModal($("accountModal"));$("loginTab").onclick=()=>switchAuthTab("login");$("signupTab").onclick=()=>switchAuthTab("signup");$("loginCustomer").onclick=customerLogin;$("forgotCustomer").onclick=customerForgotPin;$("signupCustomer").onclick=customerSignup;$("logoutCustomer").onclick=customerLogout;$("refreshMyOrders").onclick=loadMyOrders;
+$("accountBtn").onclick=async()=>{
+  await refreshAccountState();
+  $("accountModalTitle").textContent="My Account";
+  $("accountProfileCard").style.display=currentSession?.user?"block":"none";
+  $("accountOrdersSection").style.display="none";
+  openModal($("accountModal"));
+};$("closeAccount").onclick=()=>closeModal($("accountModal"));$("loginTab").onclick=()=>switchAuthTab("login");$("signupTab").onclick=()=>switchAuthTab("signup");$("loginCustomer").onclick=customerLogin;$("forgotCustomer").onclick=customerForgotPin;$("signupCustomer").onclick=customerSignup;$("logoutCustomer").onclick=customerLogout;$("refreshMyOrders").onclick=loadMyOrders;
 sb.auth.onAuthStateChange(()=>{setTimeout(()=>refreshAccountState(),0)});
 $("search").oninput=renderProducts;$("addressBtn").onclick=()=>{fillAddress();renderCheckoutSummary();openModal($("checkoutModal"))};$("openCart").onclick=()=>{renderCart();openModal($("cartModal"))};$("closeCart").onclick=()=>closeModal($("cartModal"));$("checkoutBtn").onclick=()=>{if(!cart.length)return;closeModal($("cartModal"));fillAddress();renderCheckoutSummary();openModal($("checkoutModal"))};$("backToCart").onclick=()=>{closeModal($("checkoutModal"));renderCart();openModal($("cartModal"))};$("detectLocation").onclick=detectLocation;$("placeOrder").onclick=placeOrder;$("payNow").onclick=()=>{if(lastOrderCtx)startRazorpayPayment(lastOrderCtx)};$("printBill").onclick=()=>{
   const receipt=$("receipt");
