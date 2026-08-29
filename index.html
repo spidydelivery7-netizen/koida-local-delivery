@@ -70,19 +70,84 @@ footer{background:var(--dark);color:#fff;text-align:center;padding:24px 18px;mar
   .wrap{padding-top:20px}.toolbar{display:block}
 }
 
+
+/* ===== Standard Customer Home UI v1 ===== */
+body{background:#f6f7f9}
+header{background:#fff;color:#111827;border-bottom:1px solid #edf0f3;box-shadow:0 2px 12px #00000008}
+.nav{padding:12px 16px}
+.brand{font-size:21px;letter-spacing:-.3px;color:#111827}
+.brand span{color:#f59e0b}
+.menu-btn{background:#fff;color:#111827;border:1px solid #e5e7eb;box-shadow:0 2px 8px #00000008}
+#helpWa{border-radius:14px;padding:10px 13px}
+.hero{background:linear-gradient(135deg,#0b1729,#12395a);padding:20px 18px 24px}
+.hero-in{display:flex;align-items:center;justify-content:space-between;gap:18px}
+.hero-copy{min-width:0}
+.hero-kicker{display:inline-flex;align-items:center;gap:7px;background:#ffffff18;border:1px solid #ffffff24;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:800;color:#eaf4ff;margin-bottom:10px}
+.hero h1{font-size:28px;line-height:1.1;margin:0 0 8px;letter-spacing:-.6px}
+.hero p{font-size:14px;line-height:1.45;margin:0;color:#dbe7f2;max-width:620px}
+.hero-icon{font-size:54px;filter:drop-shadow(0 8px 16px #0004)}
+.wrap{padding:16px 14px 26px}
+.toolbar{display:block}
+.search-shell{position:relative}
+.search-shell:before{content:"⌕";position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:22px;color:#6b7280;z-index:2}
+.search{height:52px;padding:13px 14px 13px 44px;border:1px solid #e1e5ea;border-radius:16px;box-shadow:0 3px 12px #00000008;font-size:16px}
+.home-address-card{border-radius:16px;border:1px solid #e5e7eb;box-shadow:0 3px 12px #00000007;margin-top:10px;background:#fff;padding:13px 14px}
+.home-address-card .addr-title{font-size:14px}
+.home-address-card .addr-text{font-size:12px}
+.section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:18px 0 4px}
+.section-head h2{font-size:18px;margin:0;letter-spacing:-.2px}
+.section-head span{font-size:12px;color:#6b7280}
+.cats{padding:10px 0 2px;gap:8px}
+.chip{padding:9px 13px;border-radius:12px;border:1px solid #e5e7eb;box-shadow:none;font-size:13px}
+.chip.active{background:#111827;color:#fff}
+.grid{margin-top:12px;gap:12px}
+.card{border:1px solid #edf0f3;border-radius:16px;box-shadow:0 5px 18px #0000000a;overflow:hidden}
+.img{height:150px}
+.body{padding:12px}
+.cat{font-size:10px;letter-spacing:.3px}
+.name{font-size:17px;line-height:1.15;margin:4px 0 5px}
+.desc{font-size:12px;min-height:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.price{font-size:16px;margin:8px 0}
+.variant{font-size:13px;padding:9px;margin-bottom:8px;border-radius:10px}
+.stock{font-size:11px;margin-bottom:8px}
+.card-actions{grid-template-columns:1fr;gap:7px}
+.card-actions .add{display:none}
+.card-actions .buy{background:#fff;color:#16a34a;border:1.5px solid #22c55e;border-radius:10px;padding:9px 10px}
+.card-actions .buy:disabled{opacity:.5;border-color:#cbd5e1;color:#94a3b8}
+.cartbar{position:fixed;left:0;right:0;bottom:0;padding:10px 12px;background:transparent;border:0;box-shadow:none;z-index:45}
+.cartbar.show{display:block}
+.cartin{background:#111827;color:#fff;border-radius:16px;padding:11px 12px;box-shadow:0 10px 28px #0003}
+.cartin .small{color:#cbd5e1}
+#openCart{background:#fbbf24;color:#111;border-radius:11px}
+footer{margin-top:12px}
+@media(max-width:700px){
+  .nav{padding:10px 14px}.brand{font-size:19px}.hero{padding:18px 14px 22px}
+  .hero h1{font-size:25px}.hero p{font-size:13px}.hero-icon{font-size:44px}
+  .wrap{padding:14px 12px 96px}
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .img{height:132px}
+  .body{padding:10px}
+  .name{font-size:16px}
+  .price{font-size:15px}
+}
+
 </style>
 </head>
 <body>
-<header><div class="nav"><div><div class="brand">KOIDA <span>LOCAL DELIVERY</span></div><div class="sub">ORDER • ADDRESS • BILL • DELIVERY</div></div><div class="nav-actions"><a id="helpWa" class="btn wa" href="#">WhatsApp Help</a><button id="menuBtn" class="menu-btn" aria-label="Open menu">⋮</button></div></div></header>
+<header><div class="nav"><div><div class="brand">KOIDA <span>LOCAL DELIVERY</span></div></div><div class="nav-actions"><a id="helpWa" class="btn wa" href="#">WhatsApp Help</a><button id="menuBtn" class="menu-btn" aria-label="Open menu">⋮</button></div></div></header>
 
 <section class="hero"><div class="hero-in">
-<h1>Order from the website 🛵</h1>
-<p>Select your item, choose Half/Full, quantity and delivery address. Your order is saved directly in Koida Local Delivery's system.</p>
+  <div class="hero-copy">
+    <div class="hero-kicker">⚡ Local delivery made simple</div>
+    <h1>Food & essentials, delivered locally</h1>
+    <p>Choose your items, add your address and pay securely. Track your orders from My Orders.</p>
+  </div>
+  <div class="hero-icon" aria-hidden="true">🛵</div>
 </div></section>
 
 <main class="wrap">
 <div class="toolbar">
-  <input id="search" class="search" placeholder="Search food/items...">
+  <div class="search-shell"><input id="search" class="search" placeholder="Search dishes or items..."></div>
   <button id="addressBtn" class="btn gray">📍 Saved Address</button>
   <button id="accountBtn" class="btn dark">👤 Login</button>
 </div>
@@ -91,7 +156,9 @@ footer{background:var(--dark);color:#fff;text-align:center;padding:24px 18px;mar
   <div class="addr-main"><div class="addr-title">📍 Saved Address</div><div id="homeAddressText" class="addr-text"></div></div>
   <button id="homeAddressEdit">Edit ›</button>
 </div>
+<div class="section-head"><h2>Browse categories</h2><span>Swipe to explore</span></div>
 <div id="cats" class="cats"></div>
+<div class="section-head"><h2>Popular near you</h2><span>Freshly available</span></div>
 <div id="grid" class="grid"></div>
 </main>
 
