@@ -35,7 +35,7 @@ header{background:var(--dark);color:#fff;position:sticky;top:0;z-index:30}
 .form{display:grid;grid-template-columns:1fr 1fr;gap:11px}.form .full{grid-column:1/-1}.form label{font-size:13px;font-weight:800}.form input,.form textarea{width:100%;padding:12px;margin-top:5px;border:1px solid #d1d5db;border-radius:10px;font-size:16px}.form textarea{min-height:84px;resize:vertical}
 .saved{font-size:12px;color:var(--green);font-weight:800;margin-top:8px}.notice{padding:11px 12px;border-radius:10px;background:#fff7ed;color:#9a3412;border:1px solid #fed7aa;margin:12px 0}.distance-box{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:12px;margin-top:12px}.distance-box.warn{background:#fff7ed;border-color:#fed7aa}.distance-line{display:flex;justify-content:space-between;gap:12px;margin:6px 0}
 .receipt{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:12px}.receipt h3{margin:0 0 8px}
-.tabs{display:flex;gap:8px;margin-bottom:12px}.tabs button{flex:1}.account-card{background:#f9fafb;border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:12px}.account-head{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}.order-card-mini{border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:10px;background:#fff}.order-status{display:inline-block;border-radius:999px;padding:4px 8px;font-size:11px;font-weight:800;background:#eef2ff}.order-status.paid{background:#dcfce7;color:#166534}.order-status.pending{background:#fee2e2;color:#991b1b}.auth-note{padding:10px 11px;border-radius:10px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:12px;margin:10px 0}
+.tabs{display:flex;gap:8px;margin-bottom:12px}.tabs button{flex:1}.account-card{background:#f9fafb;border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:12px}.account-head{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}.order-card-mini{border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:10px;background:#fff}.order-card-mini{cursor:pointer}.order-card-mini:active{transform:scale(.995)}.order-status{display:inline-block;border-radius:999px;padding:4px 8px;font-size:11px;font-weight:800;background:#eef2ff}.order-status.paid{background:#dcfce7;color:#166534}.order-status.pending{background:#fee2e2;color:#991b1b}.auth-note{padding:10px 11px;border-radius:10px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:12px;margin:10px 0}
 footer{background:var(--dark);color:#fff;text-align:center;padding:24px 18px;margin-top:24px}
 @media(max-width:900px){.grid{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:700px){.hero h1{font-size:31px}.grid{grid-template-columns:repeat(2,1fr);gap:12px}.img{height:130px}.toolbar{grid-template-columns:1fr}.sub{display:none}.name{font-size:17px}.form{grid-template-columns:1fr}.form .full{grid-column:auto}.cartin{align-items:flex-start}.cartin .btn{white-space:nowrap}}
@@ -153,6 +153,14 @@ footer{background:var(--dark);color:#fff;text-align:center;padding:24px 18px;mar
     </div>
   </div>
   <div style="display:flex;justify-content:flex-end;margin-top:14px"><button id="closeAccount" class="btn gray">Close</button></div>
+</div></div>
+
+<div id="orderDetailsModal" class="modal-bg" aria-hidden="true"><div class="modal">
+  <h2>Order Details</h2>
+  <div id="orderDetailsBody" class="receipt"></div>
+  <div style="display:flex;justify-content:flex-end;margin-top:14px">
+    <button id="closeOrderDetails" class="btn gray">Close</button>
+  </div>
 </div></div>
 
 <div id="cartModal" class="modal-bg" aria-hidden="true"><div class="modal">
@@ -275,15 +283,52 @@ async function loadCustomerProfile(){
 }
 function statusLabel(s){return String(s||"new").replaceAll("_"," ").replace(/\b\w/g,c=>c.toUpperCase())}
 function fmtOrderDate(v){try{return new Date(v).toLocaleString("en-IN")}catch{return v||""}}
+
+function esc(v){
+  return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+}
+function openOrderDetails(o){
+  const items=o.order_items||[];
+  const deliveryCharge=Number(o.delivery_charge||0);
+  const platformFee=Number(o.platform_fee||0);
+  const address=[o.address,o.landmark,o.area].filter(Boolean).join(" · ");
+  $("orderDetailsBody").innerHTML=`
+    <div class="sum-row"><span>Order ID</span><b>${esc(o.order_number)}</b></div>
+    <div class="sum-row"><span>Date & Time</span><span>${esc(fmtOrderDate(o.created_at))}</span></div>
+    <div class="sum-row"><span>Order Status</span><b>${esc(statusLabel(o.status))}</b></div>
+    <div class="sum-row"><span>Payment</span><b>${esc(statusLabel(o.payment_status))}</b></div>
+    ${o.payment_id?`<div class="sum-row"><span>Payment ID</span><span style="text-align:right;word-break:break-all">${esc(o.payment_id)}</span></div>`:""}
+    <hr style="border:0;border-top:1px solid #e5e7eb">
+    ${items.map(i=>`<div class="sum-row"><span>${esc(i.product_name)}${i.variant_label?` (${esc(i.variant_label)})`:""} × ${Number(i.qty||0)}</span><b>₹${Number(i.line_total ?? (Number(i.unit_price||0)*Number(i.qty||0)))}</b></div>`).join("")||'<div class="small">No item details available.</div>'}
+    <hr style="border:0;border-top:1px solid #e5e7eb">
+    <div class="sum-row"><span>Subtotal</span><b>₹${Number(o.subtotal||0)}</b></div>
+    ${platformFee>0?`<div class="sum-row"><span>Platform fee</span><b>₹${platformFee}</b></div>`:""}
+    <div class="sum-row"><span>Delivery</span><b>${deliveryCharge===0?"FREE":"₹"+deliveryCharge}</b></div>
+    <div class="sum-row total"><span>Total</span><span>₹${Number(o.total||0)}</span></div>
+    <hr style="border:0;border-top:1px solid #e5e7eb">
+    ${o.customer_name?`<div class="sum-row"><span>Name</span><span>${esc(o.customer_name)}</span></div>`:""}
+    ${o.phone?`<div class="sum-row"><span>Mobile</span><span>${esc(o.phone)}</span></div>`:""}
+    ${address?`<div class="sum-row"><span>Delivery Address</span><span style="text-align:right;max-width:65%">${esc(address)}</span></div>`:""}
+    ${o.delivery_note?`<div class="sum-row"><span>Delivery Note</span><span style="text-align:right;max-width:65%">${esc(o.delivery_note)}</span></div>`:""}
+    ${o.distance_km!=null?`<div class="sum-row"><span>Distance</span><b>${Number(o.distance_km)} km</b></div>`:""}
+  `;
+  openModal($("orderDetailsModal"));
+}
+
 async function loadMyOrders(){
   const box=$("myOrders");
   if(!currentSession?.user){box.innerHTML='<div class="small">Please login first.</div>';return}
   box.innerHTML='<div class="small">Loading orders...</div>';
-  const {data,error}=await sb.from("orders").select("id,order_number,created_at,subtotal,delivery_charge,platform_fee,total,payment_status,status,distance_km,order_items(product_name,variant_label,qty,line_total)").order("created_at",{ascending:false}).limit(50);
+  const {data,error}=await sb.from("orders").select("id,order_number,created_at,customer_name,phone,address,landmark,area,delivery_note,subtotal,delivery_charge,platform_fee,total,payment_status,payment_id,status,distance_km,order_items(product_name,variant_label,qty,unit_price,line_total)").order("created_at",{ascending:false}).limit(50);
   if(error){box.innerHTML=`<div class="notice">Could not load orders: ${error.message}</div>`;return}
   const orders=data||[];
   if(!orders.length){box.innerHTML='<div class="account-card"><b>No orders yet</b><div class="small" style="margin-top:4px">Orders placed after you login will appear here.</div></div>';return}
-  box.innerHTML=orders.map(o=>`<div class="order-card-mini"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><div><b>${o.order_number}</b><div class="small">${fmtOrderDate(o.created_at)}</div></div><div><span class="order-status">${statusLabel(o.status)}</span> <span class="order-status ${o.payment_status==="paid"?"paid":"pending"}">${statusLabel(o.payment_status)}</span></div></div><div class="small" style="margin-top:7px">${(o.order_items||[]).map(i=>`${i.product_name} (${i.variant_label||""}) × ${i.qty}`).join(" · ")||"Order items"}</div><div class="sum-row"><span>${o.distance_km!=null?`Distance ${o.distance_km} km`:""}</span><b>₹${o.total}</b></div></div>`).join("");
+  box.innerHTML=orders.map((o,idx)=>`<div class="order-card-mini" data-order-idx="${idx}" role="button" tabindex="0" aria-label="Open details for ${o.order_number}"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><div><b>${o.order_number}</b><div class="small">${fmtOrderDate(o.created_at)}</div></div><div><span class="order-status">${statusLabel(o.status)}</span> <span class="order-status ${o.payment_status==="paid"?"paid":"pending"}">${statusLabel(o.payment_status)}</span></div></div><div class="small" style="margin-top:7px">${(o.order_items||[]).map(i=>`${i.product_name} (${i.variant_label||""}) × ${i.qty}`).join(" · ")||"Order items"}</div><div class="sum-row"><span>${o.distance_km!=null?`Distance ${o.distance_km} km`:""}</span><b>₹${o.total}</b></div><div class="small" style="margin-top:6px;color:#2563eb;font-weight:800">Tap to view details ›</div></div>`).join("");
+  box.querySelectorAll(".order-card-mini").forEach(card=>{
+    const open=()=>openOrderDetails(orders[Number(card.dataset.orderIdx)]);
+    card.addEventListener("click",open);
+    card.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();open();}});
+  });
 }
 async function refreshAccountState(){
   const {data:{session}}=await sb.auth.getSession();currentSession=session;await loadCustomerProfile();
@@ -648,7 +693,7 @@ $("accountBtn").onclick=async()=>{
   $("accountProfileCard").style.display=currentSession?.user?"block":"none";
   $("accountOrdersSection").style.display="none";
   openModal($("accountModal"));
-};$("closeAccount").onclick=()=>closeModal($("accountModal"));$("loginTab").onclick=()=>switchAuthTab("login");$("signupTab").onclick=()=>switchAuthTab("signup");$("loginCustomer").onclick=customerLogin;$("forgotCustomer").onclick=customerForgotPin;$("signupCustomer").onclick=customerSignup;$("logoutCustomer").onclick=customerLogout;$("refreshMyOrders").onclick=loadMyOrders;
+};$("closeAccount").onclick=()=>closeModal($("accountModal"));$("loginTab").onclick=()=>switchAuthTab("login");$("signupTab").onclick=()=>switchAuthTab("signup");$("loginCustomer").onclick=customerLogin;$("forgotCustomer").onclick=customerForgotPin;$("signupCustomer").onclick=customerSignup;$("logoutCustomer").onclick=customerLogout;$("refreshMyOrders").onclick=loadMyOrders;$("closeOrderDetails").onclick=()=>closeModal($("orderDetailsModal"));
 sb.auth.onAuthStateChange(()=>{setTimeout(()=>refreshAccountState(),0)});
 $("search").oninput=renderProducts;$("addressBtn").onclick=()=>{fillAddress();renderCheckoutSummary();openModal($("checkoutModal"))};$("openCart").onclick=()=>{renderCart();openModal($("cartModal"))};$("closeCart").onclick=()=>closeModal($("cartModal"));$("checkoutBtn").onclick=()=>{if(!cart.length)return;closeModal($("cartModal"));fillAddress();renderCheckoutSummary();openModal($("checkoutModal"))};$("backToCart").onclick=()=>{closeModal($("checkoutModal"));renderCart();openModal($("cartModal"))};$("detectLocation").onclick=detectLocation;$("placeOrder").onclick=placeOrder;$("payNow").onclick=()=>{if(lastOrderCtx)startRazorpayPayment(lastOrderCtx)};$("printBill").onclick=()=>{
   const receipt=$("receipt");
@@ -696,7 +741,7 @@ $("search").oninput=renderProducts;$("addressBtn").onclick=()=>{fillAddress();re
 </body>
 </html>`);
   w.document.close();
-};$("closeSuccess").onclick=()=>closeModal($("successModal"));[$("accountModal"),$("cartModal"),$("checkoutModal"),$("successModal")].forEach(m=>m.addEventListener("click",e=>{if(e.target===m)closeModal(m)}));$("placeOrder").textContent=cfg.onlinePaymentEnabled?"Place Order & Pay":"Place Order";refreshSavedAddress();switchAuthTab("login");await refreshAccountState();await loadSettings();loadProducts();
+};$("closeSuccess").onclick=()=>closeModal($("successModal"));[$("accountModal"),$("orderDetailsModal"),$("cartModal"),$("checkoutModal"),$("successModal")].forEach(m=>m.addEventListener("click",e=>{if(e.target===m)closeModal(m)}));$("placeOrder").textContent=cfg.onlinePaymentEnabled?"Place Order & Pay":"Place Order";refreshSavedAddress();switchAuthTab("login");await refreshAccountState();await loadSettings();loadProducts();
 </script>
 </body>
 </html>
