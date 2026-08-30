@@ -132,6 +132,15 @@ footer{margin-top:12px}
 }
 
 </style>
+
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#111827">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="HUNKART">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+
 </head>
 <body>
 <header><div class="nav"><div><div class="brand">KOIDA <span>LOCAL DELIVERY</span></div></div><div class="nav-actions"><a id="helpWa" class="btn wa" href="#">WhatsApp Help</a><button id="menuBtn" class="menu-btn" aria-label="Open menu">⋮</button></div></div></header>
@@ -810,5 +819,14 @@ $("search").oninput=renderProducts;$("addressBtn").onclick=()=>{fillAddress();re
   w.document.close();
 };$("closeSuccess").onclick=()=>closeModal($("successModal"));[$("accountModal"),$("orderDetailsModal"),$("cartModal"),$("checkoutModal"),$("successModal")].forEach(m=>m.addEventListener("click",e=>{if(e.target===m)closeModal(m)}));$("placeOrder").textContent=cfg.onlinePaymentEnabled?"Place Order & Pay":"Place Order";refreshSavedAddress();switchAuthTab("login");await refreshAccountState();await loadSettings();loadProducts();
 </script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(err => console.warn("Service worker:", err));
+  });
+}
+</script>
+
 </body>
 </html>
