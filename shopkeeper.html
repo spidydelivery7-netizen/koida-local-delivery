@@ -19,7 +19,7 @@ header{background:var(--dark);color:#fff;position:sticky;top:0;z-index:10}
 label{font-size:13px;font-weight:800;display:block;margin-bottom:12px}
 input{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;font-size:16px;margin-top:6px;background:#fff}
 button{border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:pointer;font-size:14px}
-.primary{background:var(--dark);color:#fff}.gray{background:#e5e7eb}.green{background:var(--green);color:#fff}.red{background:var(--red);color:#fff}
+.primary{background:var(--dark);color:#fff}.gray{background:#e5e7eb}.green{background:var(--green);color:#fff}.red{background:var(--red);color:#fff}.linkbtn{background:transparent;color:var(--blue);padding:8px 4px}
 .topbar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .shopname{font-size:20px;font-weight:900}.small{font-size:12px;color:var(--muted)}
 .search{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;font-size:16px;background:#fff}
@@ -49,6 +49,9 @@ button{border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:poin
     <label>Email<input id="email" type="email" autocomplete="username" placeholder="shop@example.com"></label>
     <label>Password<input id="password" type="password" autocomplete="current-password" placeholder="Password"></label>
     <button id="loginBtn" class="primary" style="width:100%">Login</button>
+    <div style="text-align:center;margin-top:10px">
+      <button id="forgotPasswordBtn" type="button" class="linkbtn">Forgot Password?</button>
+    </div>
   </section>
 
   <section id="app" class="hidden">
@@ -169,6 +172,31 @@ $("loginBtn").onclick=async()=>{
   if(error)setStatus("Login failed: "+error.message);
   $("loginBtn").disabled=false;$("loginBtn").textContent="Login";
 };
+
+$("forgotPasswordBtn").onclick=async()=>{
+  if(!sb)return;
+  const email=$("email").value.trim().toLowerCase();
+  if(!email){
+    setStatus("Enter your registered shopkeeper email first.");
+    $("email").focus();
+    return;
+  }
+  $("forgotPasswordBtn").disabled=true;
+  $("forgotPasswordBtn").textContent="Sending reset link...";
+  try{
+    const {error}=await sb.auth.resetPasswordForEmail(email,{
+      redirectTo:"https://hunkart.com/shopkeeper-reset-password.html"
+    });
+    if(error)throw error;
+    setStatus("Password reset link sent. Check your email.");
+  }catch(e){
+    setStatus("Could not send reset link: "+(e?.message||e));
+  }finally{
+    $("forgotPasswordBtn").disabled=false;
+    $("forgotPasswordBtn").textContent="Forgot Password?";
+  }
+};
+
 $("logoutBtn").onclick=()=>sb?.auth.signOut();
 $("search").oninput=render;
 $("password").addEventListener("keydown",e=>{if(e.key==="Enter")$("loginBtn").click()});
