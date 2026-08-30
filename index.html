@@ -3,7 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>HUNKART</title>
+<title>HUNKART – Food & Grocery Delivery in Koida</title>
+<meta name="description" content="Order food, groceries and daily essentials online with HUNKART. Fast and convenient local delivery in Koida, Odisha.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://hunkart.com/">
+<meta property="og:title" content="HUNKART – Food & Grocery Delivery in Koida">
+<meta property="og:description" content="Order food, groceries and daily essentials online with HUNKART. Fast and convenient local delivery in Koida, Odisha.">
+<meta property="og:url" content="https://hunkart.com/">
+<meta property="og:type" content="website">
 <style>
 :root{--dark:#111827;--muted:#6b7280;--bg:#f5f7fb;--card:#fff;--accent:#fbbf24;--green:#16a34a;--red:#dc2626;--line:#e5e7eb}
 *{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:#111}
@@ -188,11 +195,11 @@ footer{margin-top:12px}
     <button id="drawerAddress" class="drawer-item"><span class="ico">📍</span><span class="txt"><b>Saved Address</b><small>Manage your delivery address</small></span><span class="arrow">›</span></button>
     <button id="drawerOrders" class="drawer-item"><span class="ico">📋</span><span class="txt"><b>My Orders</b><small>View your order history</small></span><span class="arrow">›</span></button>
     <hr class="drawer-divider">
-    <a id="drawerWa" class="drawer-item" href="#"><span class="ico">🎧</span><span class="txt"><b>WhatsApp Help</b><small>Chat with Koida Local Delivery</small></span><span class="arrow">›</span></a>
+    <a id="drawerWa" class="drawer-item" href="#"><span class="ico">🎧</span><span class="txt"><b>WhatsApp Help</b><small>Chat with HUNKART</small></span><span class="arrow">›</span></a>
     <a class="drawer-item" href="about.html"><span class="ico">ℹ️</span><span class="txt"><b>About Us</b><small>Learn more about us</small></span><span class="arrow">›</span></a>
     <a class="drawer-item" href="privacy.html"><span class="ico">🛡️</span><span class="txt"><b>Privacy Policy</b><small>Your privacy matters</small></span><span class="arrow">›</span></a>
     <button id="drawerLogout" class="drawer-item" style="display:none"><span class="ico">🚪</span><span class="txt"><b>Logout</b><small>Sign out from your account</small></span><span class="arrow">›</span></button>
-    <div class="drawer-footer">Koida <b>Local Delivery</b><br>© 2026 All rights reserved.</div>
+    <div class="drawer-footer">HUN<b>KART</b><br>© 2026 All rights reserved.</div>
   </aside>
 </div>
 
@@ -277,7 +284,7 @@ footer{margin-top:12px}
 
 <div id="successModal" class="modal-bg" aria-hidden="true"><div class="modal">
   <h2>✅ Order Placed</h2>
-  <p>Your order has been saved in Koida Local Delivery.</p>
+  <p>Your order has been saved in HUNKART.</p>
   <div id="receipt" class="receipt"></div>
   <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap">
     <button id="payNow" class="btn yellow" style="display:none">Pay Now</button>
@@ -286,7 +293,7 @@ footer{margin-top:12px}
   </div>
 </div></div>
 
-<footer>© 2026 Koida Local Delivery · WhatsApp +91 86387 94932</footer>
+<footer>© 2026 HUNKART · WhatsApp +91 86387 94932</footer>
 
 <script src="config.js"></script>
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
@@ -547,7 +554,7 @@ function renderReceipt(ctx,paymentStatus="Pending",paymentId=""){
   const {r,a,items}=ctx;
   const paid=paymentStatus.toLowerCase()==="paid";
   const receiptPlatformFee=Math.max(0,Number(r.total||0)-Number(r.subtotal||0)-Number(r.delivery_charge||0));
-  $("receipt").innerHTML=`<h3>Koida Local Delivery</h3><div class="sum-row"><span>Order ID</span><b>${r.order_number}</b></div><div class="sum-row"><span>Name</span><span>${a.name}</span></div><div class="sum-row"><span>Phone</span><span>${a.phone}</span></div><div class="sum-row"><span>Distance</span><b>${r.distance_km} km</b></div><div class="sum-row"><span>Address</span><span style="text-align:right">${a.address}${a.landmark?" · "+a.landmark:""}, ${a.area}</span></div><hr style="border:0;border-top:1px solid #e5e7eb">${items.map(x=>`<div class="sum-row"><span>${x.name} (${x.variant_label}) × ${x.qty}</span><b>₹${x.unit_price*x.qty}</b></div>`).join("")}<div class="sum-row"><span>Subtotal</span><b>₹${r.subtotal}</b></div>${receiptPlatformFee>0?`<div class="sum-row"><span>Platform fee</span><b>₹${receiptPlatformFee}</b></div>`:""}<div class="sum-row"><span>Delivery</span><b>${Number(r.delivery_charge||0)===0?"FREE":"₹"+r.delivery_charge}</b></div><div class="sum-row total"><span>Total</span><span>₹${r.total}</span></div><div class="small" style="color:${paid?'#15803d':'#9a3412'};font-weight:800">Payment status: ${paymentStatus} · Order status: New${paymentId?` · Payment ID: ${paymentId}`:""}</div>`;
+  $("receipt").innerHTML=`<h3>HUNKART</h3><div class="sum-row"><span>Order ID</span><b>${r.order_number}</b></div><div class="sum-row"><span>Name</span><span>${a.name}</span></div><div class="sum-row"><span>Phone</span><span>${a.phone}</span></div><div class="sum-row"><span>Distance</span><b>${r.distance_km} km</b></div><div class="sum-row"><span>Address</span><span style="text-align:right">${a.address}${a.landmark?" · "+a.landmark:""}, ${a.area}</span></div><hr style="border:0;border-top:1px solid #e5e7eb">${items.map(x=>`<div class="sum-row"><span>${x.name} (${x.variant_label}) × ${x.qty}</span><b>₹${x.unit_price*x.qty}</b></div>`).join("")}<div class="sum-row"><span>Subtotal</span><b>₹${r.subtotal}</b></div>${receiptPlatformFee>0?`<div class="sum-row"><span>Platform fee</span><b>₹${receiptPlatformFee}</b></div>`:""}<div class="sum-row"><span>Delivery</span><b>${Number(r.delivery_charge||0)===0?"FREE":"₹"+r.delivery_charge}</b></div><div class="sum-row total"><span>Total</span><span>₹${r.total}</span></div><div class="small" style="color:${paid?'#15803d':'#9a3412'};font-weight:800">Payment status: ${paymentStatus} · Order status: New${paymentId?` · Payment ID: ${paymentId}`:""}</div>`;
   $("payNow").style.display=paid?"none":"inline-flex";
 }
 async function invokePaymentFunction(body){
@@ -599,8 +606,8 @@ async function startRazorpayPayment(ctx){
       key:created.key_id,
       amount:rzOrder.amount,
       currency:rzOrder.currency||"INR",
-      name:"Koida Local Delivery",
-      description:"Koida Local Delivery order payment",
+      name:"HUNKART",
+      description:"HUNKART order payment",
       order_id:rzOrder.id,
       prefill:{name:ctx.a.name,contact:ctx.a.phone},
       notes:{payment_attempt_id:attemptId},
@@ -631,7 +638,7 @@ async function startRazorpayPayment(ctx){
           openModal($("successModal"));
 
         }catch(e){
-          alert("Payment may have been received, but order confirmation failed. Please contact Koida Local Delivery with your payment details. "+e.message);
+          alert("Payment may have been received, but order confirmation failed. Please contact HUNKART with your payment details. "+e.message);
         }
       },
 
@@ -762,7 +769,7 @@ $("drawerLogout").onclick=async()=>{
   openMenuDrawer();
 };
 
-$("helpWa").href="https://wa.me/"+cfg.whatsappNumber+"?text="+encodeURIComponent("Hello Koida Local Delivery, I need help with an order.");$("drawerWa").href=$("helpWa").href;
+$("helpWa").href="https://wa.me/"+cfg.whatsappNumber+"?text="+encodeURIComponent("Hello HUNKART, I need help with an order.");$("drawerWa").href=$("helpWa").href;
 $("accountBtn").onclick=async()=>{
   await refreshAccountState();
   $("accountModalTitle").textContent="My Account";
@@ -788,7 +795,7 @@ $("search").oninput=renderProducts;$("addressBtn").onclick=()=>{fillAddress();re
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Koida Local Delivery Invoice</title>
+<title>HUNKART Invoice</title>
 <style>
   *{box-sizing:border-box}
   body{margin:0;padding:24px;font-family:Arial,Helvetica,sans-serif;color:#111;background:#fff}
