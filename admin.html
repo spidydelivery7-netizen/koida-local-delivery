@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Koida Local Delivery Admin</title>
+<title>HUNKART Admin</title>
 <style>
 :root{--dark:#111827;--bg:#f3f4f6;--muted:#6b7280;--green:#16a34a;--red:#dc2626;--yellow:#fbbf24;--line:#e5e7eb}
 *{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:#111827}
@@ -23,7 +23,7 @@ button{border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:poin
 </style>
 </head>
 <body>
-<header><div class="head"><div><b>KOIDA LOCAL DELIVERY Admin</b><div class="small" style="color:#cbd5e1">Products + Orders</div></div><button id="logout" class="gray hidden">Logout</button></div></header>
+<header><div class="head"><div><b>HUNKART Admin</b><div class="small" style="color:#cbd5e1">Products + Orders</div></div><button id="logout" class="gray hidden">Logout</button></div></header>
 <main class="wrap">
 <div id="status" class="status">Checking setup...</div>
 
@@ -72,8 +72,6 @@ button{border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:poin
       <label>Every Next (km)<input id="step_distance_km" type="number" min="0.1" step="0.1"></label>
       <label>Add Charge (₹)<input id="step_charge" type="number" min="0"></label>
       <label>Free Delivery Offer<select id="free_delivery"><option value="false">OFF — Normal Delivery Charge</option><option value="true">ON — FREE DELIVERY</option></select></label>
-      <label>Platform Fee<select id="platform_fee_enabled"><option value="false">OFF — No Platform Fee</option><option value="true">ON — Charge Platform Fee</option></select></label>
-      <label>Platform Fee Per Item (₹)<input id="platform_fee_per_item" type="number" min="0" step="1" value="5"></label>
       <label>Rain Mode<select id="rain_mode"><option value="false">OFF</option><option value="true">ON</option></select></label>
       <label>Rain Extra (₹)<input id="rain_extra" type="number" min="0"></label>
       <label>Shop Latitude<input id="store_lat" type="number" step="0.000001" placeholder="Set automatically below"></label>
@@ -94,7 +92,7 @@ button{border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:poin
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 const cfg=window.SPIDY_CONFIG||{}, $=id=>document.getElementById(id);
-let sb=null,editing=null,items=[],orders=[],deliveryBoys=[],activeView="products",poll=null;
+let sb=null,editing=null,items=[],orders=[],activeView="products",poll=null;
 
 function configured(){return cfg.supabaseUrl&&cfg.supabaseAnonKey&&!cfg.supabaseUrl.includes("YOUR_")}
 function setStatus(t){$("status").textContent=t}
@@ -128,13 +126,6 @@ function edit(p){
 async function del(p){if(!confirm("Delete "+p.name+"?"))return;const {error}=await sb.from("products").delete().eq("id",p.id);if(error)setStatus(error.message);else{setStatus("Product deleted.");loadProducts()}}
 
 function fmtDate(v){return new Date(v).toLocaleString()}
-
-async function loadDeliveryBoys(){
-  const {data,error}=await sb.from("delivery_boys").select("id,full_name,is_active").eq("is_active",true).order("full_name",{ascending:true});
-  if(error){setStatus("Delivery boy load error: "+error.message);deliveryBoys=[];return}
-  deliveryBoys=data||[];
-}
-
 function renderOrders(){
  const q=$("oq").value.trim().toLowerCase(), box=$("ordersList");box.innerHTML="";
  const filtered=orders.filter(o=>!q||o.order_number.toLowerCase().includes(q)||o.customer_name.toLowerCase().includes(q)||o.phone.includes(q));
@@ -143,14 +134,6 @@ function renderOrders(){
  filtered.forEach(o=>{
   const card=document.createElement("div");card.className="panel order-card";
   const itemsHtml=(o.order_items||[]).map(i=>`<div class="itemline"><span>${i.product_name} (${i.variant_label||i.variant}) × ${i.qty}</span><b>₹${i.line_total}</b></div>`).join("");
-  const boyOptions=['<option value="">Select delivery boy</option>']
-    .concat(deliveryBoys.map(b=>`<option value="${b.id}">${b.full_name}</option>`)).join("");
-  const assigned=o.delivery_tracking&&o.delivery_tracking.length?o.delivery_tracking[0]:null;
-  const assignedName=assigned&&assigned.delivery_boys?assigned.delivery_boys.full_name:"";
-  const trackingStatus=assigned?assigned.status:"";
-  const liveMap=assigned&&assigned.current_lat!=null&&assigned.current_lng!=null
-    ? `https://www.google.com/maps/search/?api=1&query=${assigned.current_lat},${assigned.current_lng}`
-    : "";
   card.innerHTML=`<div class="order-head"><div><b>${o.order_number}</b><div class="small">${fmtDate(o.created_at)}</div></div>
     <div><span class="badge ${o.status==="new"?"new":""}">${o.status}</span> <span class="badge ${o.payment_status==="paid"?"paid":"pending"}">${o.payment_status}</span></div></div>
     <div class="order-grid">
@@ -162,37 +145,17 @@ function renderOrders(){
       <label style="min-width:180px">Order Status<select class="statusSel"><option value="new">New</option><option value="confirmed">Confirmed</option><option value="preparing">Preparing</option><option value="out_for_delivery">Out for Delivery</option><option value="delivered">Delivered</option><option value="cancelled">Cancelled</option></select></label>
       <label style="min-width:160px">Payment<select class="paySel"><option value="pending">Pending</option><option value="paid">Paid</option><option value="failed">Failed</option><option value="refunded">Refunded</option></select></label>
       <button class="green saveOrder">Save Status</button>
-    </div>
-    <div style="margin-top:14px;padding-top:12px;border-top:1px solid #e5e7eb">
-      <b>Delivery Assignment</b>
-      <div class="small" style="margin-top:4px">${assignedName?`Assigned to ${assignedName} · ${trackingStatus.replaceAll("_"," ")}`:"Not assigned yet"}</div>
-      <div class="actions">
-        <select class="boySel" style="min-width:190px">${boyOptions}</select>
-        <button class="yellow assignBtn">Assign Delivery Boy</button>
-        ${liveMap?`<a class="primary liveMapBtn" href="${liveMap}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center">📍 Live Location</a>`:""}
-      </div>
-      ${assigned&&assigned.location_updated_at?`<div class="small" style="margin-top:6px">Last location: ${fmtDate(assigned.location_updated_at)}</div>`:""}
     </div>`;
   card.querySelector(".statusSel").value=o.status;card.querySelector(".paySel").value=o.payment_status;
-  if(assigned)card.querySelector(".boySel").value=assigned.delivery_boy_id||"";
   card.querySelector(".saveOrder").onclick=async()=>{
     const payload={status:card.querySelector(".statusSel").value,payment_status:card.querySelector(".paySel").value,updated_at:new Date().toISOString()};
     const {error}=await sb.from("orders").update(payload).eq("id",o.id);if(error)setStatus("Order update error: "+error.message);else{setStatus("Order updated.");loadOrders()}
-  };
-  card.querySelector(".assignBtn").onclick=async()=>{
-    const boyId=card.querySelector(".boySel").value;
-    if(!boyId){setStatus("Select a delivery boy first.");return}
-    const {data,error}=await sb.rpc("assign_delivery_boy",{p_order_id:o.id,p_delivery_boy_id:boyId});
-    if(error){setStatus("Assign delivery boy error: "+error.message);return}
-    setStatus(`Order assigned to ${data?.delivery_boy||"delivery boy"}.`);
-    await loadOrders();
   };
   box.appendChild(card);
  });
 }
 async function loadOrders(){
- if(!deliveryBoys.length)await loadDeliveryBoys();
- const {data,error}=await sb.from("orders").select("*,order_items(*),delivery_tracking(*,delivery_boys(full_name))").order("created_at",{ascending:false}).limit(100);
+ const {data,error}=await sb.from("orders").select("*,order_items(*)").order("created_at",{ascending:false}).limit(100);
  if(error){setStatus("Orders load error: "+error.message);return}orders=data||[];renderOrders();
 }
 function switchView(v){
@@ -213,23 +176,18 @@ async function loadDeliverySettings(){
  $("base_distance_km").value=data.base_distance_km??2;$("base_charge").value=data.base_charge??30;
  $("step_distance_km").value=data.step_distance_km??2;$("step_charge").value=data.step_charge??10;
  $("free_delivery").value=String(data.free_delivery_enabled===true);
- $("platform_fee_enabled").value=String(data.platform_fee_enabled===true);
- $("platform_fee_per_item").value=data.platform_fee_per_item??5;
  $("rain_mode").value=String(data.rain_mode===true);$("rain_extra").value=data.rain_extra??0;
  $("store_lat").value=data.store_lat??"";$("store_lng").value=data.store_lng??"";
  renderDeliveryPreview();
 }
 function renderDeliveryPreview(){
  const free=$("free_delivery").value==="true";
- const platformOn=$("platform_fee_enabled").value==="true";
- const platformAmount=Number($("platform_fee_per_item").value||0);
- const platformText=platformOn?` · Platform fee ₹${platformAmount} per item`:" · Platform fee OFF";
  if(free){
-  $("deliveryPreview").innerHTML=`🎁 Free Delivery Offer is ON · Customer delivery charge = ₹0${platformText}`;
+  $("deliveryPreview").innerHTML="🎁 Free Delivery Offer is ON · Customer delivery charge = ₹0";
   return;
  }
  const b=Number($("base_distance_km").value||2),bc=Number($("base_charge").value||30),s=Number($("step_distance_km").value||2),sc=Number($("step_charge").value||10);
- $("deliveryPreview").innerHTML=`Example: 0–${b} km = ₹${bc} · ${b}–${b+s} km = ₹${bc+sc} · ${b+s}–${b+2*s} km = ₹${bc+2*sc}${$("rain_mode").value==="true"?" · Rain extra ₹"+Number($("rain_extra").value||0):""}${platformText}`;
+ $("deliveryPreview").innerHTML=`Example: 0–${b} km = ₹${bc} · ${b}–${b+s} km = ₹${bc+sc} · ${b+s}–${b+2*s} km = ₹${bc+2*sc}${$("rain_mode").value==="true"?" · Rain extra ₹"+Number($("rain_extra").value||0):""}`;
 }
 async function checkAdmin(){
  const {data:{session}}=await sb.auth.getSession();
@@ -248,7 +206,7 @@ $("loginBtn").onclick=async()=>{const {error}=await sb.auth.signInWithPassword({
   }
 
   const {error}=await sb.auth.resetPasswordForEmail(email,{
-    redirectTo:"https://koida-local-delivery.pages.dev/admin-reset-password.html"
+    redirectTo:"https://hunkart.com/admin-reset-password.html"
   });
 
   if(error){
@@ -261,7 +219,7 @@ $("logout").onclick=()=>sb.auth.signOut();
 $("productsTab").onclick=()=>switchView("products");$("ordersTab").onclick=()=>switchView("orders");$("deliveryTab").onclick=()=>switchView("delivery");
 $("cancel").onclick=reset;$("refreshProducts").onclick=loadProducts;$("q").oninput=renderProducts;$("refreshOrders").onclick=loadOrders;$("oq").oninput=renderOrders;
 
-["base_distance_km","base_charge","step_distance_km","step_charge","free_delivery","platform_fee_enabled","platform_fee_per_item","rain_mode","rain_extra"].forEach(id=>$(id).addEventListener("input",renderDeliveryPreview));
+["base_distance_km","base_charge","step_distance_km","step_charge","free_delivery","rain_mode","rain_extra"].forEach(id=>$(id).addEventListener("input",renderDeliveryPreview));
 $("detectShopLocation").onclick=()=>{
  if(!navigator.geolocation){setStatus("Location is not supported on this browser.");return}
  $("detectShopLocation").disabled=true;$("detectShopLocation").textContent="Detecting...";
@@ -278,8 +236,6 @@ $("saveDelivery").onclick=async()=>{
   step_distance_km:Number($("step_distance_km").value||2),
   step_charge:Number($("step_charge").value||10),
   free_delivery_enabled:$("free_delivery").value==="true",
-  platform_fee_enabled:$("platform_fee_enabled").value==="true",
-  platform_fee_per_item:Number($("platform_fee_per_item").value||0),
   rain_mode:$("rain_mode").value==="true",
   rain_extra:Number($("rain_extra").value||0),
   store_lat:$("store_lat").value===""?null:Number($("store_lat").value),
