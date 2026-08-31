@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>HUNKART - Shopkeeper</title>
+<style>
+:root{--dark:#111827;--bg:#f3f4f6;--card:#fff;--muted:#6b7280;--green:#16a34a;--red:#dc2626;--line:#e5e7eb;--blue:#2563eb}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:#111827}
+header{background:var(--dark);color:#fff;position:sticky;top:0;z-index:10}
+.head{max-width:900px;margin:auto;padding:15px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{font-weight:900;font-size:18px}.sub{font-size:12px;color:#cbd5e1;margin-top:2px}
+.wrap{max-width:900px;margin:auto;padding:18px 14px 40px}
+.card{background:var(--card);border-radius:16px;padding:16px;box-shadow:0 2px 12px #0001;margin-bottom:14px}
+.login{max-width:430px;margin:40px auto}
+.status{padding:11px 13px;border-radius:12px;background:#eef2ff;margin-bottom:14px;font-size:14px}
+.hidden{display:none!important}
+label{font-size:13px;font-weight:800;display:block;margin-bottom:12px}
+input{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;font-size:16px;margin-top:6px;background:#fff}
+button{border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:pointer;font-size:14px}
+.primary{background:var(--dark);color:#fff}.gray{background:#e5e7eb}.green{background:var(--green);color:#fff}.red{background:var(--red);color:#fff}.linkbtn{background:transparent;color:var(--blue);padding:8px 4px}
+.topbar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.shopname{font-size:20px;font-weight:900}.small{font-size:12px;color:var(--muted)}
+.search{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;font-size:16px;background:#fff}
+.cat{font-weight:900;font-size:16px;margin:20px 2px 8px}
+.row{background:#fff;border:1px solid var(--line);border-radius:14px;padding:13px 14px;margin-bottom:9px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.name{font-weight:800}.state{font-size:12px;font-weight:800;margin-top:4px}.state.ok{color:var(--green)}.state.out{color:var(--red)}
+.toggle{min-width:108px}.toggle.available{background:#dcfce7;color:#166534}.toggle.sold{background:#fee2e2;color:#991b1b}
+.count{display:inline-block;background:#e5e7eb;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:800}
+.empty{text-align:center;color:var(--muted);padding:30px 10px}
+.ordersHead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.ordersTitle{font-size:20px;font-weight:900}
+.alertBtn{background:#fef3c7;color:#92400e}
+.alertBtn.on{background:#dcfce7;color:#166534}
+.orderCard{background:#fff;border:1px solid var(--line);border-radius:16px;padding:15px;margin-bottom:12px;box-shadow:0 2px 10px #0000000a}
+.orderCard.newOrder{border:2px solid #f59e0b}
+.orderTop{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.orderNo{font-weight:900;font-size:16px}
+.orderTime{font-size:12px;color:var(--muted);margin-top:3px}
+.badge{display:inline-block;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:900}
+.badge.new{background:#fef3c7;color:#92400e}.badge.packed{background:#dcfce7;color:#166534}
+.orderItems{margin:12px 0;padding:10px 12px;background:#f9fafb;border-radius:12px}
+.orderItem{padding:5px 0;border-bottom:1px solid #e5e7eb;font-size:14px}.orderItem:last-child{border-bottom:0}
+.customerMeta{font-size:13px;line-height:1.5;color:#374151;margin:10px 0}
+.packBtn{width:100%;background:var(--green);color:#fff;margin-top:8px}
+.packBtn.done{background:#dcfce7;color:#166534;cursor:default}
+.orderEmpty{text-align:center;color:var(--muted);padding:18px 8px}
+.newCount{background:#dc2626;color:white;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:900}
+.sectionLabel{font-size:20px;font-weight:900;margin:22px 2px 10px}
+@media(max-width:560px){.row{align-items:flex-start}.toggle{min-width:96px;padding:10px}.brand{font-size:16px}}
+</style>
+
+<link rel="manifest" href="/shopkeeper-app/manifest.webmanifest">
+<link rel="icon" href="/icons/icon-192.png">
+<meta name="theme-color" content="#0f172a">
+<meta name="application-name" content="HUNKART Shopkeeper">
+
+</head>
+<body>
+<header>
+  <div class="head">
+    <div><div class="brand">HUNKART</div><div class="sub">Shopkeeper Availability Panel</div></div>
+    <button id="logoutBtn" class="gray hidden">Logout</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="status" class="status">Checking setup...</div>
+
+  <section id="loginBox" class="card login hidden">
+    <h2 style="margin-top:0">Shopkeeper Login</h2>
+    <p class="small">Login with the email and password given for your shop.</p>
+    <label>Email<input id="email" type="email" autocomplete="username" placeholder="shop@example.com"></label>
+    <label>Password<input id="password" type="password" autocomplete="current-password" placeholder="Password"></label>
+    <button id="loginBtn" class="primary" style="width:100%">Login</button>
+    <div style="text-align:center;margin-top:10px">
+      <button id="forgotPasswordBtn" type="button" class="linkbtn">Forgot Password?</button>
+    </div>
+  </section>
+
+  <section id="app" class="hidden">
+    <div class="card">
+      <div class="topbar">
+        <div><div id="shopName" class="shopname">My Shop</div><div class="small">You can only change Available / Sold Out.</div></div>
+        <span id="itemCount" class="count">0 items</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ordersHead">
+        <div>
+          <div class="ordersTitle">Incoming Orders <span id="newOrderCount" class="newCount hidden">0</span></div>
+          <div class="small">New paid orders for your shop appear here automatically.</div>
+        </div>
+        <button id="enableAlertsBtn" type="button" class="alertBtn">🔔 Enable Order Alerts</button>
+      </div>
+    </div>
+    <div id="orderList"></div>
+
+    <div class="sectionLabel">Product Availability</div>
+    <div class="card"><input id="search" class="search" placeholder="Search item..."></div>
+    <div id="productList"></div>
+  </section>
+</main>
+
+<script src="/config.js"></script>
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+const cfg=window.SPIDY_CONFIG||{};
+const $=id=>document.getElementById(id);
+let sb=null, sessionUser=null, shopId=null, shopName="", products=[], shopOrders=[], orderPollTimer=null, audioCtx=null;
+
+function configured(){return cfg.supabaseUrl&&cfg.supabaseAnonKey&&!String(cfg.supabaseUrl).includes("YOUR_")}
+function setStatus(msg){$("status").textContent=msg}
+function showLoggedOut(){
+  stopOrderPolling();
+  $("loginBox").classList.remove("hidden");
+  $("app").classList.add("hidden");
+  $("logoutBtn").classList.add("hidden");
+}
+function showLoggedIn(){
+  $("loginBox").classList.add("hidden");
+  $("app").classList.remove("hidden");
+  $("logoutBtn").classList.remove("hidden");
+}
+
+function effectiveAvailable(p){
+  if(typeof p.available==="boolean") return p.available;
+  return p.is_available!==false;
+}
+
+function render(){
+  const q=$("search").value.trim().toLowerCase();
+  const filtered=products.filter(p=>!q||String(p.name||"").toLowerCase().includes(q)||String(p.category||"").toLowerCase().includes(q));
+  $("itemCount").textContent=`${products.length} items`;
+  const box=$("productList"); box.innerHTML="";
+  if(!filtered.length){box.innerHTML='<div class="card empty">No items found.</div>';return}
+  const groups=new Map();
+  filtered.forEach(p=>{const c=p.category||"Other";if(!groups.has(c))groups.set(c,[]);groups.get(c).push(p)});
+  for(const [category,arr] of groups){
+    const h=document.createElement("div");h.className="cat";h.textContent=category;box.appendChild(h);
+    arr.forEach(p=>{
+      const on=effectiveAvailable(p);
+      const r=document.createElement("div");r.className="row";
+      r.innerHTML=`<div><div class="name"></div><div class="state ${on?"ok":"out"}">${on?"Available":"Sold Out"}</div></div><button class="toggle ${on?"available":"sold"}">${on?"Mark Sold Out":"Mark Available"}</button>`;
+      r.querySelector(".name").textContent=p.name||"Item";
+      const btn=r.querySelector(".toggle");
+      btn.onclick=()=>changeAvailability(p,!on,btn);
+      box.appendChild(r);
+    });
+  }
+}
+
+
+function esc(v){
+  return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+}
+
+function alertStorageKey(){
+  return `hunkart-shop-alerted-${shopId||"unknown"}`;
+}
+
+function getAlertedOrderIds(){
+  try{return new Set(JSON.parse(localStorage.getItem(alertStorageKey())||"[]"))}
+  catch{return new Set()}
+}
+
+function saveAlertedOrderIds(set){
+  try{localStorage.setItem(alertStorageKey(),JSON.stringify([...set].slice(-300)))}catch{}
+}
+
+function unlockAudio(){
+  try{
+    audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();
+    if(audioCtx.state==="suspended")audioCtx.resume();
+  }catch{}
+}
+
+function playOrderAlarm(){
+  unlockAudio();
+  try{
+    if(audioCtx){
+      const now=audioCtx.currentTime;
+      [0,.28,.56].forEach((d,i)=>{
+        const osc=audioCtx.createOscillator();
+        const gain=audioCtx.createGain();
+        osc.type="sine";
+        osc.frequency.value=i===1?880:660;
+        gain.gain.setValueAtTime(.0001,now+d);
+        gain.gain.exponentialRampToValueAtTime(.32,now+d+.02);
+        gain.gain.exponentialRampToValueAtTime(.0001,now+d+.22);
+        osc.connect(gain);gain.connect(audioCtx.destination);
+        osc.start(now+d);osc.stop(now+d+.24);
+      });
+    }
+  }catch{}
+  try{navigator.vibrate?.([250,120,250,120,400])}catch{}
+}
+
+function notifyNewOrder(order){
+  playOrderAlarm();
+  if("Notification" in window && Notification.permission==="granted"){
+    try{
+      new Notification("HUNKART • New Order",{
+        body:`${order.order_number||"New order"} • ${Array.isArray(order.items)?order.items.length:0} item(s)`,
+        tag:`shop-order-${order.order_id}`
+      });
+    }catch{}
+  }
+}
+
+async function enableOrderAlerts(){
+  unlockAudio();
+  if("Notification" in window && Notification.permission==="default"){
+    try{await Notification.requestPermission()}catch{}
+  }
+  $("enableAlertsBtn").classList.add("on");
+  $("enableAlertsBtn").textContent="🔔 Order Alerts On";
+  setStatus("Order alerts enabled. Keep this page open for instant alarm.");
+}
+
+function renderOrders(){
+  const box=$("orderList");
+  if(!box)return;
+  box.innerHTML="";
+  const active=shopOrders.filter(o=>o.order_status!=="cancelled" && o.order_status!=="delivered");
+  const newCount=active.filter(o=>o.shop_status!=="packed").length;
+  $("newOrderCount").textContent=String(newCount);
+  $("newOrderCount").classList.toggle("hidden",newCount===0);
+
+  if(!active.length){
+    box.innerHTML='<div class="card orderEmpty">No active paid orders for your shop.</div>';
+    return;
+  }
+
+  active.forEach(o=>{
+    const packed=o.shop_status==="packed";
+    const items=Array.isArray(o.items)?o.items:[];
+    const itemHtml=items.map(i=>`<div class="orderItem"><b>${esc(i.product_name)}</b> • ${esc(i.variant_label||"Regular")} • Qty ${Number(i.qty||1)}</div>`).join("");
+    const dt=o.created_at?new Date(o.created_at):null;
+    const when=dt&&!isNaN(dt)?dt.toLocaleString("en-IN",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}):"";
+    const addr=[o.address,o.landmark,o.area].filter(Boolean).join(", ");
+    const card=document.createElement("div");
+    card.className=`orderCard ${packed?"":"newOrder"}`;
+    card.innerHTML=`
+      <div class="orderTop">
+        <div>
+          <div class="orderNo">${esc(o.order_number||"Order")}</div>
+          <div class="orderTime">${esc(when)}</div>
+        </div>
+        <span class="badge ${packed?"packed":"new"}">${packed?"PACKED":"NEW ORDER"}</span>
+      </div>
+      <div class="orderItems">${itemHtml||'<div class="orderItem">Items unavailable</div>'}</div>
+      <div class="customerMeta">
+        <b>Customer:</b> ${esc(o.customer_name||"-")}<br>
+        <b>Phone:</b> ${esc(o.phone||"-")}<br>
+        <b>Address:</b> ${esc(addr||"-")}
+        ${o.delivery_note?`<br><b>Note:</b> ${esc(o.delivery_note)}`:""}
+      </div>
+      <button class="packBtn ${packed?"done":""}" ${packed?"disabled":""}>
+        ${packed?"✓ Order Packed":"Mark as Packed"}
+      </button>`;
+    const btn=card.querySelector(".packBtn");
+    if(!packed)btn.onclick=()=>markOrderPacked(o,btn);
+    box.appendChild(card);
+  });
+}
+
+async function loadShopOrders({alertNew=true}={}){
+  if(!sb||!sessionUser||!shopId)return;
+  const {data,error}=await sb.rpc("get_my_shop_orders");
+  if(error){
+    setStatus("Orders load error: "+error.message);
+    return;
+  }
+  const next=Array.isArray(data)?data:[];
+  if(alertNew){
+    const alerted=getAlertedOrderIds();
+    const fresh=next.filter(o=>o.shop_status!=="packed" && !alerted.has(o.order_id));
+    if(fresh.length){
+      fresh.forEach(o=>alerted.add(o.order_id));
+      saveAlertedOrderIds(alerted);
+      notifyNewOrder(fresh[0]);
+      setStatus(`${fresh.length} new paid order${fresh.length>1?"s":""} received!`);
+    }
+  }
+  shopOrders=next;
+  renderOrders();
+}
+
+async function markOrderPacked(order,btn){
+  if(!confirm(`Mark ${order.order_number||"this order"} as packed?`))return;
+  btn.disabled=true;
+  btn.textContent="Saving...";
+  const {data,error}=await sb.rpc("mark_my_shop_order_packed",{p_order_id:order.order_id});
+  if(error){
+    setStatus("Packed update failed: "+error.message);
+    btn.disabled=false;
+    btn.textContent="Mark as Packed";
+    return;
+  }
+  order.shop_status="packed";
+  if(data?.all_shops_packed)order.order_status="packed";
+  setStatus(`${order.order_number||"Order"} marked as Packed.`);
+  renderOrders();
+  await loadShopOrders({alertNew:false});
+}
+
+function startOrderPolling(){
+  if(orderPollTimer)clearInterval(orderPollTimer);
+  loadShopOrders({alertNew:true});
+  orderPollTimer=setInterval(()=>loadShopOrders({alertNew:true}),8000);
+}
+
+function stopOrderPolling(){
+  if(orderPollTimer){clearInterval(orderPollTimer);orderPollTimer=null}
+}
+
+async function loadShopAndProducts(){
+  if(!sessionUser)return;
+  setStatus("Loading your shop...");
+  const {data:map,error:mapErr}=await sb.from("shopkeepers").select("shop_id").eq("user_id",sessionUser.id).maybeSingle();
+  if(mapErr){setStatus("Shop mapping error: "+mapErr.message);return}
+  if(!map||!map.shop_id){
+    showLoggedOut();
+    await sb.auth.signOut();
+    setStatus("This login is not assigned to a shop. Contact HUNKART admin.");
+    return;
+  }
+  shopId=map.shop_id;
+  const {data:shop,error:shopErr}=await sb.from("shops").select("id,name,active").eq("id",shopId).maybeSingle();
+  if(shopErr||!shop){setStatus("Shop details could not be loaded.");return}
+  shopName=shop.name||"My Shop";$("shopName").textContent=shopName;
+  const {data,error}=await sb.from("products").select("id,shop_id,name,category,available,is_available").eq("shop_id",shopId).order("category",{ascending:true}).order("name",{ascending:true});
+  if(error){setStatus("Products load error: "+error.message);return}
+  products=data||[];
+  setStatus(`${shopName}: ${products.length} products loaded.`);
+  render();
+  startOrderPolling();
+}
+
+async function changeAvailability(product,newValue,btn){
+  btn.disabled=true;const oldText=btn.textContent;btn.textContent="Saving...";
+  const {error}=await sb.rpc("set_my_product_availability",{p_product_id:product.id,p_available:newValue});
+  if(error){
+    setStatus("Update failed: "+error.message);
+    btn.disabled=false;btn.textContent=oldText;return;
+  }
+  product.available=newValue;product.is_available=newValue;
+  setStatus(`${product.name} is now ${newValue?"Available":"Sold Out"}.`);
+  render();
+}
+
+async function checkSession(){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){sessionUser=null;showLoggedOut();setStatus("Shopkeeper login required.");return}
+  sessionUser=session.user;showLoggedIn();await loadShopAndProducts();
+}
+
+if(!configured()){
+  setStatus("Supabase is not connected. Keep this file beside your existing config.js.");
+}else{
+  sb=createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{storageKey:"kld-shopkeeper-auth",persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
+  await checkSession();
+  sb.auth.onAuthStateChange(async(_event,session)=>{sessionUser=session?.user||null;if(sessionUser){showLoggedIn();await loadShopAndProducts()}else showLoggedOut()});
+}
+
+$("loginBtn").onclick=async()=>{
+  if(!sb)return;
+  const email=$("email").value.trim(),password=$("password").value;
+  if(!email||!password){setStatus("Enter email and password.");return}
+  $("loginBtn").disabled=true;$("loginBtn").textContent="Logging in...";
+  const {error}=await sb.auth.signInWithPassword({email,password});
+  if(error)setStatus("Login failed: "+error.message);
+  $("loginBtn").disabled=false;$("loginBtn").textContent="Login";
+};
+
+$("forgotPasswordBtn").onclick=async()=>{
+  if(!sb)return;
+  const email=$("email").value.trim().toLowerCase();
+  if(!email){
+    setStatus("Enter your registered shopkeeper email first.");
+    $("email").focus();
+    return;
+  }
+  $("forgotPasswordBtn").disabled=true;
+  $("forgotPasswordBtn").textContent="Sending reset link...";
+  try{
+    const {error}=await sb.auth.resetPasswordForEmail(email,{
+      redirectTo:"https://hunkart.com/shopkeeper-reset-password.html"
+    });
+    if(error)throw error;
+    setStatus("Password reset link sent. Check your email.");
+  }catch(e){
+    setStatus("Could not send reset link: "+(e?.message||e));
+  }finally{
+    $("forgotPasswordBtn").disabled=false;
+    $("forgotPasswordBtn").textContent="Forgot Password?";
+  }
+};
+
+$("enableAlertsBtn").onclick=enableOrderAlerts;
+$("logoutBtn").onclick=()=>sb?.auth.signOut();
+$("search").oninput=render;
+$("password").addEventListener("keydown",e=>{if(e.key==="Enter")$("loginBtn").click()});
+</script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/shopkeeper-app/sw.js", {
+      scope: "/shopkeeper-app/"
+    }).catch(err => console.warn("Shopkeeper service worker:", err));
+  });
+}
+</script>
+
+</body>
+</html>
