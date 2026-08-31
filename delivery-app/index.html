@@ -9,14 +9,18 @@
 <link rel="manifest" href="/delivery-app/manifest.webmanifest">
 <link rel="icon" href="/icons/icon-192.png">
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
+
 <meta name="theme-color" content="#0f172a">
 <meta name="application-name" content="HUNKART Delivery">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <style>
 :root{
   --dark:#111827;
   --bg:#f3f4f6;
-  --card:#fff;
+  --card:#ffffff;
   --muted:#6b7280;
   --green:#16a34a;
   --red:#dc2626;
@@ -25,7 +29,9 @@
   --line:#e5e7eb;
 }
 
-*{box-sizing:border-box}
+*{
+  box-sizing:border-box;
+}
 
 body{
   margin:0;
@@ -67,7 +73,9 @@ header{
   margin-bottom:14px;
 }
 
-.hidden{display:none!important}
+.hidden{
+  display:none!important;
+}
 
 .small{
   font-size:12px;
@@ -104,7 +112,8 @@ input{
   background:#fff;
 }
 
-button,a.btn{
+button,
+a.btn{
   border:0;
   border-radius:10px;
   padding:12px 14px;
@@ -118,11 +127,35 @@ button,a.btn{
   font-size:14px;
 }
 
-.primary{background:var(--dark);color:#fff}
-.green{background:var(--green);color:#fff}
-.red{background:var(--red);color:#fff}
-.gray{background:#e5e7eb;color:#111827}
-.blue{background:var(--blue);color:#fff}
+button:disabled{
+  opacity:.6;
+  cursor:not-allowed;
+}
+
+.primary{
+  background:var(--dark);
+  color:#fff;
+}
+
+.green{
+  background:var(--green);
+  color:#fff;
+}
+
+.red{
+  background:var(--red);
+  color:#fff;
+}
+
+.gray{
+  background:#e5e7eb;
+  color:#111827;
+}
+
+.blue{
+  background:var(--blue);
+  color:#fff;
+}
 
 .actions{
   display:flex;
@@ -153,9 +186,21 @@ button,a.btn{
   text-transform:capitalize;
 }
 
-.badge.assigned{background:#fef3c7}
-.badge.out_for_delivery{background:#dbeafe}
-.badge.delivered{background:#dcfce7}
+.badge.assigned{
+  background:#fef3c7;
+}
+
+.badge.picked_up{
+  background:#ffedd5;
+}
+
+.badge.out_for_delivery{
+  background:#dbeafe;
+}
+
+.badge.delivered{
+  background:#dcfce7;
+}
 
 .order-card{
   border:1px solid var(--line);
@@ -220,11 +265,15 @@ button,a.btn{
 }
 
 @media(max-width:620px){
-  .grid{grid-template-columns:1fr}
+  .grid{
+    grid-template-columns:1fr;
+  }
+
   .actions{
     display:grid;
     grid-template-columns:1fr;
   }
+
   .actions>*{
     width:100%;
     min-width:0;
@@ -237,6 +286,7 @@ button,a.btn{
 
 <header>
   <div class="head">
+
     <div>
       <b>HUNKART</b>
       <div style="font-size:12px;color:#cbd5e1">
@@ -247,80 +297,80 @@ button,a.btn{
     <button id="logoutBtn" class="gray hidden">
       Logout
     </button>
+
   </div>
 </header>
 
 <main class="wrap">
 
-<div id="status" class="statusbox">
-  Checking delivery partner login...
-</div>
-
-<section id="loginView" class="panel login hidden">
-
-  <h2 style="margin-top:0">
-    Delivery Partner Login
-  </h2>
-
-  <div class="small">
-    Use the delivery-boy email and password created by Admin.
+  <div id="status" class="statusbox">
+    Checking delivery partner login...
   </div>
 
-  <label>
-    Email
-    <input
-      id="email"
-      type="email"
-      autocomplete="username"
-      placeholder="you@gmail.com">
-  </label>
+  <section id="loginView" class="panel login hidden">
 
-  <label>
-    Password
-    <input
-      id="password"
-      type="password"
-      autocomplete="current-password"
-      placeholder="Password">
-  </label>
+    <h2 style="margin-top:0">
+      Delivery Partner Login
+    </h2>
 
-  <div class="actions">
-    <button id="loginBtn" class="primary">
-      Login
-    </button>
-  </div>
-
-</section>
-
-
-<section id="appView" class="hidden">
-
-  <div class="panel partner">
-
-    <div>
-      <div class="small">
-        Logged in as
-      </div>
-
-      <b id="partnerName">
-        Delivery Partner
-      </b>
+    <div class="small">
+      Use the delivery-boy email and password created by Admin.
     </div>
 
-    <button id="refreshBtn" class="gray">
-      Refresh
-    </button>
+    <label>
+      Email
+      <input
+        id="email"
+        type="email"
+        autocomplete="username"
+        placeholder="you@gmail.com">
+    </label>
 
-  </div>
+    <label>
+      Password
+      <input
+        id="password"
+        type="password"
+        autocomplete="current-password"
+        placeholder="Password">
+    </label>
 
-  <div id="gpsNotice" class="warn hidden">
-    Keep location permission ON while you are delivering.
-    Browser tracking may pause if the app is force-closed.
-  </div>
+    <div class="actions">
+      <button id="loginBtn" class="primary">
+        Login
+      </button>
+    </div>
 
-  <div id="ordersList"></div>
+  </section>
 
-</section>
+  <section id="appView" class="hidden">
+
+    <div class="panel partner">
+
+      <div>
+        <div class="small">
+          Logged in as
+        </div>
+
+        <b id="partnerName">
+          Delivery Partner
+        </b>
+      </div>
+
+      <button id="refreshBtn" class="gray">
+        Refresh
+      </button>
+
+    </div>
+
+    <div id="gpsNotice" class="warn hidden">
+      Keep location permission ON while you are delivering.
+      Browser tracking may pause if the app is force-closed.
+    </div>
+
+    <div id="ordersList"></div>
+
+  </section>
 
 </main>
 
@@ -332,11 +382,10 @@ import {
   createClient
 } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
-
 const cfg = window.SPIDY_CONFIG || {};
 
-const $ = id => document.getElementById(id);
-
+const $ = id =>
+  document.getElementById(id);
 
 let sb = null;
 let profile = null;
@@ -355,7 +404,7 @@ function setStatus(msg){
 
 
 function configured(){
-  return (
+  return !!(
     cfg.supabaseUrl &&
     cfg.supabaseAnonKey &&
     !String(cfg.supabaseUrl).includes("YOUR_")
@@ -411,8 +460,13 @@ function stopGps(){
 async function getSession(){
 
   const {
-    data:{session}
+    data:{session},
+    error
   } = await sb.auth.getSession();
+
+  if(error){
+    throw error;
+  }
 
   return session;
 
@@ -421,20 +475,23 @@ async function getSession(){
 
 async function loadProfile(){
 
-  const session = await getSession();
+  const session =
+    await getSession();
 
-  if(!session) return null;
+  if(!session){
+    return null;
+  }
 
+  const {data,error} =
+    await sb
+      .from("delivery_boys")
+      .select("id,full_name,phone,is_active")
+      .eq("user_id",session.user.id)
+      .maybeSingle();
 
-  const {data,error} = await sb
-    .from("delivery_boys")
-    .select("id,full_name,phone,is_active")
-    .eq("user_id",session.user.id)
-    .maybeSingle();
-
-
-  if(error) throw error;
-
+  if(error){
+    throw error;
+  }
 
   if(
     !data ||
@@ -442,7 +499,6 @@ async function loadProfile(){
   ){
     return null;
   }
-
 
   return data;
 
@@ -452,31 +508,45 @@ async function loadProfile(){
 async function loadDeliveries(){
 
   const {data,error} =
-    await sb.rpc("get_my_deliveries");
+    await sb.rpc(
+      "get_my_deliveries"
+    );
 
+  if(error){
+    throw error;
+  }
 
-  if(error) throw error;
-
-
-  deliveries = data || [];
-
+  deliveries =
+    data || [];
 
   renderDeliveries();
 
-
-  const live = deliveries.find(
-    d => d.delivery_status === "out_for_delivery"
-  );
-
+  const live =
+    deliveries.find(
+      d =>
+        d.delivery_status ===
+        "out_for_delivery"
+    );
 
   if(
     live &&
-    activeTrackingOrderId !== live.order_id
+    activeTrackingOrderId !==
+      live.order_id
   ){
-    startGpsWatch(live.order_id);
+
+    startGpsWatch(
+      live.order_id
+    );
+
   }
   else if(!live){
+
     stopGps();
+
+    $("gpsNotice")
+      .classList
+      .add("hidden");
+
   }
 
 }
@@ -484,10 +554,10 @@ async function loadDeliveries(){
 
 function renderDeliveries(){
 
-  const box = $("ordersList");
+  const box =
+    $("ordersList");
 
   box.innerHTML = "";
-
 
   if(!deliveries.length){
 
@@ -529,10 +599,12 @@ function renderDeliveries(){
 
             ${
               i.variant_label || i.variant
+
               ? ` (${esc(
                   i.variant_label ||
                   i.variant
                 )})`
+
               : ""
             }
 
@@ -617,7 +689,6 @@ function renderDeliveries(){
 
         </div>
 
-
         <span class="badge ${statusClass}">
 
           ${esc(
@@ -654,9 +725,7 @@ function renderDeliveries(){
 
         <div class="info">
 
-          <b>
-            Delivery Address
-          </b>
+          <b>Delivery Address</b>
 
           <div>
             ${esc(o.address)}
@@ -673,7 +742,6 @@ function renderDeliveries(){
             )}
           </div>
 
-
           ${
             o.delivery_note
 
@@ -688,7 +756,6 @@ function renderDeliveries(){
 
             : ""
           }
-
 
           ${
             o.distance_km != null
@@ -718,22 +785,18 @@ function renderDeliveries(){
           '<div class="small">No item details.</div>'
         }
 
-
         <div
           class="itemline"
           style="font-size:17px"
         >
 
-          <b>
-            Order Total
-          </b>
+          <b>Order Total</b>
 
           <b>
             ${money(o.total)}
           </b>
 
         </div>
-
 
         <div class="small">
           Payment:
@@ -806,7 +869,6 @@ function renderDeliveries(){
           🗺 Open in Maps
         </a>
 
-
         ${
           canStart
 
@@ -820,7 +882,6 @@ function renderDeliveries(){
 
           : ""
         }
-
 
         ${
           live
@@ -846,7 +907,6 @@ function renderDeliveries(){
         ".startBtn"
       );
 
-
     if(startBtn){
 
       startBtn.onclick =
@@ -863,7 +923,6 @@ function renderDeliveries(){
       card.querySelector(
         ".deliveredBtn"
       );
-
 
     if(deliveredBtn){
 
@@ -900,7 +959,6 @@ function currentPosition(){
         return;
       }
 
-
       navigator.geolocation
         .getCurrentPosition(
           resolve,
@@ -931,10 +989,8 @@ async function startDelivery(
       "Getting your current location..."
     );
 
-
     const pos =
       await currentPosition();
-
 
     const {error} =
       await sb.rpc(
@@ -947,22 +1003,21 @@ async function startDelivery(
         }
       );
 
-
-    if(error) throw error;
-
+    if(error){
+      throw error;
+    }
 
     setStatus(
       "Delivery started. Live location tracking is ON."
     );
 
-
     $("gpsNotice")
       .classList
       .remove("hidden");
 
-
-    startGpsWatch(orderId);
-
+    startGpsWatch(
+      orderId
+    );
 
     await loadDeliveries();
 
@@ -991,7 +1046,6 @@ function startGpsWatch(orderId){
 
   stopGps();
 
-
   if(!navigator.geolocation){
 
     setStatus(
@@ -1001,10 +1055,8 @@ function startGpsWatch(orderId){
     return;
   }
 
-
   activeTrackingOrderId =
     orderId;
-
 
   $("gpsNotice")
     .classList
@@ -1013,82 +1065,81 @@ function startGpsWatch(orderId){
 
   watchId =
     navigator.geolocation
-    .watchPosition(
+      .watchPosition(
 
-      async pos => {
+        async pos => {
 
-        const now =
-          Date.now();
-
-
-        if(
-          now - lastSentAt < 10000 ||
-          sendingLocation
-        ){
-          return;
-        }
-
-
-        sendingLocation = true;
-
-
-        try{
-
-          const {error} =
-            await sb.rpc(
-              "delivery_update_location",
-              {
-                p_order_id:orderId,
-                p_lat:pos.coords.latitude,
-                p_lng:pos.coords.longitude,
-                p_accuracy:pos.coords.accuracy
-              }
-            );
-
-
-          if(error) throw error;
-
-
-          lastSentAt =
+          const now =
             Date.now();
 
+          if(
+            now - lastSentAt < 10000 ||
+            sendingLocation
+          ){
+            return;
+          }
+
+          sendingLocation = true;
+
+          try{
+
+            const {error} =
+              await sb.rpc(
+                "delivery_update_location",
+                {
+                  p_order_id:orderId,
+                  p_lat:pos.coords.latitude,
+                  p_lng:pos.coords.longitude,
+                  p_accuracy:pos.coords.accuracy
+                }
+              );
+
+            if(error){
+              throw error;
+            }
+
+            lastSentAt =
+              Date.now();
+
+            setStatus(
+              "Live location updated at " +
+              new Date()
+                .toLocaleTimeString()
+            );
+
+          }
+          catch(e){
+
+            console.error(
+              "Location update failed:",
+              e
+            );
+
+          }
+          finally{
+
+            sendingLocation = false;
+
+          }
+
+        },
+
+        err => {
 
           setStatus(
-            "Live location updated at " +
-            new Date()
-              .toLocaleTimeString()
+            "Live location error: " +
+            err.message
           );
 
-        }
-        catch(e){
+        },
 
-          console.error(e);
-
-        }
-        finally{
-
-          sendingLocation = false;
-
+        {
+          enableHighAccuracy:true,
+          maximumAge:5000,
+          timeout:20000
         }
 
-      },
-
-      err => {
-
-        setStatus(
-          "Live location error: " +
-          err.message
-        );
-
-      },
-
-      {
-        enableHighAccuracy:true,
-        maximumAge:5000,
-        timeout:20000
-      }
-
-    );
+      );
 
 }
 
@@ -1111,15 +1162,12 @@ async function markDelivered(
 
     btn.disabled = true;
 
-
     setStatus(
       "Confirming delivery location..."
     );
 
-
     const pos =
       await currentPosition();
-
 
     const {error} =
       await sb.rpc(
@@ -1132,17 +1180,15 @@ async function markDelivered(
         }
       );
 
-
-    if(error) throw error;
-
+    if(error){
+      throw error;
+    }
 
     stopGps();
-
 
     setStatus(
       "Order marked Delivered successfully."
     );
-
 
     await loadDeliveries();
 
@@ -1174,31 +1220,25 @@ async function showApp(){
     profile =
       await loadProfile();
 
-
     if(!profile){
 
       await sb.auth.signOut();
-
 
       $("loginView")
         .classList
         .remove("hidden");
 
-
       $("appView")
         .classList
         .add("hidden");
-
 
       $("logoutBtn")
         .classList
         .add("hidden");
 
-
       setStatus(
         "This account is not an active delivery-boy account."
       );
-
 
       return;
 
@@ -1214,11 +1254,9 @@ async function showApp(){
       .classList
       .add("hidden");
 
-
     $("appView")
       .classList
       .remove("hidden");
-
 
     $("logoutBtn")
       .classList
@@ -1237,7 +1275,7 @@ async function showApp(){
 
     setStatus(
       "Setup error: " +
-      e.message
+      (e.message || e)
     );
 
   }
@@ -1247,40 +1285,55 @@ async function showApp(){
 
 async function checkAuth(){
 
-  const session =
-    await getSession();
+  try{
 
+    const session =
+      await getSession();
 
-  if(session){
+    if(session){
 
-    await showApp();
+      await showApp();
+
+    }
+    else{
+
+      stopGps();
+
+      profile = null;
+      deliveries = [];
+
+      $("loginView")
+        .classList
+        .remove("hidden");
+
+      $("appView")
+        .classList
+        .add("hidden");
+
+      $("logoutBtn")
+        .classList
+        .add("hidden");
+
+      setStatus(
+        "Delivery partner login required."
+      );
+
+    }
 
   }
-  else{
-
-    stopGps();
-
-    profile = null;
-    deliveries = [];
-
+  catch(e){
 
     $("loginView")
       .classList
       .remove("hidden");
 
-
     $("appView")
       .classList
       .add("hidden");
 
-
-    $("logoutBtn")
-      .classList
-      .add("hidden");
-
-
     setStatus(
-      "Delivery partner login required."
+      "Login check failed: " +
+      (e.message || e)
     );
 
   }
@@ -1290,6 +1343,10 @@ async function checkAuth(){
 
 if(!configured()){
 
+  $("loginView")
+    .classList
+    .remove("hidden");
+
   setStatus(
     "Supabase is not connected. Check config.js."
   );
@@ -1297,29 +1354,52 @@ if(!configured()){
 }
 else{
 
-  sb = createClient(
-    cfg.supabaseUrl,
-    cfg.supabaseAnonKey,
-    {
-      auth:{
-        storageKey:
-          "kld-delivery-auth",
+  try{
 
-        persistSession:true,
-        autoRefreshToken:true,
-        detectSessionInUrl:false
+    sb = createClient(
+      cfg.supabaseUrl,
+      cfg.supabaseAnonKey,
+      {
+        auth:{
+          storageKey:"kld-delivery-auth",
+          persistSession:true,
+          autoRefreshToken:true,
+          detectSessionInUrl:false
+        }
       }
-    }
-  );
+    );
 
+    await checkAuth();
 
-  await checkAuth();
+  }
+  catch(e){
+
+    $("loginView")
+      .classList
+      .remove("hidden");
+
+    setStatus(
+      "App startup error: " +
+      (e.message || e)
+    );
+
+  }
 
 }
 
 
 $("loginBtn").onclick =
 async () => {
+
+  if(!sb){
+
+    setStatus(
+      "Supabase is not connected."
+    );
+
+    return;
+  }
+
 
   const email =
     $("email")
@@ -1355,31 +1435,38 @@ async () => {
   );
 
 
-  const {error} =
-    await sb.auth
-      .signInWithPassword({
-        email,
-        password
-      });
+  try{
+
+    const {error} =
+      await sb.auth
+        .signInWithPassword({
+          email,
+          password
+        });
 
 
-  $("loginBtn").disabled =
-    false;
+    if(error){
+      throw error;
+    }
 
 
-  if(error){
+    await showApp();
+
+  }
+  catch(e){
 
     setStatus(
       "Login failed: " +
-      error.message
+      (e.message || e)
     );
 
-    return;
+  }
+  finally{
+
+    $("loginBtn").disabled =
+      false;
 
   }
-
-
-  await showApp();
 
 };
 
@@ -1387,11 +1474,25 @@ async () => {
 $("logoutBtn").onclick =
 async () => {
 
-  stopGps();
+  try{
 
-  await sb.auth.signOut();
+    stopGps();
 
-  await checkAuth();
+    if(sb){
+      await sb.auth.signOut();
+    }
+
+    await checkAuth();
+
+  }
+  catch(e){
+
+    setStatus(
+      "Logout error: " +
+      (e.message || e)
+    );
+
+  }
 
 };
 
@@ -1405,9 +1506,7 @@ async () => {
       "Refreshing assigned deliveries..."
     );
 
-
     await loadDeliveries();
-
 
     setStatus(
       "Deliveries refreshed."
@@ -1418,7 +1517,7 @@ async () => {
 
     setStatus(
       "Refresh error: " +
-      e.message
+      (e.message || e)
     );
 
   }
@@ -1427,8 +1526,43 @@ async () => {
 
 
 /* HUNKART Delivery PWA */
+
 if("serviceWorker" in navigator){
 
   window.addEventListener(
     "load",
     () => {
+
+      navigator.serviceWorker
+        .register(
+          "/delivery-app/sw.js",
+          {
+            scope:"/delivery-app/"
+          }
+        )
+        .then(registration => {
+
+          console.log(
+            "HUNKART Delivery service worker registered:",
+            registration.scope
+          );
+
+        })
+        .catch(error => {
+
+          console.error(
+            "HUNKART Delivery service worker registration failed:",
+            error
+          );
+
+        });
+
+    }
+  );
+
+}
+
+</script>
+
+</body>
+</html>
