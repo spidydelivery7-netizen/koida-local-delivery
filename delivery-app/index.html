@@ -29,9 +29,7 @@
   --line:#e5e7eb;
 }
 
-*{
-  box-sizing:border-box;
-}
+*{box-sizing:border-box}
 
 body{
   margin:0;
@@ -73,9 +71,7 @@ header{
   margin-bottom:14px;
 }
 
-.hidden{
-  display:none!important;
-}
+.hidden{display:none!important}
 
 .small{
   font-size:12px;
@@ -132,30 +128,11 @@ button:disabled{
   cursor:not-allowed;
 }
 
-.primary{
-  background:var(--dark);
-  color:#fff;
-}
-
-.green{
-  background:var(--green);
-  color:#fff;
-}
-
-.red{
-  background:var(--red);
-  color:#fff;
-}
-
-.gray{
-  background:#e5e7eb;
-  color:#111827;
-}
-
-.blue{
-  background:var(--blue);
-  color:#fff;
-}
+.primary{background:var(--dark);color:#fff}
+.green{background:var(--green);color:#fff}
+.red{background:var(--red);color:#fff}
+.gray{background:#e5e7eb;color:#111827}
+.blue{background:var(--blue);color:#fff}
 
 .actions{
   display:flex;
@@ -186,21 +163,10 @@ button:disabled{
   text-transform:capitalize;
 }
 
-.badge.assigned{
-  background:#fef3c7;
-}
-
-.badge.picked_up{
-  background:#ffedd5;
-}
-
-.badge.out_for_delivery{
-  background:#dbeafe;
-}
-
-.badge.delivered{
-  background:#dcfce7;
-}
+.badge.assigned{background:#fef3c7}
+.badge.picked_up{background:#ffedd5}
+.badge.out_for_delivery{background:#dbeafe}
+.badge.delivered{background:#dcfce7}
 
 .order-card{
   border:1px solid var(--line);
@@ -264,10 +230,31 @@ button:disabled{
   color:var(--muted);
 }
 
+.link-btn{
+  border:0;
+  background:transparent;
+  color:var(--blue);
+  padding:4px 0;
+  font-weight:800;
+  cursor:pointer;
+  font-size:13px;
+  text-decoration:underline;
+}
+
+.auth-links{
+  margin-top:12px;
+  text-align:center;
+}
+
+.auth-note{
+  margin-top:10px;
+  font-size:12px;
+  color:var(--muted);
+  line-height:1.45;
+}
+
 @media(max-width:620px){
-  .grid{
-    grid-template-columns:1fr;
-  }
+  .grid{grid-template-columns:1fr}
 
   .actions{
     display:grid;
@@ -285,92 +272,165 @@ button:disabled{
 <body>
 
 <header>
-  <div class="head">
-
-    <div>
-      <b>HUNKART</b>
-      <div style="font-size:12px;color:#cbd5e1">
-        Delivery Partner
-      </div>
+<div class="head">
+  <div>
+    <b>HUNKART</b>
+    <div style="font-size:12px;color:#cbd5e1">
+      Delivery Partner
     </div>
-
-    <button id="logoutBtn" class="gray hidden">
-      Logout
-    </button>
-
   </div>
+
+  <button id="logoutBtn" class="gray hidden">
+    Logout
+  </button>
+</div>
 </header>
 
 <main class="wrap">
 
-  <div id="status" class="statusbox">
-    Checking delivery partner login...
+<div id="status" class="statusbox">
+  Checking delivery partner login...
+</div>
+
+<section id="loginView" class="panel login hidden">
+
+  <h2 style="margin-top:0">
+    Delivery Partner Login
+  </h2>
+
+  <div class="small">
+    Use the delivery-boy email and password created by Admin.
   </div>
 
-  <section id="loginView" class="panel login hidden">
+  <label>
+    Email
+    <input
+      id="email"
+      type="email"
+      autocomplete="username"
+      placeholder="you@gmail.com">
+  </label>
 
-    <h2 style="margin-top:0">
-      Delivery Partner Login
-    </h2>
+  <label>
+    Password
+    <input
+      id="password"
+      type="password"
+      autocomplete="current-password"
+      placeholder="Password">
+  </label>
 
-    <div class="small">
-      Use the delivery-boy email and password created by Admin.
+  <div class="actions">
+    <button id="loginBtn" class="primary">
+      Login
+    </button>
+  </div>
+
+  <div class="auth-links">
+    <button id="forgotPasswordBtn" class="link-btn" type="button">
+      Forgot Password?
+    </button>
+  </div>
+
+</section>
+
+<section id="forgotView" class="panel login hidden">
+
+  <h2 style="margin-top:0">
+    Reset Password
+  </h2>
+
+  <div class="small">
+    Enter the delivery-boy email registered by Admin.
+    We will send a password reset link to that email.
+  </div>
+
+  <label>
+    Email
+    <input
+      id="forgotEmail"
+      type="email"
+      autocomplete="email"
+      placeholder="you@gmail.com">
+  </label>
+
+  <div class="actions">
+    <button id="sendResetBtn" class="primary">
+      Send Reset Link
+    </button>
+
+    <button id="backToLoginBtn" class="gray" type="button">
+      Back to Login
+    </button>
+  </div>
+
+  <div class="auth-note">
+    Open the reset email on this phone and use the link to return to HUNKART Delivery.
+  </div>
+
+</section>
+
+<section id="resetView" class="panel login hidden">
+
+  <h2 style="margin-top:0">
+    Create New Password
+  </h2>
+
+  <div class="small">
+    Enter a new password for your delivery partner account.
+  </div>
+
+  <label>
+    New Password
+    <input
+      id="newPassword"
+      type="password"
+      autocomplete="new-password"
+      placeholder="New password">
+  </label>
+
+  <label>
+    Confirm New Password
+    <input
+      id="confirmPassword"
+      type="password"
+      autocomplete="new-password"
+      placeholder="Confirm new password">
+  </label>
+
+  <div class="actions">
+    <button id="updatePasswordBtn" class="green">
+      Update Password
+    </button>
+  </div>
+
+  <div class="auth-note">
+    Use at least 8 characters.
+  </div>
+
+</section>
+
+<section id="appView" class="hidden">
+
+  <div class="panel partner">
+    <div>
+      <div class="small">Logged in as</div>
+      <b id="partnerName">Delivery Partner</b>
     </div>
 
-    <label>
-      Email
-      <input
-        id="email"
-        type="email"
-        autocomplete="username"
-        placeholder="you@gmail.com">
-    </label>
+    <button id="refreshBtn" class="gray">
+      Refresh
+    </button>
+  </div>
 
-    <label>
-      Password
-      <input
-        id="password"
-        type="password"
-        autocomplete="current-password"
-        placeholder="Password">
-    </label>
+  <div id="gpsNotice" class="warn hidden">
+    Keep location permission ON while you are delivering.
+    Browser tracking may pause if the app is force-closed.
+  </div>
 
-    <div class="actions">
-      <button id="loginBtn" class="primary">
-        Login
-      </button>
-    </div>
+  <div id="ordersList"></div>
 
-  </section>
-
-  <section id="appView" class="hidden">
-
-    <div class="panel partner">
-
-      <div>
-        <div class="small">
-          Logged in as
-        </div>
-
-        <b id="partnerName">
-          Delivery Partner
-        </b>
-      </div>
-
-      <button id="refreshBtn" class="gray">
-        Refresh
-      </button>
-
-    </div>
-
-    <div id="gpsNotice" class="warn hidden">
-      Keep location permission ON while you are delivering.
-      Browser tracking may pause if the app is force-closed.
-    </div>
-
-    <div id="ordersList"></div>
-
-  </section>
+</section>
 
 </main>
 
@@ -384,8 +444,7 @@ import {
 
 const cfg = window.SPIDY_CONFIG || {};
 
-const $ = id =>
-  document.getElementById(id);
+const $ = id => document.getElementById(id);
 
 let sb = null;
 let profile = null;
@@ -396,12 +455,56 @@ let activeTrackingOrderId = null;
 
 let lastSentAt = 0;
 let sendingLocation = false;
-
+let passwordRecoveryMode = false;
 
 function setStatus(msg){
   $("status").textContent = msg;
 }
 
+function hideAuthViews(){
+  $("loginView").classList.add("hidden");
+  $("forgotView").classList.add("hidden");
+  $("resetView").classList.add("hidden");
+}
+
+function showLoginView(){
+  passwordRecoveryMode = false;
+  hideAuthViews();
+  $("loginView").classList.remove("hidden");
+  $("appView").classList.add("hidden");
+  $("logoutBtn").classList.add("hidden");
+}
+
+function showForgotView(){
+  hideAuthViews();
+  $("forgotView").classList.remove("hidden");
+  $("appView").classList.add("hidden");
+  $("logoutBtn").classList.add("hidden");
+
+  const currentEmail = $("email").value.trim();
+
+  if(currentEmail && !$("forgotEmail").value.trim()){
+    $("forgotEmail").value = currentEmail;
+  }
+}
+
+function showResetView(){
+  passwordRecoveryMode = true;
+  stopGps();
+  hideAuthViews();
+
+  $("resetView").classList.remove("hidden");
+  $("appView").classList.add("hidden");
+  $("logoutBtn").classList.add("hidden");
+
+  setStatus(
+    "Password recovery link verified. Create your new password."
+  );
+}
+
+function recoveryRedirectUrl(){
+  return window.location.origin + window.location.pathname;
+}
 
 function configured(){
   return !!(
@@ -411,21 +514,15 @@ function configured(){
   );
 }
 
-
 function money(v){
   return "₹" + Number(v || 0).toFixed(0);
 }
 
-
 function fmt(v){
-  return v
-    ? new Date(v).toLocaleString()
-    : "—";
+  return v ? new Date(v).toLocaleString() : "—";
 }
 
-
 function esc(v){
-
   return String(v ?? "").replace(
     /[&<>"']/g,
     c => ({
@@ -436,16 +533,10 @@ function esc(v){
       "'":"&#39;"
     }[c])
   );
-
 }
 
-
 function stopGps(){
-
-  if(
-    watchId !== null &&
-    navigator.geolocation
-  ){
+  if(watchId !== null && navigator.geolocation){
     navigator.geolocation.clearWatch(watchId);
   }
 
@@ -453,34 +544,23 @@ function stopGps(){
   activeTrackingOrderId = null;
   lastSentAt = 0;
   sendingLocation = false;
-
 }
 
-
 async function getSession(){
-
   const {
     data:{session},
     error
   } = await sb.auth.getSession();
 
-  if(error){
-    throw error;
-  }
+  if(error) throw error;
 
   return session;
-
 }
 
-
 async function loadProfile(){
+  const session = await getSession();
 
-  const session =
-    await getSession();
-
-  if(!session){
-    return null;
-  }
+  if(!session) return null;
 
   const {data,error} =
     await sb
@@ -489,73 +569,46 @@ async function loadProfile(){
       .eq("user_id",session.user.id)
       .maybeSingle();
 
-  if(error){
-    throw error;
-  }
+  if(error) throw error;
 
-  if(
-    !data ||
-    data.is_active !== true
-  ){
+  if(!data || data.is_active !== true){
     return null;
   }
 
   return data;
-
 }
-
 
 async function loadDeliveries(){
 
   const {data,error} =
-    await sb.rpc(
-      "get_my_deliveries"
-    );
+    await sb.rpc("get_my_deliveries");
 
-  if(error){
-    throw error;
-  }
+  if(error) throw error;
 
-  deliveries =
-    data || [];
+  deliveries = data || [];
 
   renderDeliveries();
 
   const live =
     deliveries.find(
-      d =>
-        d.delivery_status ===
-        "out_for_delivery"
+      d => d.delivery_status === "out_for_delivery"
     );
 
   if(
     live &&
-    activeTrackingOrderId !==
-      live.order_id
+    activeTrackingOrderId !== live.order_id
   ){
-
-    startGpsWatch(
-      live.order_id
-    );
-
+    startGpsWatch(live.order_id);
   }
   else if(!live){
-
     stopGps();
-
-    $("gpsNotice")
-      .classList
-      .add("hidden");
-
+    $("gpsNotice").classList.add("hidden");
   }
-
 }
-
 
 function renderDeliveries(){
 
-  const box =
-    $("ordersList");
+  const box = $("ordersList");
 
   box.innerHTML = "";
 
@@ -563,20 +616,17 @@ function renderDeliveries(){
 
     box.innerHTML = `
       <div class="panel empty">
-
         <b>No assigned deliveries</b>
 
         <div style="margin-top:6px">
           Admin assigns an order,
           then it will appear here.
         </div>
-
       </div>
     `;
 
     return;
   }
-
 
   deliveries.forEach(o => {
 
@@ -586,54 +636,33 @@ function renderDeliveries(){
     card.className =
       "panel order-card";
 
-
     const items =
       (o.items || [])
       .map(i => `
-
         <div class="itemline">
-
           <span>
-
             ${esc(i.product_name)}
-
             ${
               i.variant_label || i.variant
-
-              ? ` (${esc(
-                  i.variant_label ||
-                  i.variant
-                )})`
-
+              ? ` (${esc(i.variant_label || i.variant)})`
               : ""
             }
-
             × ${Number(i.qty || 0)}
-
           </span>
 
-          <b>
-            ${money(i.line_total)}
-          </b>
-
+          <b>${money(i.line_total)}</b>
         </div>
-
       `)
       .join("");
-
 
     const mapsLink =
       (
         o.delivery_lat != null &&
         o.delivery_lng != null
       )
-
       ? `https://www.google.com/maps/dir/?api=1&destination=${
           encodeURIComponent(o.delivery_lat)
-        },${
-          encodeURIComponent(o.delivery_lng)
-        }`
-
+        },${encodeURIComponent(o.delivery_lng)}`
       : `https://www.google.com/maps/search/?api=1&query=${
           encodeURIComponent(
             [
@@ -646,68 +675,46 @@ function renderDeliveries(){
           )
         }`;
 
-
     const statusClass =
-      String(
-        o.delivery_status || ""
-      )
-      .replace(
-        /[^a-z_]/g,
-        ""
-      );
-
+      String(o.delivery_status || "")
+      .replace(/[^a-z_]/g,"");
 
     const canStart =
       o.delivery_status === "assigned" ||
       o.delivery_status === "picked_up";
 
-
     const live =
-      o.delivery_status ===
-      "out_for_delivery";
-
+      o.delivery_status === "out_for_delivery";
 
     const delivered =
-      o.delivery_status ===
-      "delivered";
-
+      o.delivery_status === "delivered";
 
     card.innerHTML = `
 
       <div class="order-head">
 
         <div>
-
-          <b>
-            ${esc(o.order_number)}
-          </b>
+          <b>${esc(o.order_number)}</b>
 
           <div class="small">
             Order ID:
             ${esc(o.order_id)}
           </div>
-
         </div>
 
         <span class="badge ${statusClass}">
-
           ${esc(
             String(
-              o.delivery_status ||
-              "assigned"
-            )
-            .replaceAll("_"," ")
+              o.delivery_status || "assigned"
+            ).replaceAll("_"," ")
           )}
-
         </span>
 
       </div>
 
-
       <div class="grid">
 
         <div class="info">
-
           <b>Customer</b>
 
           <div>
@@ -719,17 +726,13 @@ function renderDeliveries(){
               ${esc(o.phone)}
             </a>
           </div>
-
         </div>
-
 
         <div class="info">
 
           <b>Delivery Address</b>
 
-          <div>
-            ${esc(o.address)}
-          </div>
+          <div>${esc(o.address)}</div>
 
           <div>
             ${esc(
@@ -744,39 +747,28 @@ function renderDeliveries(){
 
           ${
             o.delivery_note
-
             ? `
-              <div
-                class="small"
-                style="margin-top:5px"
-              >
+              <div class="small" style="margin-top:5px">
                 ${esc(o.delivery_note)}
               </div>
             `
-
             : ""
           }
 
           ${
             o.distance_km != null
-
             ? `
-              <div
-                class="small"
-                style="margin-top:5px"
-              >
+              <div class="small" style="margin-top:5px">
                 Distance:
                 ${esc(o.distance_km)} km
               </div>
             `
-
             : ""
           }
 
         </div>
 
       </div>
-
 
       <div class="items">
 
@@ -785,17 +777,9 @@ function renderDeliveries(){
           '<div class="small">No item details.</div>'
         }
 
-        <div
-          class="itemline"
-          style="font-size:17px"
-        >
-
+        <div class="itemline" style="font-size:17px">
           <b>Order Total</b>
-
-          <b>
-            ${money(o.total)}
-          </b>
-
+          <b>${money(o.total)}</b>
         </div>
 
         <div class="small">
@@ -805,58 +789,35 @@ function renderDeliveries(){
 
       </div>
 
-
       ${
         live
-
         ? `
           <div class="live">
-
-            <b>
-              📍 Live tracking ON
-            </b>
+            <b>📍 Live tracking ON</b>
 
             <div class="small">
               Last location update:
-              ${esc(
-                fmt(
-                  o.location_updated_at
-                )
-              )}
+              ${esc(fmt(o.location_updated_at))}
             </div>
-
           </div>
         `
-
         : ""
       }
-
 
       ${
         delivered
-
         ? `
           <div class="live">
-
-            <b>
-              ✅ Delivered
-            </b>
+            <b>✅ Delivered</b>
 
             <div class="small">
               Delivered at:
-              ${esc(
-                fmt(
-                  o.delivered_at
-                )
-              )}
+              ${esc(fmt(o.delivered_at))}
             </div>
-
           </div>
         `
-
         : ""
       }
-
 
       <div class="actions">
 
@@ -864,85 +825,58 @@ function renderDeliveries(){
           class="btn blue"
           href="${mapsLink}"
           target="_blank"
-          rel="noopener"
-        >
+          rel="noopener">
           🗺 Open in Maps
         </a>
 
         ${
           canStart
-
           ? `
-            <button
-              class="green startBtn"
-            >
+            <button class="green startBtn">
               🚚 Start Delivery
             </button>
           `
-
           : ""
         }
 
         ${
           live
-
           ? `
-            <button
-              class="red deliveredBtn"
-            >
+            <button class="red deliveredBtn">
               ✅ Mark Delivered
             </button>
           `
-
           : ""
         }
 
       </div>
-
     `;
 
-
     const startBtn =
-      card.querySelector(
-        ".startBtn"
-      );
+      card.querySelector(".startBtn");
 
     if(startBtn){
-
       startBtn.onclick =
-        () =>
-          startDelivery(
-            o.order_id,
-            startBtn
-          );
-
+        () => startDelivery(
+          o.order_id,
+          startBtn
+        );
     }
-
 
     const deliveredBtn =
-      card.querySelector(
-        ".deliveredBtn"
-      );
+      card.querySelector(".deliveredBtn");
 
     if(deliveredBtn){
-
       deliveredBtn.onclick =
-        () =>
-          markDelivered(
-            o.order_id,
-            deliveredBtn
-          );
-
+        () => markDelivered(
+          o.order_id,
+          deliveredBtn
+        );
     }
 
-
     box.appendChild(card);
-
   });
-
 }
-
-
 function currentPosition(){
 
   return new Promise(
@@ -972,7 +906,6 @@ function currentPosition(){
 
     }
   );
-
 }
 
 
@@ -1015,9 +948,7 @@ async function startDelivery(
       .classList
       .remove("hidden");
 
-    startGpsWatch(
-      orderId
-    );
+    startGpsWatch(orderId);
 
     await loadDeliveries();
 
@@ -1061,7 +992,6 @@ function startGpsWatch(orderId){
   $("gpsNotice")
     .classList
     .remove("hidden");
-
 
   watchId =
     navigator.geolocation
@@ -1157,7 +1087,6 @@ async function markDelivered(
     return;
   }
 
-
   try{
 
     btn.disabled = true;
@@ -1224,35 +1153,20 @@ async function showApp(){
 
       await sb.auth.signOut();
 
-      $("loginView")
-        .classList
-        .remove("hidden");
-
-      $("appView")
-        .classList
-        .add("hidden");
-
-      $("logoutBtn")
-        .classList
-        .add("hidden");
+      showLoginView();
 
       setStatus(
         "This account is not an active delivery-boy account."
       );
 
       return;
-
     }
-
 
     $("partnerName").textContent =
       profile.full_name ||
       "Delivery Partner";
 
-
-    $("loginView")
-      .classList
-      .add("hidden");
+    hideAuthViews();
 
     $("appView")
       .classList
@@ -1262,11 +1176,9 @@ async function showApp(){
       .classList
       .remove("hidden");
 
-
     setStatus(
       "Delivery partner logged in."
     );
-
 
     await loadDeliveries();
 
@@ -1302,17 +1214,7 @@ async function checkAuth(){
       profile = null;
       deliveries = [];
 
-      $("loginView")
-        .classList
-        .remove("hidden");
-
-      $("appView")
-        .classList
-        .add("hidden");
-
-      $("logoutBtn")
-        .classList
-        .add("hidden");
+      showLoginView();
 
       setStatus(
         "Delivery partner login required."
@@ -1323,13 +1225,7 @@ async function checkAuth(){
   }
   catch(e){
 
-    $("loginView")
-      .classList
-      .remove("hidden");
-
-    $("appView")
-      .classList
-      .add("hidden");
+    showLoginView();
 
     setStatus(
       "Login check failed: " +
@@ -1343,9 +1239,7 @@ async function checkAuth(){
 
 if(!configured()){
 
-  $("loginView")
-    .classList
-    .remove("hidden");
+  showLoginView();
 
   setStatus(
     "Supabase is not connected. Check config.js."
@@ -1364,19 +1258,89 @@ else{
           storageKey:"kld-delivery-auth",
           persistSession:true,
           autoRefreshToken:true,
-          detectSessionInUrl:false
+          detectSessionInUrl:true
         }
       }
     );
 
-    await checkAuth();
+
+    sb.auth.onAuthStateChange(
+      async (event, session) => {
+
+        if(event === "PASSWORD_RECOVERY"){
+
+          showResetView();
+          return;
+
+        }
+
+        if(
+          event === "SIGNED_OUT" &&
+          !passwordRecoveryMode
+        ){
+
+          showLoginView();
+
+        }
+
+      }
+    );
+
+
+    const hashParams =
+      new URLSearchParams(
+        window.location.hash.replace(/^#/, "")
+      );
+
+    const queryParams =
+      new URLSearchParams(
+        window.location.search
+      );
+
+    const authError =
+      hashParams.get("error_description") ||
+      queryParams.get("error_description");
+
+
+    if(authError){
+
+      showLoginView();
+
+      setStatus(
+        "Password reset link error: " +
+        decodeURIComponent(authError)
+      );
+
+    }
+    else{
+
+      const {
+        data:{session}
+      } = await sb.auth.getSession();
+
+      if(
+        session &&
+        (
+          hashParams.get("type") === "recovery" ||
+          queryParams.get("type") === "recovery"
+        )
+      ){
+
+        showResetView();
+
+      }
+      else{
+
+        await checkAuth();
+
+      }
+
+    }
 
   }
   catch(e){
 
-    $("loginView")
-      .classList
-      .remove("hidden");
+    showLoginView();
 
     setStatus(
       "App startup error: " +
@@ -1386,6 +1350,212 @@ else{
   }
 
 }
+
+
+$("forgotPasswordBtn").onclick =
+() => {
+
+  showForgotView();
+
+  setStatus(
+    "Enter your registered delivery-boy email."
+  );
+
+};
+
+
+$("backToLoginBtn").onclick =
+() => {
+
+  showLoginView();
+
+  setStatus(
+    "Delivery partner login required."
+  );
+
+};
+
+
+$("sendResetBtn").onclick =
+async () => {
+
+  if(!sb){
+
+    setStatus(
+      "Supabase is not connected."
+    );
+
+    return;
+  }
+
+  const email =
+    $("forgotEmail")
+      .value
+      .trim()
+      .toLowerCase();
+
+  if(!email){
+
+    setStatus(
+      "Enter your registered email."
+    );
+
+    return;
+  }
+
+  $("sendResetBtn").disabled =
+    true;
+
+  setStatus(
+    "Sending password reset link..."
+  );
+
+  try{
+
+    const {error} =
+      await sb.auth
+        .resetPasswordForEmail(
+          email,
+          {
+            redirectTo:
+              recoveryRedirectUrl()
+          }
+        );
+
+    if(error){
+      throw error;
+    }
+
+    setStatus(
+      "Password reset link sent. Check your email inbox and spam folder."
+    );
+
+  }
+  catch(e){
+
+    setStatus(
+      "Could not send reset link: " +
+      (e.message || e)
+    );
+
+  }
+  finally{
+
+    $("sendResetBtn").disabled =
+      false;
+
+  }
+
+};
+
+
+$("updatePasswordBtn").onclick =
+async () => {
+
+  if(!sb){
+
+    setStatus(
+      "Supabase is not connected."
+    );
+
+    return;
+  }
+
+  const newPassword =
+    $("newPassword").value;
+
+  const confirmPassword =
+    $("confirmPassword").value;
+
+  if(
+    !newPassword ||
+    !confirmPassword
+  ){
+
+    setStatus(
+      "Enter and confirm your new password."
+    );
+
+    return;
+  }
+
+  if(newPassword.length < 8){
+
+    setStatus(
+      "New password must be at least 8 characters."
+    );
+
+    return;
+  }
+
+  if(
+    newPassword !==
+    confirmPassword
+  ){
+
+    setStatus(
+      "New password and confirmation do not match."
+    );
+
+    return;
+  }
+
+  $("updatePasswordBtn").disabled =
+    true;
+
+  setStatus(
+    "Updating password..."
+  );
+
+  try{
+
+    const {error} =
+      await sb.auth
+        .updateUser({
+          password:newPassword
+        });
+
+    if(error){
+      throw error;
+    }
+
+    passwordRecoveryMode =
+      false;
+
+    $("newPassword").value = "";
+    $("confirmPassword").value = "";
+
+    await sb.auth.signOut();
+
+    history.replaceState(
+      {},
+      document.title,
+      window.location.pathname
+    );
+
+    showLoginView();
+
+    setStatus(
+      "Password updated successfully. Login with your new password."
+    );
+
+  }
+  catch(e){
+
+    setStatus(
+      "Could not update password: " +
+      (e.message || e)
+    );
+
+  }
+  finally{
+
+    $("updatePasswordBtn").disabled =
+      false;
+
+  }
+
+};
 
 
 $("loginBtn").onclick =
@@ -1400,17 +1570,14 @@ async () => {
     return;
   }
 
-
   const email =
     $("email")
       .value
       .trim()
       .toLowerCase();
 
-
   const password =
     $("password").value;
-
 
   if(
     !email ||
@@ -1422,18 +1589,14 @@ async () => {
     );
 
     return;
-
   }
-
 
   $("loginBtn").disabled =
     true;
 
-
   setStatus(
     "Logging in..."
   );
-
 
   try{
 
@@ -1444,11 +1607,9 @@ async () => {
           password
         });
 
-
     if(error){
       throw error;
     }
-
 
     await showApp();
 
