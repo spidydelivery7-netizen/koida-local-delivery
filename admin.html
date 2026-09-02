@@ -856,11 +856,9 @@ ${b.full_name||"Delivery Partner"}
 )
 .join("");
 
-const assigned=
-o.delivery_tracking &&
-o.delivery_tracking.length
-?o.delivery_tracking[0]
-:null;
+const assigned = Array.isArray(o.delivery_tracking)
+  ? (o.delivery_tracking[0] || null)
+  : (o.delivery_tracking || null);
 
 const assignedName=
 assigned &&
