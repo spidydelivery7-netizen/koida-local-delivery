@@ -5,20 +5,49 @@
 <title>HUNKART Admin</title>
 <style>
 :root{--dark:#111827;--bg:#f3f4f6;--muted:#6b7280;--green:#16a34a;--red:#dc2626;--yellow:#fbbf24;--line:#e5e7eb}
-*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:#111827}
-header{background:var(--dark);color:#fff}.head{max-width:1180px;margin:auto;padding:15px 18px;display:flex;justify-content:space-between;align-items:center}
-.wrap{max-width:1180px;margin:auto;padding:22px 18px}.panel{background:#fff;border-radius:16px;padding:18px;box-shadow:0 2px 12px #0001;margin-bottom:16px}
-h2{margin-top:0}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.full{grid-column:1/-1}
-label{font-size:13px;font-weight:800}input,textarea,select{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;font-size:16px;margin-top:6px;background:#fff}textarea{min-height:88px;resize:vertical}
-button{border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:pointer}.primary{background:var(--dark);color:#fff}.green{background:var(--green);color:#fff}.red{background:var(--red);color:#fff}.gray{background:#e5e7eb}.yellow{background:var(--yellow)}
-.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.hidden{display:none!important}.status{padding:11px 13px;border-radius:10px;background:#eef2ff;margin-bottom:14px}
-.login{max-width:430px;margin:40px auto}.toptools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.search{flex:1;min-width:220px}
-.row{display:grid;grid-template-columns:82px 1fr auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid #eee}.row:last-child{border-bottom:0}
-.thumb{width:82px;height:68px;object-fit:cover;border-radius:10px;background:#eee}.meta{font-size:12px;color:var(--muted);margin-top:4px}.preview{width:130px;height:100px;object-fit:cover;border-radius:12px;background:#eee;margin-top:8px}
-.tabs{display:flex;gap:8px;margin-bottom:16px}.tabs button{flex:1}.tabs .active{background:var(--dark);color:#fff}
-.order-card{border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}.order-head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
-.badge{display:inline-block;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:800;background:#eef2ff}.badge.new{background:#fef3c7}.badge.paid{background:#dcfce7}.badge.pending{background:#fee2e2}
-.order-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.order-grid>div{background:#f9fafb;border-radius:10px;padding:10px}.items{margin-top:10px;border-top:1px solid var(--line);padding-top:10px}.itemline{display:flex;justify-content:space-between;gap:10px;margin:6px 0}.small{font-size:12px;color:var(--muted)}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:#111827}
+header{background:var(--dark);color:#fff}
+.head{max-width:1180px;margin:auto;padding:15px 18px;display:flex;justify-content:space-between;align-items:center}
+.wrap{max-width:1180px;margin:auto;padding:22px 18px}
+.panel{background:#fff;border-radius:16px;padding:18px;box-shadow:0 2px 12px #0001;margin-bottom:16px}
+h2{margin-top:0}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.full{grid-column:1/-1}
+label{font-size:13px;font-weight:800}
+input,textarea,select{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;font-size:16px;margin-top:6px;background:#fff}
+textarea{min-height:88px;resize:vertical}
+button{border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:pointer}
+.primary{background:var(--dark);color:#fff}
+.green{background:var(--green);color:#fff}
+.red{background:var(--red);color:#fff}
+.gray{background:#e5e7eb}
+.yellow{background:var(--yellow)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.hidden{display:none!important}
+.status{padding:11px 13px;border-radius:10px;background:#eef2ff;margin-bottom:14px}
+.login{max-width:430px;margin:40px auto}
+.toptools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.search{flex:1;min-width:220px}
+.row{display:grid;grid-template-columns:82px 1fr auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid #eee}
+.row:last-child{border-bottom:0}
+.thumb{width:82px;height:68px;object-fit:cover;border-radius:10px;background:#eee}
+.meta{font-size:12px;color:var(--muted);margin-top:4px}
+.preview{width:130px;height:100px;object-fit:cover;border-radius:12px;background:#eee;margin-top:8px}
+.tabs{display:flex;gap:8px;margin-bottom:16px}
+.tabs button{flex:1}
+.tabs .active{background:var(--dark);color:#fff}
+.order-card{border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.order-head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.badge{display:inline-block;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:800;background:#eef2ff}
+.badge.new{background:#fef3c7}
+.badge.paid{background:#dcfce7}
+.badge.pending{background:#fee2e2}
+.order-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.order-grid>div{background:#f9fafb;border-radius:10px;padding:10px}
+.items{margin-top:10px;border-top:1px solid var(--line);padding-top:10px}
+.itemline{display:flex;justify-content:space-between;gap:10px;margin:6px 0}
+.small{font-size:12px;color:var(--muted)}
 .shopkeeper-card{border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
 .shopkeeper-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap}
 .shopkeeper-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:12px}
@@ -26,1436 +55,2232 @@ button{border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:poin
 .shopAssign{min-width:220px}
 .shop-actions{align-items:flex-end}
 .shop-pill{display:inline-block;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:800;background:#e5e7eb}
-@media(max-width:700px){.grid,.order-grid,.shopkeeper-grid{grid-template-columns:1fr}.full{grid-column:auto}.row{grid-template-columns:64px 1fr}.row>.actions{grid-column:1/-1}.thumb{width:64px;height:56px}.tabs{overflow-x:auto}.tabs button{min-width:120px}.shopAssign{min-width:100%}}
+
+@media(max-width:700px){
+.grid,.order-grid,.shopkeeper-grid{grid-template-columns:1fr}
+.full{grid-column:auto}
+.row{grid-template-columns:64px 1fr}
+.row>.actions{grid-column:1/-1}
+.thumb{width:64px;height:56px}
+.tabs{overflow-x:auto}
+.tabs button{min-width:120px}
+.shopAssign{min-width:100%}
+}
 </style>
 </head>
+
 <body>
-<header><div class="head"><div><b>HUNKART Admin</b><div class="small" style="color:#cbd5e1">Products + Orders + Delivery + Shopkeepers</div></div><button id="logout" class="gray hidden">Logout</button></div></header>
+
+<header>
+<div class="head">
+<div>
+<b>HUNKART Admin</b>
+<div class="small" style="color:#cbd5e1">
+Products + Orders + Delivery + Shopkeepers
+</div>
+</div>
+<button id="logout" class="gray hidden">Logout</button>
+</div>
+</header>
+
 <main class="wrap">
+
 <div id="status" class="status">Checking setup...</div>
 
 <section id="login" class="panel login hidden">
+
 <h2>Admin Login</h2>
-<label>Email<input id="email" type="email"></label><br><br>
-<label>Password<input id="password" type="password"></label>
-<div class="actions"><button id="loginBtn" class="primary">Login</button></div>
-<div style="margin-top:14px;text-align:center;"><button id="forgotPasswordBtn" type="button">Forgot Password?</button></div></section>
+
+<label>
+Email
+<input id="email" type="email">
+</label>
+
+<br><br>
+
+<label>
+Password
+<input id="password" type="password">
+</label>
+
+<div class="actions">
+<button id="loginBtn" class="primary">Login</button>
+</div>
+
+<div style="margin-top:14px;text-align:center;">
+<button id="forgotPasswordBtn" type="button">
+Forgot Password?
+</button>
+</div>
+
+</section>
 
 <section id="app" class="hidden">
-<div class="tabs"><button id="productsTab" class="active">Products</button><button id="ordersTab">Orders <span id="newCount"></span></button><button id="deliveryTab">Delivery</button><button id="shopkeepersTab">Shopkeepers <span id="pendingShopkeeperCount"></span></button></div>
+
+<div class="tabs">
+<button id="productsTab" class="active">Products</button>
+<button id="ordersTab">
+Orders <span id="newCount"></span>
+</button>
+<button id="deliveryTab">Delivery</button>
+<button id="shopkeepersTab">
+Shopkeepers <span id="pendingShopkeeperCount"></span>
+</button>
+</div>
 
 <section id="productsView">
+
 <div class="panel">
+
 <h2 id="formTitle">Add Product</h2>
+
 <div class="grid">
-<label>Item Name<input id="name"></label><label>Category<input id="category"></label>
-<label class="full">Shop<select id="shop_id"><option value="">Select shop</option></select></label>
-<label>Normal Price<input id="price" type="number" min="0"></label><label>Half Price<input id="price_half" type="number" min="0"></label>
-<label>Full Price<input id="price_full" type="number" min="0"></label><label>Sort Order<input id="sort_order" type="number" min="0" value="100"></label>
-<label>Availability<select id="available"><option value="true">Available</option><option value="false">Out of Stock</option></select></label>
-<label>Featured<select id="featured"><option value="false">Normal</option><option value="true">Featured</option></select></label>
-<label class="full">Description<textarea id="description"></textarea></label>
-<label class="full">Product Image<input id="image_file" type="file" accept="image/*"><img id="preview" class="preview hidden" alt="Preview"><input id="image_url" type="url" placeholder="Or paste image URL"></label>
+
+<label>
+Item Name
+<input id="name">
+</label>
+
+<label>
+Category
+<input id="category">
+</label>
+
+<label class="full">
+Shop
+<select id="shop_id">
+<option value="">Select shop</option>
+</select>
+</label>
+
+<label>
+Normal Price
+<input id="price" type="number" min="0">
+</label>
+
+<label>
+Half Price
+<input id="price_half" type="number" min="0">
+</label>
+
+<label>
+Full Price
+<input id="price_full" type="number" min="0">
+</label>
+
+<label>
+Sort Order
+<input id="sort_order" type="number" min="0" value="100">
+</label>
+
+<label>
+Availability
+<select id="available">
+<option value="true">Available</option>
+<option value="false">Out of Stock</option>
+</select>
+</label>
+
+<label>
+Featured
+<select id="featured">
+<option value="false">Normal</option>
+<option value="true">Featured</option>
+</select>
+</label>
+
+<label class="full">
+Description
+<textarea id="description"></textarea>
+</label>
+
+<label class="full">
+Product Image
+<input id="image_file" type="file" accept="image/*">
+<img id="preview" class="preview hidden" alt="Preview">
+<input id="image_url" type="url" placeholder="Or paste image URL">
+</label>
+
 </div>
-<div class="actions"><button id="save" class="green">Save Product</button><button id="cancel" class="gray hidden">Cancel Edit</button></div>
+
+<div class="actions">
+<button id="save" class="green">Save Product</button>
+<button id="cancel" class="gray hidden">Cancel Edit</button>
 </div>
-<div class="panel"><div class="toptools"><input id="q" class="search" placeholder="Search products..."><button id="refreshProducts" class="gray">Refresh</button></div><div id="list"></div></div>
+
+</div>
+
+<div class="panel">
+
+<div class="toptools">
+<input id="q" class="search" placeholder="Search products...">
+<button id="refreshProducts" class="gray">Refresh</button>
+</div>
+
+<div id="list"></div>
+
+</div>
+
 </section>
 
 <section id="ordersView" class="hidden">
+
 <div class="panel">
-<div class="toptools"><input id="oq" class="search" placeholder="Search Order ID / customer / phone"><button id="refreshOrders" class="gray">Refresh Orders</button></div>
-<div class="small">Orders auto-refresh every 20 seconds while this page is open.</div>
+
+<div class="toptools">
+<input id="oq" class="search" placeholder="Search Order ID / customer / phone">
+<button id="refreshOrders" class="gray">Refresh Orders</button>
 </div>
+
+<div class="small">
+Orders auto-refresh every 20 seconds while this page is open.
+</div>
+
+</div>
+
 <div id="ordersList"></div>
+
 </section>
 
 <section id="deliveryView" class="hidden">
-  <div class="panel">
-    <h2>Delivery Settings</h2>
-    <p class="small">Default rule: 0–2 km = ₹30, then every next 2 km adds ₹10. You can change these anytime.</p>
-    <div class="grid">
-      <label>Base Distance (km)<input id="base_distance_km" type="number" min="0" step="0.1"></label>
-      <label>Base Charge (₹)<input id="base_charge" type="number" min="0"></label>
-      <label>Every Next (km)<input id="step_distance_km" type="number" min="0.1" step="0.1"></label>
-      <label>Add Charge (₹)<input id="step_charge" type="number" min="0"></label>
-      <label>Free Delivery Offer<select id="free_delivery"><option value="false">OFF — Normal Delivery Charge</option><option value="true">ON — FREE DELIVERY</option></select></label>
-      <label>Rain Mode<select id="rain_mode"><option value="false">OFF</option><option value="true">ON</option></select></label>
-      <label>Rain Extra (₹)<input id="rain_extra" type="number" min="0"></label>
-      <label>Shop Latitude<input id="store_lat" type="number" step="0.000001" placeholder="Set automatically below"></label>
-      <label>Shop Longitude<input id="store_lng" type="number" step="0.000001" placeholder="Set automatically below"></label>
-    </div>
-    <div class="actions">
-      <button id="detectShopLocation" class="yellow">📍 Use My Current Location as Shop Location</button>
-      <button id="saveDelivery" class="green">Save Delivery Settings</button>
-    </div>
-    <div id="deliveryPreview" class="status" style="margin-top:14px"></div>
-  </div>
+
+<div class="panel">
+
+<h2>Delivery Settings</h2>
+
+<p class="small">
+Default rule: 0–2 km = ₹30, then every next 2 km adds ₹10.
+You can change these anytime.
+</p>
+
+<div class="grid">
+
+<label>
+Base Distance (km)
+<input id="base_distance_km" type="number" min="0" step="0.1">
+</label>
+
+<label>
+Base Charge (₹)
+<input id="base_charge" type="number" min="0">
+</label>
+
+<label>
+Every Next (km)
+<input id="step_distance_km" type="number" min="0.1" step="0.1">
+</label>
+
+<label>
+Add Charge (₹)
+<input id="step_charge" type="number" min="0">
+</label>
+
+<label>
+Free Delivery Offer
+<select id="free_delivery">
+<option value="false">OFF — Normal Delivery Charge</option>
+<option value="true">ON — FREE DELIVERY</option>
+</select>
+</label>
+
+<label>
+Rain Mode
+<select id="rain_mode">
+<option value="false">OFF</option>
+<option value="true">ON</option>
+</select>
+</label>
+
+<label>
+Rain Extra (₹)
+<input id="rain_extra" type="number" min="0">
+</label>
+
+<label>
+Shop Latitude
+<input id="store_lat" type="number" step="0.000001" placeholder="Set automatically below">
+</label>
+
+<label>
+Shop Longitude
+<input id="store_lng" type="number" step="0.000001" placeholder="Set automatically below">
+</label>
+
+</div>
+
+<div class="actions">
+
+<button id="detectShopLocation" class="yellow">
+📍 Use My Current Location as Shop Location
+</button>
+
+<button id="saveDelivery" class="green">
+Save Delivery Settings
+</button>
+
+</div>
+
+<div id="deliveryPreview" class="status" style="margin-top:14px"></div>
+
+</div>
+
 </section>
 
 <section id="shopkeepersView" class="hidden">
-  <div class="panel">
-    <div class="shopkeeper-head">
-      <div>
-        <h2 style="margin-bottom:4px">Shopkeeper Management</h2>
-        <div class="small">New shopkeepers stay blocked until you assign their own shop and activate the account.</div>
-      </div>
-      <button id="refreshShopkeepers" class="gray">Refresh</button>
-    </div>
-  </div>
 
-  <div class="panel">
-    <h2>Create New Shop</h2>
-    <div class="grid">
-      <label>Shop Name<input id="newShopName" placeholder="e.g. XYZ Grocery"></label>
-      <label>Shop Status<select id="newShopActive"><option value="true">Active</option><option value="false">Inactive</option></select></label>
-    </div>
-    <div class="actions"><button id="createShopBtn" class="green">Create Shop</button></div>
-  </div>
+<div class="panel">
 
-  <div id="shopkeepersList"></div>
+<div class="shopkeeper-head">
+
+<div>
+
+<h2 style="margin-bottom:4px">
+Shopkeeper Management
+</h2>
+
+<div class="small">
+New shopkeepers stay blocked until you assign their own shop and activate the account.
+</div>
+
+</div>
+
+<button id="refreshShopkeepers" class="gray">
+Refresh
+</button>
+
+</div>
+
+</div>
+
+<div class="panel">
+
+<h2>Create New Shop</h2>
+
+<div class="grid">
+
+<label>
+Shop Name
+<input id="newShopName" placeholder="e.g. XYZ Grocery">
+</label>
+
+<label>
+Shop Status
+<select id="newShopActive">
+<option value="true">Active</option>
+<option value="false">Inactive</option>
+</select>
+</label>
+
+</div>
+
+<div class="actions">
+<button id="createShopBtn" class="green">
+Create Shop
+</button>
+</div>
+
+</div>
+
+<div id="shopkeepersList"></div>
+
 </section>
 
 </section>
+
 </main>
 
 <script src="config.js"></script>
-<script type="module">
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
-const cfg=window.SPIDY_CONFIG||{}, $=id=>document.getElementById(id);
-let sb=null,editing=null,items=[],orders=[],shops=[],shopkeepers=[],activeView="products",poll=null;
 
-function configured(){return cfg.supabaseUrl&&cfg.supabaseAnonKey&&!cfg.supabaseUrl.includes("YOUR_")}
-function setStatus(t){$("status").textContent=t}
-function n(id){const v=$(id).value.trim();return v===""?null:Number(v)}
+<script type="module">
+
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+const cfg=window.SPIDY_CONFIG||{},
+$=id=>document.getElementById(id);
+
+let sb=null,
+editing=null,
+items=[],
+orders=[],
+shops=[],
+shopkeepers=[],
+deliveryBoys=[],
+activeView="products",
+poll=null;
+
+function configured(){
+return cfg.supabaseUrl &&
+cfg.supabaseAnonKey &&
+!cfg.supabaseUrl.includes("YOUR_");
+}
+
+function setStatus(t){
+$("status").textContent=t;
+}
+
+function n(id){
+const v=$(id).value.trim();
+return v===""?null:Number(v);
+}
 
 function reset(){
- editing=null;
- $("formTitle").textContent="Add Product";
- ["name","category","price","price_half","price_full","description","image_url"].forEach(id=>$(id).value="");
- $("sort_order").value="100";
- $("available").value="true";
- $("featured").value="false";
- $("shop_id").value="";
- $("image_file").value="";
- $("preview").classList.add("hidden");
- $("cancel").classList.add("hidden");
+
+editing=null;
+
+$("formTitle").textContent="Add Product";
+
+[
+"name",
+"category",
+"price",
+"price_half",
+"price_full",
+"description",
+"image_url"
+].forEach(id=>$(id).value="");
+
+$("sort_order").value="100";
+$("available").value="true";
+$("featured").value="false";
+$("shop_id").value="";
+$("image_file").value="";
+$("preview").classList.add("hidden");
+$("cancel").classList.add("hidden");
+
 }
 
 async function uploadImage(file){
- if(!file)return $("image_url").value.trim()||null;
 
- const ext=(file.name.split(".").pop()||"jpg").toLowerCase();
- const path=`products/${crypto.randomUUID()}.${ext}`;
+if(!file){
+return $("image_url").value.trim()||null;
+}
 
- const {error}=await sb.storage
-   .from("product-images")
-   .upload(path,file,{
-     upsert:false,
-     contentType:file.type||"image/jpeg"
-   });
+const ext=
+(file.name.split(".").pop()||"jpg").toLowerCase();
 
- if(error)throw error;
+const path=
+`products/${crypto.randomUUID()}.${ext}`;
 
- return sb.storage
-   .from("product-images")
-   .getPublicUrl(path).data.publicUrl;
+const {error}=await sb.storage
+.from("product-images")
+.upload(
+path,
+file,
+{
+upsert:false,
+contentType:file.type||"image/jpeg"
+}
+);
+
+if(error)throw error;
+
+return sb.storage
+.from("product-images")
+.getPublicUrl(path)
+.data.publicUrl;
+
 }
 
 function shopNameById(id){
- const s=shops.find(x=>x.id===id);
- return s?s.name:"Unassigned";
+
+const s=shops.find(x=>x.id===id);
+
+return s?s.name:"Unassigned";
+
 }
 
 function fillShopSelects(){
- const productSelect=$("shop_id");
 
- if(!productSelect)return;
+const productSelect=$("shop_id");
 
- const current=productSelect.value;
+if(!productSelect)return;
 
- productSelect.innerHTML=
-   '<option value="">Select shop</option>'+
-   shops.map(s=>
-     `<option value="${s.id}">${s.name}${s.active===false?" (Inactive)":""}</option>`
-   ).join("");
+const current=productSelect.value;
 
- if([...productSelect.options].some(o=>o.value===current)){
-   productSelect.value=current;
- }
+productSelect.innerHTML=
+'<option value="">Select shop</option>'+
+shops.map(s=>
+`<option value="${s.id}">
+${s.name}${s.active===false?" (Inactive)":""}
+</option>`
+).join("");
+
+if(
+[...productSelect.options]
+.some(o=>o.value===current)
+){
+productSelect.value=current;
+}
+
 }
 
 async function loadShops(){
- const {data,error}=await sb
-   .from("shops")
-   .select("id,name,active,created_at")
-   .order("name",{ascending:true});
 
- if(error){
-   setStatus("Shop load error: "+error.message);
-   return false;
- }
+const {data,error}=await sb
+.from("shops")
+.select("id,name,active,created_at")
+.order("name",{ascending:true});
 
- shops=data||[];
- fillShopSelects();
- return true;
+if(error){
+
+setStatus(
+"Shop load error: "+error.message
+);
+
+return false;
+
+}
+
+shops=data||[];
+
+fillShopSelects();
+
+return true;
+
 }
 
 function renderProducts(){
- const q=$("q").value.trim().toLowerCase();
- $("list").innerHTML="";
 
- items
- .filter(p=>
-   !q||
-   p.name.toLowerCase().includes(q)||
-   (p.category||"").toLowerCase().includes(q)
- )
- .forEach(p=>{
-   const r=document.createElement("div");
-   r.className="row";
+const q=
+$("q").value.trim().toLowerCase();
 
-   r.innerHTML=`
-   <img class="thumb"
-        src="${p.image_url||'https://placehold.co/160x120?text=Food'}">
+$("list").innerHTML="";
 
-   <div>
-     <b>${p.name}</b>
+items
+.filter(p=>
+!q ||
+p.name.toLowerCase().includes(q) ||
+(p.category||"").toLowerCase().includes(q)
+)
+.forEach(p=>{
 
-     <div class="meta">
-       ${shopNameById(p.shop_id)}
-       · ${p.category||"Food"}
-       · ${p.available===false?"Out of Stock":"Available"}
-       · ${p.price_half!=null?"Half ₹"+p.price_half+" ":""}
-       ${p.price_full!=null?"Full ₹"+p.price_full+" ":""}
-       ${p.price!=null?"₹"+p.price:""}
-     </div>
-   </div>
+const r=document.createElement("div");
 
-   <div class="actions">
-     <button class="gray edit">Edit</button>
-     <button class="red del">Delete</button>
-   </div>`;
+r.className="row";
 
-   r.querySelector(".edit").onclick=()=>edit(p);
-   r.querySelector(".del").onclick=()=>del(p);
+r.innerHTML=`
 
-   $("list").appendChild(r);
- });
+<img
+class="thumb"
+src="${p.image_url||'https://placehold.co/160x120?text=Food'}"
+>
+
+<div>
+
+<b>${p.name}</b>
+
+<div class="meta">
+${shopNameById(p.shop_id)}
+· ${p.category||"Food"}
+· ${p.available===false?"Out of Stock":"Available"}
+· ${p.price_half!=null?"Half ₹"+p.price_half+" ":""}
+${p.price_full!=null?"Full ₹"+p.price_full+" ":""}
+${p.price!=null?"₹"+p.price:""}
+</div>
+
+</div>
+
+<div class="actions">
+
+<button class="gray edit">
+Edit
+</button>
+
+<button class="red del">
+Delete
+</button>
+
+</div>
+
+`;
+
+r.querySelector(".edit").onclick=
+()=>edit(p);
+
+r.querySelector(".del").onclick=
+()=>del(p);
+
+$("list").appendChild(r);
+
+});
+
 }
 
 async function loadProducts(){
- const {data,error}=await sb
-   .from("products")
-   .select("*")
-   .order("sort_order",{ascending:true})
-   .order("name",{ascending:true});
 
- if(error){
-   setStatus("Product load error: "+error.message);
-   return;
- }
+const {data,error}=await sb
+.from("products")
+.select("*")
+.order("sort_order",{ascending:true})
+.order("name",{ascending:true});
 
- items=data||[];
- renderProducts();
+if(error){
+
+setStatus(
+"Product load error: "+error.message
+);
+
+return;
+
+}
+
+items=data||[];
+
+renderProducts();
+
 }
 
 function edit(p){
- editing=p.id;
 
- $("formTitle").textContent="Edit Product";
+editing=p.id;
 
- $("name").value=p.name||"";
- $("category").value=p.category||"";
- $("price").value=p.price??"";
- $("price_half").value=p.price_half??"";
- $("price_full").value=p.price_full??"";
- $("description").value=p.description||"";
- $("image_url").value=p.image_url||"";
- $("sort_order").value=p.sort_order??100;
- $("available").value=String(p.available!==false);
- $("featured").value=String(p.featured===true);
- $("shop_id").value=p.shop_id||"";
+$("formTitle").textContent=
+"Edit Product";
 
- $("cancel").classList.remove("hidden");
+$("name").value=p.name||"";
 
- if(p.image_url){
-   $("preview").src=p.image_url;
-   $("preview").classList.remove("hidden");
- }else{
-   $("preview").classList.add("hidden");
- }
+$("category").value=
+p.category||"";
 
- window.scrollTo({
-   top:0,
-   behavior:"smooth"
- });
-}
+$("price").value=
+p.price??"";
 
-async function del(p){
- if(!confirm("Delete "+p.name+"?"))return;
+$("price_half").value=
+p.price_half??"";
 
- const {error}=await sb
-   .from("products")
-   .delete()
-   .eq("id",p.id);
+$("price_full").value=
+p.price_full??"";
 
- if(error){
-   setStatus(error.message);
- }else{
-   setStatus("Product deleted.");
-   loadProducts();
- }
-}
+$("description").value=
+p.description||"";
 
-function fmtDate(v){
- return new Date(v).toLocaleString();
-}
+$("image_url").value=
+p.image_url||"";
 
-function renderOrders(){
- const q=$("oq").value.trim().toLowerCase();
- const box=$("ordersList");
+$("sort_order").value=
+p.sort_order??100;
 
- box.innerHTML="";
+$("available").value=
+String(p.available!==false);
 
- const filtered=orders.filter(o=>
-   !q||
-   o.order_number.toLowerCase().includes(q)||
-   o.customer_name.toLowerCase().includes(q)||
-   o.phone.includes(q)
- );
+$("featured").value=
+String(p.featured===true);
 
- const newOrders=orders.filter(o=>o.status==="new").length;
+$("shop_id").value=
+p.shop_id||"";
 
- $("newCount").textContent=newOrders
-   ?"("+newOrders+")"
-   :"";
+$("cancel").classList.remove(
+"hidden"
+);
 
- if(!filtered.length){
-   box.innerHTML='<div class="panel">No orders found.</div>';
-   return;
- }
+if(p.image_url){
 
- filtered.forEach(o=>{
+$("preview").src=p.image_url;
 
-   const card=document.createElement("div");
-   card.className="panel order-card";
-
-   const itemsHtml=(o.order_items||[])
-   .map(i=>`
-     <div class="itemline">
-       <span>
-         ${i.product_name}
-         (${i.variant_label||i.variant})
-         × ${i.qty}
-       </span>
-       <b>₹${i.line_total}</b>
-     </div>
-   `).join("");
-
-   card.innerHTML=`
-   <div class="order-head">
-
-     <div>
-       <b>${o.order_number}</b>
-       <div class="small">
-         ${fmtDate(o.created_at)}
-       </div>
-     </div>
-
-     <div>
-       <span class="badge ${o.status==="new"?"new":""}">
-         ${o.status}
-       </span>
-
-       <span class="badge ${o.payment_status==="paid"?"paid":"pending"}">
-         ${o.payment_status}
-       </span>
-     </div>
-
-   </div>
-
-   <div class="order-grid">
-
-     <div>
-       <b>Customer</b>
-       <div>${o.customer_name}</div>
-       <div>${o.phone}</div>
-     </div>
-
-     <div>
-       <b>Delivery Address</b>
-       <div>${o.address}</div>
-       <div>${o.landmark||""} ${o.area||""}</div>
-       <div class="small">${o.delivery_note||""}</div>
-
-       <div class="small">
-         ${o.distance_km!=null
-           ?"Distance: "+o.distance_km+" km"
-           :""}
-
-         ${o.rain_surcharge>0
-           ?" · Rain extra ₹"+o.rain_surcharge
-           :""}
-       </div>
-     </div>
-
-   </div>
-
-   <div class="items">
-
-     ${itemsHtml}
-
-     <div class="itemline">
-       <span>Subtotal</span>
-       <b>₹${o.subtotal}</b>
-     </div>
-
-     <div class="itemline">
-       <span>Delivery</span>
-       <b>₹${o.delivery_charge}</b>
-     </div>
-
-     <div class="itemline" style="font-size:18px">
-       <b>Total</b>
-       <b>₹${o.total}</b>
-     </div>
-
-   </div>
-
-   <div class="actions">
-
-     <label style="min-width:180px">
-       Order Status
-
-       <select class="statusSel">
-         <option value="new">New</option>
-         <option value="confirmed">Confirmed</option>
-         <option value="preparing">Preparing</option>
-         <option value="out_for_delivery">Out for Delivery</option>
-         <option value="delivered">Delivered</option>
-         <option value="cancelled">Cancelled</option>
-       </select>
-     </label>
-
-     <label style="min-width:160px">
-       Payment
-
-       <select class="paySel">
-         <option value="pending">Pending</option>
-         <option value="paid">Paid</option>
-         <option value="failed">Failed</option>
-         <option value="refunded">Refunded</option>
-       </select>
-     </label>
-
-     <button class="green saveOrder">
-       Save Status
-     </button>
-
-   </div>
-   `;
-
-   card.querySelector(".statusSel").value=o.status;
-   card.querySelector(".paySel").value=o.payment_status;
-
-   card.querySelector(".saveOrder").onclick=async()=>{
-
-     const payload={
-       status:card.querySelector(".statusSel").value,
-       payment_status:card.querySelector(".paySel").value,
-       updated_at:new Date().toISOString()
-     };
-
-     const {error}=await sb
-       .from("orders")
-       .update(payload)
-       .eq("id",o.id);
-
-     if(error){
-       setStatus("Order update error: "+error.message);
-     }else{
-       setStatus("Order updated.");
-       loadOrders();
-     }
-   };
-
-   box.appendChild(card);
- });
-}
-
-async function loadOrders(){
- const {data,error}=await sb
-   .from("orders")
-   .select("*,order_items(*)")
-   .order("created_at",{ascending:false})
-   .limit(100);
-
- if(error){
-   setStatus("Orders load error: "+error.message);
-   return;
- }
-
- orders=data||[];
- renderOrders();
-}
-
-function renderShopkeepers(){
- const box=$("shopkeepersList");
-
- box.innerHTML="";
-
- const pendingCount=shopkeepers.filter(
-   sk=>sk.active!==true||!sk.shop_id
- ).length;
-
- $("pendingShopkeeperCount").textContent=
-   pendingCount
-   ?`(${pendingCount})`
-   :"";
-
- if(!shopkeepers.length){
-   box.innerHTML=
-     '<div class="panel">No shopkeeper accounts found.</div>';
-   return;
- }
-
- shopkeepers.forEach(sk=>{
-
-   const assigned=shops.find(
-     s=>s.id===sk.shop_id
-   );
-
-   const card=document.createElement("div");
-
-   card.className=
-     "panel shopkeeper-card";
-
-   const options=
-     '<option value="">Select shop</option>'+
-     shops.map(s=>
-       `<option value="${s.id}"
-       ${sk.shop_id===s.id?"selected":""}>
-       ${s.name}${s.active===false?" (Inactive)":""}
-       </option>`
-     ).join("");
-
-   card.innerHTML=`
-
-     <div class="shopkeeper-head">
-
-       <div>
-         <b style="font-size:18px">
-           ${sk.full_name||"Unnamed Shopkeeper"}
-         </b>
-
-         <div class="small">
-           ${sk.business_name||"No business name"}
-           ·
-           ${sk.requested_category||"No category"}
-         </div>
-       </div>
-
-       <span class="badge ${
-         sk.active===true&&sk.shop_id
-         ?"paid"
-         :"pending"
-       }">
-         ${
-           sk.active===true&&sk.shop_id
-           ?"ACTIVE"
-           :"PENDING / INACTIVE"
-         }
-       </span>
-
-     </div>
-
-     <div class="shopkeeper-grid">
-
-       <div>
-         <b>Phone</b>
-         <div>${sk.phone||"-"}</div>
-       </div>
-
-       <div>
-         <b>Assigned Shop</b>
-         <div>
-           ${assigned?assigned.name:"Not assigned"}
-         </div>
-       </div>
-
-       <div>
-         <b>Requested Category</b>
-         <div>${sk.requested_category||"-"}</div>
-       </div>
-
-       <div>
-         <b>User ID</b>
-         <div class="small"
-              style="word-break:break-all">
-           ${sk.user_id||"-"}
-         </div>
-       </div>
-
-     </div>
-
-     <div class="actions shop-actions">
-
-       <label class="shopAssign">
-         Assign Shop
-
-         <select class="shopSelect">
-           ${options}
-         </select>
-       </label>
-
-       <button class="green approveBtn">
-         Assign + Activate
-       </button>
-
-       <button class="yellow deactivateBtn">
-         Deactivate
-       </button>
-
-       <button class="red removeBtn">
-         Remove Access
-       </button>
-
-     </div>
-   `;
-
-   card.querySelector(".approveBtn").onclick=
-   async()=>{
-
-     const shop_id=
-       card.querySelector(".shopSelect").value;
-
-     if(!shop_id){
-       setStatus("Select a shop first.");
-       return;
-     }
-
-     const {error}=await sb
-       .from("shopkeepers")
-       .update({
-         shop_id,
-         active:true
-       })
-       .eq("id",sk.id);
-
-     if(error){
-       setStatus(
-         "Shopkeeper approval error: "+
-         error.message
-       );
-     }else{
-       setStatus(
-         "Shop assigned and shopkeeper activated."
-       );
-
-       await loadShopkeepers();
-     }
-   };
-
-   card.querySelector(".deactivateBtn").onclick=
-   async()=>{
-
-     const {error}=await sb
-       .from("shopkeepers")
-       .update({
-         active:false
-       })
-       .eq("id",sk.id);
-
-     if(error){
-       setStatus(
-         "Deactivate error: "+
-         error.message
-       );
-     }else{
-       setStatus(
-         "Shopkeeper deactivated."
-       );
-
-       await loadShopkeepers();
-     }
-   };
-
-   card.querySelector(".removeBtn").onclick=
-   async()=>{
-
-     if(!confirm(
-       "Remove this shopkeeper's shop access?"
-     ))return;
-
-     const {error}=await sb
-       .from("shopkeepers")
-       .update({
-         shop_id:null,
-         active:false
-       })
-       .eq("id",sk.id);
-
-     if(error){
-       setStatus(
-         "Remove access error: "+
-         error.message
-       );
-     }else{
-       setStatus(
-         "Shop access removed."
-       );
-
-       await loadShopkeepers();
-     }
-   };
-
-   box.appendChild(card);
- });
-}
-
-async function loadShopkeepers(){
- const {data,error}=await sb
-   .from("shopkeepers")
-   .select(
-     "id,user_id,shop_id,active,created_at,full_name,phone,business_name,requested_category"
-   )
-   .order(
-     "created_at",
-     {ascending:false}
-   );
-
- if(error){
-   setStatus(
-     "Shopkeeper load error: "+
-     error.message
-   );
-   return false;
- }
-
- shopkeepers=data||[];
-
- renderShopkeepers();
-
- return true;
-}
-
-async function createShop(){
- const name=
-   $("newShopName").value.trim();
-
- if(!name){
-   setStatus(
-     "Shop name is required."
-   );
-   return;
- }
-
- const active=
-   $("newShopActive").value==="true";
-
- $("createShopBtn").disabled=true;
-
- try{
-
-   const {error}=await sb
-     .from("shops")
-     .insert({
-       name,
-       active
-     });
-
-   if(error)throw error;
-
-   $("newShopName").value="";
-
-   setStatus(
-     "New shop created."
-   );
-
-   await loadShops();
-
-   renderShopkeepers();
-
- }catch(e){
-
-   setStatus(
-     "Create shop error: "+
-     e.message
-   );
-
- }finally{
-
-   $("createShopBtn").disabled=false;
-
- }
-}
-
-function switchView(v){
-
- activeView=v;
-
- $("productsView").classList.toggle(
-   "hidden",
-   v!=="products"
- );
-
- $("ordersView").classList.toggle(
-   "hidden",
-   v!=="orders"
- );
-
- $("deliveryView").classList.toggle(
-   "hidden",
-   v!=="delivery"
- );
-
- $("shopkeepersView").classList.toggle(
-   "hidden",
-   v!=="shopkeepers"
- );
-
- $("productsTab").classList.toggle(
-   "active",
-   v==="products"
- );
-
- $("ordersTab").classList.toggle(
-   "active",
-   v==="orders"
- );
-
- $("deliveryTab").classList.toggle(
-   "active",
-   v==="delivery"
- );
-
- $("shopkeepersTab").classList.toggle(
-   "active",
-   v==="shopkeepers"
- );
-
- if(v==="orders"){
-   loadOrders();
- }
-
- if(v==="delivery"){
-   loadDeliverySettings();
- }
-
- if(v==="shopkeepers"){
-   loadShops().then(
-     ()=>loadShopkeepers()
-   );
- }
-}
-
-async function loadDeliverySettings(){
-
- const {data,error}=await sb
-   .from("delivery_settings")
-   .select("*")
-   .eq("id",1)
-   .single();
-
- if(error){
-   setStatus(
-     "Delivery settings error: "+
-     error.message
-   );
-   return;
- }
-
- $("base_distance_km").value=
-   data.base_distance_km??2;
-
- $("base_charge").value=
-   data.base_charge??30;
-
- $("step_distance_km").value=
-   data.step_distance_km??2;
-
- $("step_charge").value=
-   data.step_charge??10;
-
- $("free_delivery").value=
-   String(
-     data.free_delivery_enabled===true
-   );
-
- $("rain_mode").value=
-   String(
-     data.rain_mode===true
-   );
-
- $("rain_extra").value=
-   data.rain_extra??0;
-
- $("store_lat").value=
-   data.store_lat??"";
-
- $("store_lng").value=
-   data.store_lng??"";
-
- renderDeliveryPreview();
-}
-
-function renderDeliveryPreview(){
-
- const free=
-   $("free_delivery").value==="true";
-
- if(free){
-
-   $("deliveryPreview").innerHTML=
-     "🎁 Free Delivery Offer is ON · Customer delivery charge = ₹0";
-
-   return;
- }
-
- const b=Number(
-   $("base_distance_km").value||2
- );
-
- const bc=Number(
-   $("base_charge").value||30
- );
-
- const s=Number(
-   $("step_distance_km").value||2
- );
-
- const sc=Number(
-   $("step_charge").value||10
- );
-
- $("deliveryPreview").innerHTML=
-   `Example: 0–${b} km = ₹${bc} · ${b}–${b+s} km = ₹${bc+sc} · ${b+s}–${b+2*s} km = ₹${bc+2*sc}${
-     $("rain_mode").value==="true"
-     ?" · Rain extra ₹"+Number(
-       $("rain_extra").value||0
-     )
-     :""
-   }`;
-}
-
-async function checkAdmin(){
-
- const {
-   data:{session}
- }=await sb.auth.getSession();
-
- if(!session){
-
-   $("login").classList.remove(
-     "hidden"
-   );
-
-   $("app").classList.add(
-     "hidden"
-   );
-
-   $("logout").classList.add(
-     "hidden"
-   );
-
-   setStatus(
-     "Admin login required."
-   );
-
-   if(poll){
-     clearInterval(poll);
-     poll=null;
-   }
-
-   return;
- }
-
- const email=
-   (session.user.email||"")
-   .toLowerCase();
-
- const {
-   data:admin,
-   error:adminError
- }=await sb
-   .from("app_admins")
-   .select("email")
-   .eq("email",email)
-   .maybeSingle();
-
- if(adminError||!admin){
-
-   $("login").classList.remove(
-     "hidden"
-   );
-
-   $("app").classList.add(
-     "hidden"
-   );
-
-   $("logout").classList.remove(
-     "hidden"
-   );
-
-   setStatus(
-     "This account is not an authorized HUNKART admin."
-   );
-
-   if(poll){
-     clearInterval(poll);
-     poll=null;
-   }
-
-   return;
- }
-
- $("login").classList.add(
-   "hidden"
- );
-
- $("app").classList.remove(
-   "hidden"
- );
-
- $("logout").classList.remove(
-   "hidden"
- );
-
- setStatus(
-   "Logged in. Products, orders, delivery and shopkeepers are live."
- );
-
- await loadShops();
-
- await loadProducts();
-
- await loadOrders();
-
- await loadShopkeepers();
-
- if(!poll){
-
-   poll=setInterval(()=>{
-
-     if(activeView==="orders"){
-       loadOrders();
-     }
-
-   },20000);
- }
-}
-
-if(!configured()){
-
- setStatus(
-   "Supabase is not connected."
- );
+$("preview").classList.remove(
+"hidden"
+);
 
 }else{
 
- sb=createClient(
-   cfg.supabaseUrl,
-   cfg.supabaseAnonKey
- );
+$("preview").classList.add(
+"hidden"
+);
 
- await checkAdmin();
-
- sb.auth.onAuthStateChange(
-   ()=>checkAdmin()
- );
 }
+
+window.scrollTo({
+top:0,
+behavior:"smooth"
+});
+
+}
+
+async function del(p){
+
+if(!confirm(
+"Delete "+p.name+"?"
+))return;
+
+const {error}=await sb
+.from("products")
+.delete()
+.eq("id",p.id);
+
+if(error){
+
+setStatus(error.message);
+
+}else{
+
+setStatus(
+"Product deleted."
+);
+
+loadProducts();
+
+}
+
+}
+
+function fmtDate(v){
+
+return new Date(v)
+.toLocaleString();
+
+}
+
+/* =========================
+   DELIVERY BOYS
+========================= */
+
+async function loadDeliveryBoys(){
+
+const {data,error}=await sb
+.from("delivery_boys")
+.select("id,full_name,is_active")
+.eq("is_active",true)
+.order(
+"full_name",
+{ascending:true}
+);
+
+if(error){
+
+setStatus(
+"Delivery partner load error: "+
+error.message
+);
+
+deliveryBoys=[];
+
+return false;
+
+}
+
+deliveryBoys=data||[];
+
+return true;
+
+}
+
+/* =========================
+   ORDERS
+========================= */
+
+function renderOrders(){
+
+const q=
+$("oq").value.trim().toLowerCase();
+
+const box=
+$("ordersList");
+
+box.innerHTML="";
+
+const filtered=
+orders.filter(o=>
+
+!q ||
+
+o.order_number
+.toLowerCase()
+.includes(q) ||
+
+o.customer_name
+.toLowerCase()
+.includes(q) ||
+
+o.phone.includes(q)
+
+);
+
+const newOrders=
+orders.filter(
+o=>o.status==="new"
+).length;
+
+$("newCount").textContent=
+newOrders
+?"("+newOrders+")"
+:"";
+
+if(!filtered.length){
+
+box.innerHTML=
+'<div class="panel">No orders found.</div>';
+
+return;
+
+}
+
+filtered.forEach(o=>{
+
+const card=
+document.createElement("div");
+
+card.className=
+"panel order-card";
+
+const itemsHtml=
+(o.order_items||[])
+.map(i=>`
+
+<div class="itemline">
+
+<span>
+${i.product_name}
+(${i.variant_label||i.variant})
+× ${i.qty}
+</span>
+
+<b>
+₹${i.line_total}
+</b>
+
+</div>
+
+`)
+.join("");
+
+const boyOptions=
+[
+'<option value="">Select delivery partner</option>'
+]
+.concat(
+deliveryBoys.map(b=>
+`<option value="${b.id}">
+${b.full_name||"Delivery Partner"}
+</option>`
+)
+)
+.join("");
+
+const assigned=
+o.delivery_tracking &&
+o.delivery_tracking.length
+?o.delivery_tracking[0]
+:null;
+
+const assignedName=
+assigned &&
+assigned.delivery_boys
+?assigned.delivery_boys.full_name
+:"";
+
+const trackingStatus=
+assigned
+?assigned.status
+:"";
+
+const liveMap=
+assigned &&
+assigned.current_lat!=null &&
+assigned.current_lng!=null
+
+?`https://www.google.com/maps/search/?api=1&query=${assigned.current_lat},${assigned.current_lng}`
+
+:"";
+
+card.innerHTML=`
+
+<div class="order-head">
+
+<div>
+
+<b>
+${o.order_number}
+</b>
+
+<div class="small">
+${fmtDate(o.created_at)}
+</div>
+
+</div>
+
+<div>
+
+<span class="badge ${o.status==="new"?"new":""}">
+${o.status}
+</span>
+
+<span class="badge ${o.payment_status==="paid"?"paid":"pending"}">
+${o.payment_status}
+</span>
+
+</div>
+
+</div>
+
+<div class="order-grid">
+
+<div>
+
+<b>Customer</b>
+
+<div>
+${o.customer_name}
+</div>
+
+<div>
+${o.phone}
+</div>
+
+</div>
+
+<div>
+
+<b>
+Delivery Address
+</b>
+
+<div>
+${o.address}
+</div>
+
+<div>
+${o.landmark||""}
+${o.area||""}
+</div>
+
+<div class="small">
+${o.delivery_note||""}
+</div>
+
+<div class="small">
+
+${o.distance_km!=null
+?"Distance: "+o.distance_km+" km"
+:""}
+
+${o.rain_surcharge>0
+?" · Rain extra ₹"+o.rain_surcharge
+:""}
+
+</div>
+
+</div>
+
+</div>
+
+<div class="items">
+
+${itemsHtml}
+
+<div class="itemline">
+
+<span>
+Subtotal
+</span>
+
+<b>
+₹${o.subtotal}
+</b>
+
+</div>
+
+<div class="itemline">
+
+<span>
+Delivery
+</span>
+
+<b>
+₹${o.delivery_charge}
+</b>
+
+</div>
+
+<div
+class="itemline"
+style="font-size:18px"
+>
+
+<b>Total</b>
+
+<b>
+₹${o.total}
+</b>
+
+</div>
+
+</div>
+
+<div class="actions">
+
+<label style="min-width:180px">
+
+Order Status
+
+<select class="statusSel">
+
+<option value="new">
+New
+</option>
+
+<option value="confirmed">
+Confirmed
+</option>
+
+<option value="preparing">
+Preparing
+</option>
+
+<option value="out_for_delivery">
+Out for Delivery
+</option>
+
+<option value="delivered">
+Delivered
+</option>
+
+<option value="cancelled">
+Cancelled
+</option>
+
+</select>
+
+</label>
+
+<label style="min-width:160px">
+
+Payment
+
+<select class="paySel">
+
+<option value="pending">
+Pending
+</option>
+
+<option value="paid">
+Paid
+</option>
+
+<option value="failed">
+Failed
+</option>
+
+<option value="refunded">
+Refunded
+</option>
+
+</select>
+
+</label>
+
+<button class="green saveOrder">
+Save Status
+</button>
+
+</div>
+
+<div
+style="
+margin-top:14px;
+padding-top:12px;
+border-top:1px solid #e5e7eb
+"
+>
+
+<b>
+Delivery Assignment
+</b>
+
+<div
+class="small"
+style="margin-top:4px"
+>
+
+${assignedName
+?`Assigned to ${assignedName} · ${String(trackingStatus||"assigned").replaceAll("_"," ")}`
+:"Not assigned yet"}
+
+</div>
+
+<div class="actions">
+
+<select
+class="boySel"
+style="min-width:190px"
+>
+
+${boyOptions}
+
+</select>
+
+<button
+class="yellow assignBtn"
+>
+
+Assign Delivery Partner
+
+</button>
+
+${liveMap
+?`
+<a
+class="primary liveMapBtn"
+href="${liveMap}"
+target="_blank"
+rel="noopener"
+style="
+text-decoration:none;
+display:inline-flex;
+align-items:center
+"
+>
+📍 Live Location
+</a>
+`
+:""}
+
+</div>
+
+${assigned &&
+assigned.location_updated_at
+
+?`
+<div
+class="small"
+style="margin-top:6px"
+>
+Last location:
+${fmtDate(assigned.location_updated_at)}
+</div>
+`
+
+:""}
+
+</div>
+
+`;
+
+card.querySelector(
+".statusSel"
+).value=o.status;
+
+card.querySelector(
+".paySel"
+).value=o.payment_status;
+
+if(assigned){
+
+card.querySelector(
+".boySel"
+).value=
+assigned.delivery_boy_id||"";
+
+}
+
+card.querySelector(
+".saveOrder"
+).onclick=
+async()=>{
+
+const payload={
+
+status:
+card.querySelector(
+".statusSel"
+).value,
+
+payment_status:
+card.querySelector(
+".paySel"
+).value,
+
+updated_at:
+new Date().toISOString()
+
+};
+
+const {error}=await sb
+.from("orders")
+.update(payload)
+.eq("id",o.id);
+
+if(error){
+
+setStatus(
+"Order update error: "+
+error.message
+);
+
+}else{
+
+setStatus(
+"Order updated."
+);
+
+loadOrders();
+
+}
+
+};
+
+card.querySelector(
+".assignBtn"
+).onclick=
+async()=>{
+
+const boyId=
+card.querySelector(
+".boySel"
+).value;
+
+if(!boyId){
+
+setStatus(
+"Select a delivery partner first."
+);
+
+return;
+
+}
+
+const {data,error}=await sb.rpc(
+"assign_delivery_boy",
+{
+p_order_id:o.id,
+p_delivery_boy_id:boyId
+}
+);
+
+if(error){
+
+setStatus(
+"Assign delivery partner error: "+
+error.message
+);
+
+return;
+
+}
+
+setStatus(
+`Order assigned to ${
+data?.delivery_boy ||
+assignedName ||
+"delivery partner"
+}.`
+);
+
+await loadOrders();
+
+};
+
+box.appendChild(card);
+
+});
+
+}
+
+async function loadOrders(){
+
+if(!deliveryBoys.length){
+
+await loadDeliveryBoys();
+
+}
+
+const {data,error}=await sb
+.from("orders")
+.select(`
+*,
+order_items(*),
+delivery_tracking(
+*,
+delivery_boys(full_name)
+)
+`)
+.order(
+"created_at",
+{ascending:false}
+)
+.limit(100);
+
+if(error){
+
+setStatus(
+"Orders load error: "+
+error.message
+);
+
+return;
+
+}
+
+orders=data||[];
+
+renderOrders();
+
+}
+
+/* =========================
+   SHOPKEEPERS
+========================= */
+
+function renderShopkeepers(){
+  const box=$("shopkeepersList");
+  box.innerHTML="";
+
+  const pendingCount=shopkeepers.filter(
+    sk=>sk.active!==true || !sk.shop_id
+  ).length;
+
+  $("pendingShopkeeperCount").textContent=
+    pendingCount ? `(${pendingCount})` : "";
+
+  if(!shopkeepers.length){
+    box.innerHTML='<div class="panel">No shopkeeper accounts found.</div>';
+    return;
+  }
+
+  shopkeepers.forEach(sk=>{
+    const assigned=shops.find(s=>s.id===sk.shop_id);
+
+    const card=document.createElement("div");
+    card.className="panel shopkeeper-card";
+
+    const options=
+      '<option value="">Select shop</option>'+
+      shops.map(s=>
+        `<option value="${s.id}" ${sk.shop_id===s.id?"selected":""}>
+          ${s.name}${s.active===false?" (Inactive)":""}
+        </option>`
+      ).join("");
+
+    card.innerHTML=`
+      <div class="shopkeeper-head">
+        <div>
+          <b style="font-size:18px">
+            ${sk.full_name||"Unnamed Shopkeeper"}
+          </b>
+
+          <div class="small">
+            ${sk.business_name||"No business name"} ·
+            ${sk.requested_category||"No category"}
+          </div>
+        </div>
+
+        <span class="badge ${
+          sk.active===true && sk.shop_id ? "paid" : "pending"
+        }">
+          ${
+            sk.active===true && sk.shop_id
+              ? "ACTIVE"
+              : "PENDING / INACTIVE"
+          }
+        </span>
+      </div>
+
+      <div class="shopkeeper-grid">
+        <div>
+          <b>Phone</b>
+          <div>${sk.phone||"-"}</div>
+        </div>
+
+        <div>
+          <b>Assigned Shop</b>
+          <div>${assigned ? assigned.name : "Not assigned"}</div>
+        </div>
+
+        <div>
+          <b>Requested Category</b>
+          <div>${sk.requested_category||"-"}</div>
+        </div>
+
+        <div>
+          <b>User ID</b>
+          <div class="small" style="word-break:break-all">
+            ${sk.user_id||"-"}
+          </div>
+        </div>
+      </div>
+
+      <div class="actions shop-actions">
+
+        <label class="shopAssign">
+          Assign Shop
+          <select class="shopSelect">
+            ${options}
+          </select>
+        </label>
+
+        <button class="green approveBtn">
+          Assign + Activate
+        </button>
+
+        <button class="yellow deactivateBtn">
+          Deactivate
+        </button>
+
+        <button class="red removeBtn">
+          Remove Access
+        </button>
+
+      </div>
+    `;
+
+    card.querySelector(".approveBtn").onclick=async()=>{
+
+      const shop_id=
+        card.querySelector(".shopSelect").value;
+
+      if(!shop_id){
+        setStatus("Select a shop first.");
+        return;
+      }
+
+      const {error}=await sb
+        .from("shopkeepers")
+        .update({
+          shop_id,
+          active:true
+        })
+        .eq("id",sk.id);
+
+      if(error){
+        setStatus(
+          "Shopkeeper approval error: "+
+          error.message
+        );
+      }else{
+        setStatus(
+          "Shop assigned and shopkeeper activated."
+        );
+
+        await loadShopkeepers();
+      }
+    };
+
+
+    card.querySelector(".deactivateBtn").onclick=
+    async()=>{
+
+      const {error}=await sb
+        .from("shopkeepers")
+        .update({
+          active:false
+        })
+        .eq("id",sk.id);
+
+      if(error){
+        setStatus(
+          "Deactivate error: "+
+          error.message
+        );
+      }else{
+        setStatus(
+          "Shopkeeper deactivated."
+        );
+
+        await loadShopkeepers();
+      }
+    };
+
+
+    card.querySelector(".removeBtn").onclick=
+    async()=>{
+
+      if(
+        !confirm(
+          "Remove this shopkeeper's shop access?"
+        )
+      )return;
+
+      const {error}=await sb
+        .from("shopkeepers")
+        .update({
+          shop_id:null,
+          active:false
+        })
+        .eq("id",sk.id);
+
+      if(error){
+        setStatus(
+          "Remove access error: "+
+          error.message
+        );
+      }else{
+        setStatus(
+          "Shop access removed."
+        );
+
+        await loadShopkeepers();
+      }
+    };
+
+    box.appendChild(card);
+  });
+}
+
+
+async function loadShopkeepers(){
+
+  const {data,error}=await sb
+    .from("shopkeepers")
+    .select(
+      "id,user_id,shop_id,active,created_at,full_name,phone,business_name,requested_category"
+    )
+    .order(
+      "created_at",
+      {ascending:false}
+    );
+
+  if(error){
+    setStatus(
+      "Shopkeeper load error: "+
+      error.message
+    );
+
+    return false;
+  }
+
+  shopkeepers=data||[];
+
+  renderShopkeepers();
+
+  return true;
+}
+
+
+async function createShop(){
+
+  const name=
+    $("newShopName").value.trim();
+
+  if(!name){
+    setStatus(
+      "Shop name is required."
+    );
+    return;
+  }
+
+  const active=
+    $("newShopActive").value==="true";
+
+  $("createShopBtn").disabled=true;
+
+  try{
+
+    const {error}=await sb
+      .from("shops")
+      .insert({
+        name,
+        active
+      });
+
+    if(error)throw error;
+
+    $("newShopName").value="";
+
+    setStatus(
+      "New shop created."
+    );
+
+    await loadShops();
+
+    renderShopkeepers();
+
+  }catch(e){
+
+    setStatus(
+      "Create shop error: "+
+      e.message
+    );
+
+  }finally{
+
+    $("createShopBtn").disabled=false;
+
+  }
+}
+
+
+function switchView(v){
+
+  activeView=v;
+
+  $("productsView").classList.toggle(
+    "hidden",
+    v!=="products"
+  );
+
+  $("ordersView").classList.toggle(
+    "hidden",
+    v!=="orders"
+  );
+
+  $("deliveryView").classList.toggle(
+    "hidden",
+    v!=="delivery"
+  );
+
+  $("shopkeepersView").classList.toggle(
+    "hidden",
+    v!=="shopkeepers"
+  );
+
+  $("productsTab").classList.toggle(
+    "active",
+    v==="products"
+  );
+
+  $("ordersTab").classList.toggle(
+    "active",
+    v==="orders"
+  );
+
+  $("deliveryTab").classList.toggle(
+    "active",
+    v==="delivery"
+  );
+
+  $("shopkeepersTab").classList.toggle(
+    "active",
+    v==="shopkeepers"
+  );
+
+  if(v==="orders"){
+    loadOrders();
+  }
+
+  if(v==="delivery"){
+    loadDeliverySettings();
+  }
+
+  if(v==="shopkeepers"){
+    loadShops().then(
+      ()=>loadShopkeepers()
+    );
+  }
+}
+
+
+async function loadDeliverySettings(){
+
+  const {data,error}=await sb
+    .from("delivery_settings")
+    .select("*")
+    .eq("id",1)
+    .single();
+
+  if(error){
+
+    setStatus(
+      "Delivery settings error: "+
+      error.message
+    );
+
+    return;
+  }
+
+  $("base_distance_km").value=
+    data.base_distance_km??2;
+
+  $("base_charge").value=
+    data.base_charge??30;
+
+  $("step_distance_km").value=
+    data.step_distance_km??2;
+
+  $("step_charge").value=
+    data.step_charge??10;
+
+  $("free_delivery").value=
+    String(
+      data.free_delivery_enabled===true
+    );
+
+  $("rain_mode").value=
+    String(
+      data.rain_mode===true
+    );
+
+  $("rain_extra").value=
+    data.rain_extra??0;
+
+  $("store_lat").value=
+    data.store_lat??"";
+
+  $("store_lng").value=
+    data.store_lng??"";
+
+  renderDeliveryPreview();
+}
+
+
+function renderDeliveryPreview(){
+
+  const free=
+    $("free_delivery").value==="true";
+
+  if(free){
+
+    $("deliveryPreview").innerHTML=
+      "🎁 Free Delivery Offer is ON · Customer delivery charge = ₹0";
+
+    return;
+  }
+
+  const b=
+    Number(
+      $("base_distance_km").value||2
+    );
+
+  const bc=
+    Number(
+      $("base_charge").value||30
+    );
+
+  const s=
+    Number(
+      $("step_distance_km").value||2
+    );
+
+  const sc=
+    Number(
+      $("step_charge").value||10
+    );
+
+  $("deliveryPreview").innerHTML=
+    `Example: 0–${b} km = ₹${bc} · ${b}–${b+s} km = ₹${bc+sc} · ${b+s}–${b+2*s} km = ₹${bc+2*sc}${
+      $("rain_mode").value==="true"
+      ? " · Rain extra ₹"+
+        Number(
+          $("rain_extra").value||0
+        )
+      : ""
+    }`;
+}
+
+
+async function checkAdmin(){
+
+  const {
+    data:{session}
+  }=
+  await sb.auth.getSession();
+
+  if(!session){
+
+    $("login").classList.remove(
+      "hidden"
+    );
+
+    $("app").classList.add(
+      "hidden"
+    );
+
+    $("logout").classList.add(
+      "hidden"
+    );
+
+    setStatus(
+      "Admin login required."
+    );
+
+    if(poll){
+
+      clearInterval(poll);
+
+      poll=null;
+    }
+
+    return;
+  }
+
+  const email=
+    (
+      session.user.email||""
+    ).toLowerCase();
+
+  const {
+    data:admin,
+    error:adminError
+  }=
+  await sb
+    .from("app_admins")
+    .select("email")
+    .eq("email",email)
+    .maybeSingle();
+
+  if(adminError || !admin){
+
+    $("login").classList.remove(
+      "hidden"
+    );
+
+    $("app").classList.add(
+      "hidden"
+    );
+
+    $("logout").classList.remove(
+      "hidden"
+    );
+
+    setStatus(
+      "This account is not an authorized HUNKART admin."
+    );
+
+    if(poll){
+
+      clearInterval(poll);
+
+      poll=null;
+    }
+
+    return;
+  }
+
+  $("login").classList.add(
+    "hidden"
+  );
+
+  $("app").classList.remove(
+    "hidden"
+  );
+
+  $("logout").classList.remove(
+    "hidden"
+  );
+
+  setStatus(
+    "Logged in. Products, orders, delivery and shopkeepers are live."
+  );
+
+  await loadShops();
+
+  await loadProducts();
+
+  await loadDeliveryBoys();
+
+  await loadOrders();
+
+  await loadShopkeepers();
+
+  if(!poll){
+
+    poll=setInterval(
+      ()=>{
+        if(activeView==="orders"){
+          loadOrders();
+        }
+      },
+      20000
+    );
+  }
+}
+
+
+if(!configured()){
+
+  setStatus(
+    "Supabase is not connected."
+  );
+
+}else{
+
+  sb=createClient(
+    cfg.supabaseUrl,
+    cfg.supabaseAnonKey
+  );
+
+  await checkAdmin();
+
+  sb.auth.onAuthStateChange(
+    ()=>checkAdmin()
+  );
+}
+
 
 $("loginBtn").onclick=async()=>{
 
- const {error}=await sb.auth
-   .signInWithPassword({
+  const {error}=
+  await sb.auth.signInWithPassword({
 
-     email:$("email").value.trim(),
+    email:
+      $("email").value.trim(),
 
-     password:$("password").value
+    password:
+      $("password").value
 
-   });
+  });
 
- if(error){
+  if(error){
 
-   setStatus(
-     "Login failed: "+
-     error.message
-   );
-
- }
+    setStatus(
+      "Login failed: "+
+      error.message
+    );
+  }
 };
+
 
 $("forgotPasswordBtn").onclick=async()=>{
 
- const email=
-   $("email")
-   .value
-   .trim()
-   .toLowerCase();
+  const email=
+    $("email")
+      .value
+      .trim()
+      .toLowerCase();
 
- if(!email){
+  if(!email){
 
-   setStatus(
-     "Enter your admin email first."
-   );
+    setStatus(
+      "Enter your admin email first."
+    );
 
-   return;
- }
+    return;
+  }
 
- const {error}=await sb.auth
-   .resetPasswordForEmail(
-     email,
-     {
-       redirectTo:
-       "https://hunkart.com/admin-reset-password.html"
-     }
-   );
+  const {error}=
+  await sb.auth.resetPasswordForEmail(
+    email,
+    {
+      redirectTo:
+      "https://hunkart.com/admin-reset-password.html"
+    }
+  );
 
- if(error){
+  if(error){
 
-   setStatus(
-     "Could not send reset email: "+
-     error.message
-   );
+    setStatus(
+      "Could not send reset email: "+
+      error.message
+    );
 
- }else{
+  }else{
 
-   setStatus(
-     "Admin password reset link sent. Check your email."
-   );
-
- }
+    setStatus(
+      "Admin password reset link sent. Check your email."
+    );
+  }
 };
 
+
 $("logout").onclick=
-()=>sb.auth.signOut();
+  ()=>sb.auth.signOut();
+
 
 $("productsTab").onclick=
-()=>switchView("products");
+  ()=>switchView("products");
 
 $("ordersTab").onclick=
-()=>switchView("orders");
+  ()=>switchView("orders");
 
 $("deliveryTab").onclick=
-()=>switchView("delivery");
+  ()=>switchView("delivery");
 
 $("shopkeepersTab").onclick=
-()=>switchView("shopkeepers");
+  ()=>switchView("shopkeepers");
+
 
 $("cancel").onclick=reset;
+
 
 $("refreshProducts").onclick=
 async()=>{
 
- await loadShops();
+  await loadShops();
 
- await loadProducts();
-
+  await loadProducts();
 };
 
+
 $("q").oninput=
-renderProducts;
+  renderProducts;
+
 
 $("refreshOrders").onclick=
-loadOrders;
+  loadOrders;
+
 
 $("oq").oninput=
-renderOrders;
+  renderOrders;
+
 
 $("refreshShopkeepers").onclick=
 async()=>{
 
- await loadShops();
+  await loadShops();
 
- await loadShopkeepers();
-
+  await loadShopkeepers();
 };
 
+
 $("createShopBtn").onclick=
-createShop;
+  createShop;
+
 
 [
- "base_distance_km",
- "base_charge",
- "step_distance_km",
- "step_charge",
- "free_delivery",
- "rain_mode",
- "rain_extra"
+  "base_distance_km",
+  "base_charge",
+  "step_distance_km",
+  "step_charge",
+  "free_delivery",
+  "rain_mode",
+  "rain_extra"
 ].forEach(
- id=>
- $(""+id).addEventListener(
-   "input",
-   renderDeliveryPreview
- )
+  id=>
+    $(id).addEventListener(
+      "input",
+      renderDeliveryPreview
+    )
 );
+
 
 $("detectShopLocation").onclick=()=>{
 
- if(!navigator.geolocation){
+  if(!navigator.geolocation){
 
-   setStatus(
-     "Location is not supported on this browser."
-   );
+    setStatus(
+      "Location is not supported on this browser."
+    );
 
-   return;
- }
+    return;
+  }
 
- $("detectShopLocation").disabled=
-   true;
+  $("detectShopLocation").disabled=true;
 
- $("detectShopLocation").textContent=
-   "Detecting...";
+  $("detectShopLocation").textContent=
+    "Detecting...";
 
- navigator.geolocation
- .getCurrentPosition(
+  navigator.geolocation.getCurrentPosition(
 
-   pos=>{
+    pos=>{
 
-     $("store_lat").value=
-       pos.coords.latitude
-       .toFixed(6);
+      $("store_lat").value=
+        pos.coords.latitude.toFixed(6);
 
-     $("store_lng").value=
-       pos.coords.longitude
-       .toFixed(6);
+      $("store_lng").value=
+        pos.coords.longitude.toFixed(6);
 
-     setStatus(
-       "Shop location captured. Tap Save Delivery Settings."
-     );
+      setStatus(
+        "Shop location captured. Tap Save Delivery Settings."
+      );
 
-     $("detectShopLocation").disabled=
-       false;
+      $("detectShopLocation").disabled=false;
 
-     $("detectShopLocation").textContent=
-       "📍 Use My Current Location as Shop Location";
+      $("detectShopLocation").textContent=
+        "📍 Use My Current Location as Shop Location";
+    },
 
-   },
+    ()=>{
 
-   ()=>{
+      setStatus(
+        "Location permission is required."
+      );
 
-     setStatus(
-       "Location permission is required."
-     );
+      $("detectShopLocation").disabled=false;
 
-     $("detectShopLocation").disabled=
-       false;
+      $("detectShopLocation").textContent=
+        "📍 Use My Current Location as Shop Location";
+    },
 
-     $("detectShopLocation").textContent=
-       "📍 Use My Current Location as Shop Location";
-
-   },
-
-   {
-     enableHighAccuracy:true,
-     timeout:15000
-   }
-
- );
+    {
+      enableHighAccuracy:true,
+      timeout:15000
+    }
+  );
 };
 
-$("saveDelivery").onclick=
-async()=>{
 
- const payload={
+$("saveDelivery").onclick=async()=>{
 
-   base_distance_km:
-     Number(
-       $("base_distance_km").value||2
-     ),
+  const payload={
 
-   base_charge:
-     Number(
-       $("base_charge").value||30
-     ),
+    base_distance_km:
+      Number(
+        $("base_distance_km").value||2
+      ),
 
-   step_distance_km:
-     Number(
-       $("step_distance_km").value||2
-     ),
+    base_charge:
+      Number(
+        $("base_charge").value||30
+      ),
 
-   step_charge:
-     Number(
-       $("step_charge").value||10
-     ),
+    step_distance_km:
+      Number(
+        $("step_distance_km").value||2
+      ),
 
-   free_delivery_enabled:
-     $("free_delivery").value==="true",
+    step_charge:
+      Number(
+        $("step_charge").value||10
+      ),
 
-   rain_mode:
-     $("rain_mode").value==="true",
+    free_delivery_enabled:
+      $("free_delivery").value==="true",
 
-   rain_extra:
-     Number(
-       $("rain_extra").value||0
-     ),
+    rain_mode:
+      $("rain_mode").value==="true",
 
-   store_lat:
-     $("store_lat").value===""
-     ?null
-     :Number(
-       $("store_lat").value
-     ),
+    rain_extra:
+      Number(
+        $("rain_extra").value||0
+      ),
 
-   store_lng:
-     $("store_lng").value===""
-     ?null
-     :Number(
-       $("store_lng").value
-     ),
+    store_lat:
+      $("store_lat").value===""
+        ? null
+        : Number(
+            $("store_lat").value
+          ),
 
-   updated_at:
-     new Date().toISOString()
+    store_lng:
+      $("store_lng").value===""
+        ? null
+        : Number(
+            $("store_lng").value
+          ),
 
- };
+    updated_at:
+      new Date().toISOString()
+  };
 
- const {error}=await sb
-   .from("delivery_settings")
-   .update(payload)
-   .eq("id",1);
+  const {error}=await sb
+    .from("delivery_settings")
+    .update(payload)
+    .eq("id",1);
 
- if(error){
+  if(error){
 
-   setStatus(
-     "Save delivery settings error: "+
-     error.message
-   );
+    setStatus(
+      "Save delivery settings error: "+
+      error.message
+    );
 
- }else{
+  }else{
 
-   setStatus(
-     "Delivery settings saved."
-   );
+    setStatus(
+      "Delivery settings saved."
+    );
 
-   renderDeliveryPreview();
-
- }
+    renderDeliveryPreview();
+  }
 };
+
 
 $("image_file").onchange=()=>{
 
- const f=
-   $("image_file").files[0];
+  const f=
+    $("image_file").files[0];
 
- if(f){
+  if(f){
 
-   $("preview").src=
-     URL.createObjectURL(f);
+    $("preview").src=
+      URL.createObjectURL(f);
 
-   $("preview")
-     .classList
-     .remove("hidden");
- }
+    $("preview").classList.remove(
+      "hidden"
+    );
+  }
 };
+
 
 $("save").onclick=async()=>{
 
- const name=
-   $("name").value.trim();
+  const name=
+    $("name").value.trim();
 
- if(!name){
+  if(!name){
 
-   setStatus(
-     "Item name is required."
-   );
+    setStatus(
+      "Item name is required."
+    );
 
-   return;
- }
+    return;
+  }
 
- const shop_id=
-   $("shop_id").value;
+  const shop_id=
+    $("shop_id").value;
 
- if(!shop_id){
+  if(!shop_id){
 
-   setStatus(
-     "Select a shop for this product."
-   );
+    setStatus(
+      "Select a shop for this product."
+    );
 
-   return;
- }
+    return;
+  }
 
- try{
+  try{
 
-   setStatus(
-     "Saving product..."
-   );
+    setStatus(
+      "Saving product..."
+    );
 
-   const image_url=
-     await uploadImage(
-       $("image_file").files[0]
-     );
+    const image_url=
+      await uploadImage(
+        $("image_file").files[0]
+      );
 
-   const payload={
+    const payload={
 
-     name,
+      name,
 
-     shop_id,
+      shop_id,
 
-     category:
-       $("category").value.trim()
-       ||null,
+      category:
+        $("category").value.trim()||null,
 
-     price:
-       n("price"),
+      price:n("price"),
 
-     price_half:
-       n("price_half"),
+      price_half:n("price_half"),
 
-     price_full:
-       n("price_full"),
+      price_full:n("price_full"),
 
-     description:
-       $("description").value.trim()
-       ||null,
+      description:
+        $("description").value.trim()||null,
 
-     image_url,
+      image_url,
 
-     available:
-       $("available").value==="true",
+      available:
+        $("available").value==="true",
 
-     featured:
-       $("featured").value==="true",
+      featured:
+        $("featured").value==="true",
 
-     sort_order:
-       n("sort_order")??100
+      sort_order:
+        n("sort_order")??100
+    };
 
-   };
+    const res=
+      editing
+      ? await sb
+          .from("products")
+          .update(payload)
+          .eq("id",editing)
 
-   const res=
-     editing
-     ?await sb
-       .from("products")
-       .update(payload)
-       .eq("id",editing)
-     :await sb
-       .from("products")
-       .insert(payload);
+      : await sb
+          .from("products")
+          .insert(payload);
 
-   if(res.error){
-     throw res.error;
-   }
+    if(res.error){
+      throw res.error;
+    }
 
-   setStatus(
-     editing
-     ?"Product updated."
-     :"Product added."
-   );
+    setStatus(
+      editing
+      ? "Product updated."
+      : "Product added."
+    );
 
-   reset();
+    reset();
 
-   await loadProducts();
+    await loadProducts();
 
- }catch(e){
+  }catch(e){
 
-   setStatus(
-     "Save error: "+
-     e.message
-   );
-
- }
+    setStatus(
+      "Save error: "+
+      e.message
+    );
+  }
 };
+
 </script>
 </body>
 </html>
