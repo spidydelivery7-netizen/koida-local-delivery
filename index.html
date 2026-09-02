@@ -370,12 +370,81 @@ function fmtOrderDate(v){try{return new Date(v).toLocaleString("en-IN")}catch{re
 function esc(v){
   return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 }
-function openOrderDetails(o){
+async function openOrderDetails(o){
   const items=o.order_items||[];
   const deliveryCharge=Number(o.delivery_charge||0);
   const platformFee=Number(o.platform_fee||0);
   const address=[o.address,o.landmark,o.area].filter(Boolean).join(" · ");
-  $("orderDetailsBody").innerHTML=`
+  let tracking=null;
+
+try{
+  const {data,error}=await sb.rpc(
+    "get_customer_delivery_tracking",
+    {
+      p_order_id:o.id
+    }
+  );
+
+  if(!error && Array.isArray(data) && data.length){
+    tracking=data[0];
+  }
+}catch(e){
+  console.error("Customer delivery tracking load failed",e);
+}
+
+let trackingHtml="";
+
+if(tracking){
+
+  const partnerName=
+    esc(tracking.delivery_partner || "Delivery Partner");
+
+  const hasLocation=
+    tracking.current_lat!=null &&
+    tracking.current_lng!=null;
+
+  const lastUpdate=
+    tracking.location_updated_at
+      ? fmtDate(tracking.location_updated_at)
+      : "";
+
+  trackingHtml=`
+    <hr style="border:0;border-top:1px solid #e5e7eb">
+
+    <div class="sum-row">
+      <span>Delivery Partner</span>
+      <b>${partnerName}</b>
+    </div>
+
+    ${
+      hasLocation
+      ? `
+        <div style="margin-top:12px">
+          <button
+            class="btn dark"
+            style="width:100%"
+            onclick="openCustomerLiveLocation('${o.id}')"
+          >
+            📍 Track Live Location
+          </button>
+
+          ${
+            lastUpdate
+            ? `<div class="small" style="margin-top:7px">
+                 Last location: ${esc(lastUpdate)}
+               </div>`
+            : ""
+          }
+        </div>
+      `
+      : `
+        <div class="small" style="margin-top:8px">
+          Live tracking will be available after the delivery partner starts delivery.
+        </div>
+      `
+    }
+  `;
+  }$("orderDetailsBody").innerHTML=`
     <div class="sum-row"><span>Order ID</span><b>${esc(o.order_number)}</b></div>
     <div class="sum-row"><span>Date & Time</span><span>${esc(fmtOrderDate(o.created_at))}</span></div>
     <div class="sum-row"><span>Order Status</span><b>${esc(statusLabel(o.status))}</b></div>
