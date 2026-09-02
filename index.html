@@ -476,11 +476,30 @@ async function loadMyOrders(){
   const orders=data||[];
   if(!orders.length){box.innerHTML='<div class="account-card"><b>No orders yet</b><div class="small" style="margin-top:4px">Orders placed after you login will appear here.</div></div>';return}
   box.innerHTML=orders.map((o,idx)=>`<div class="order-card-mini" data-order-idx="${idx}" role="button" tabindex="0" aria-label="Open details for ${o.order_number}"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><div><b>${o.order_number}</b><div class="small">${fmtOrderDate(o.created_at)}</div></div><div><span class="order-status">${statusLabel(o.status)}</span> <span class="order-status ${o.payment_status==="paid"?"paid":"pending"}">${statusLabel(o.payment_status)}</span></div></div><div class="small" style="margin-top:7px">${(o.order_items||[]).map(i=>`${i.product_name} (${i.variant_label||""}) × ${i.qty}`).join(" · ")||"Order items"}</div><div class="sum-row"><span>${o.distance_km!=null?`Distance ${o.distance_km} km`:""}</span><b>₹${o.total}</b></div><div class="small" style="margin-top:6px;color:#2563eb;font-weight:800">Tap to view details ›</div></div>`).join("");
-  box.querySelectorAll(".order-card-mini").forEach(card=>{
-    const open=()=>openOrderDetails(orders[Number(card.dataset.orderIdx)]);
-    card.addEventListener("click",open);
-    card.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();open();}});
-  });
+  box.onclick=(e)=>{
+  const card=e.target.closest(".order-card-mini");
+  if(!card) return;
+
+  const idx=Number(card.dataset.orderIdx);
+
+  if(Number.isInteger(idx) && orders[idx]){
+    openOrderDetails(orders[idx]);
+  }
+};
+
+box.onkeydown=(e)=>{
+  if(e.key!=="Enter" && e.key!==" ") return;
+
+  const card=e.target.closest(".order-card-mini");
+  if(!card) return;
+
+  const idx=Number(card.dataset.orderIdx);
+
+  if(Number.isInteger(idx) && orders[idx]){
+    e.preventDefault();
+    openOrderDetails(orders[idx]);
+  }
+};
 }
 async function refreshAccountState(){
   const {data:{session}}=await sb.auth.getSession();currentSession=session;await loadCustomerProfile();
