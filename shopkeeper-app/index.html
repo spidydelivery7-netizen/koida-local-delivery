@@ -69,15 +69,161 @@ button{border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:poin
   <div id="status" class="status">Checking setup...</div>
 
   <section id="loginBox" class="card login hidden">
-    <h2 style="margin-top:0">Shopkeeper Login</h2>
-    <p class="small">Login with the email and password given for your shop.</p>
-    <label>Email<input id="email" type="email" autocomplete="username" placeholder="shop@example.com"></label>
-    <label>Password<input id="password" type="password" autocomplete="current-password" placeholder="Password"></label>
-    <button id="loginBtn" class="primary" style="width:100%">Login</button>
-    <div style="text-align:center;margin-top:10px">
-      <button id="forgotPasswordBtn" type="button" class="linkbtn">Forgot Password?</button>
-    </div>
-  </section>
+  <h2 style="margin-top:0">Shopkeeper Login</h2>
+
+  <p class="small">
+    Login with your registered shopkeeper email and password.
+  </p>
+
+  <label>
+    Email
+    <input
+      id="email"
+      type="email"
+      autocomplete="username"
+      placeholder="shop@example.com">
+  </label>
+
+  <label>
+    Password
+    <input
+      id="password"
+      type="password"
+      autocomplete="current-password"
+      placeholder="Password">
+  </label>
+
+  <button
+    id="loginBtn"
+    class="primary"
+    style="width:100%">
+    Login
+  </button>
+
+  <div style="text-align:center;margin-top:10px">
+    <button
+      id="forgotPasswordBtn"
+      type="button"
+      class="linkbtn">
+      Forgot Password?
+    </button>
+
+    &nbsp;·&nbsp;
+
+    <button
+      id="createAccountBtn"
+      type="button"
+      class="linkbtn">
+      Create Account
+    </button>
+  </div>
+</section>
+
+
+<section id="signupBox" class="card login hidden">
+
+  <h2 style="margin-top:0">
+    Create Shopkeeper Account
+  </h2>
+
+  <p class="small">
+    Register as a HUNKART shopkeeper. After email confirmation,
+    HUNKART Admin will assign your shop before product access is enabled.
+  </p>
+
+  <label>
+    Full Name
+    <input
+      id="signupName"
+      type="text"
+      autocomplete="name"
+      placeholder="Full name">
+  </label>
+
+  <label>
+    Phone Number
+    <input
+      id="signupPhone"
+      type="tel"
+      inputmode="numeric"
+      autocomplete="tel"
+      maxlength="10"
+      placeholder="10-digit mobile number">
+  </label>
+
+  <label>
+    Business / Shop Name
+    <input
+      id="signupBusinessName"
+      type="text"
+      placeholder="Your shop or business name">
+  </label>
+
+  <label>
+    Shop Category
+    <select id="signupCategory">
+      <option value="">Select category</option>
+      <option value="restaurant">Restaurant / Food</option>
+      <option value="grocery">Grocery</option>
+      <option value="medicine">Medicine</option>
+      <option value="fruits">Fruits</option>
+      <option value="bakery">Bakery</option>
+      <option value="sweets">Sweets</option>
+      <option value="meat_fish">Meat / Fish</option>
+      <option value="other">Other</option>
+    </select>
+  </label>
+
+  <label>
+    Email
+    <input
+      id="signupEmail"
+      type="email"
+      autocomplete="email"
+      placeholder="you@gmail.com">
+  </label>
+
+  <label>
+    Password
+    <input
+      id="signupPassword"
+      type="password"
+      autocomplete="new-password"
+      minlength="8"
+      placeholder="Minimum 8 characters">
+  </label>
+
+  <label>
+    Confirm Password
+    <input
+      id="signupConfirmPassword"
+      type="password"
+      autocomplete="new-password"
+      minlength="8"
+      placeholder="Confirm password">
+  </label>
+
+  <button
+    id="signupBtn"
+    class="primary"
+    style="width:100%">
+    Create Account
+  </button>
+
+  <button
+    id="signupBackBtn"
+    type="button"
+    class="linkbtn"
+    style="width:100%;margin-top:10px">
+    Back to Login
+  </button>
+
+  <p class="small" style="margin-top:12px;text-align:center">
+    Email confirmation is required. Shop access will be enabled only
+    after HUNKART Admin assigns this account to a shop.
+  </p>
+
+</section>
 
   <section id="app" class="hidden">
     <div class="card">
