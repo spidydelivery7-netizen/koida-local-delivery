@@ -537,7 +537,108 @@ $("loginBtn").onclick=async()=>{
   if(error)setStatus("Login failed: "+error.message);
   $("loginBtn").disabled=false;$("loginBtn").textContent="Login";
 };
+$("createAccountBtn").onclick = () => {
+  showSignup();
+};
 
+$("signupBackBtn").onclick = () => {
+  showLoggedOut();
+  setStatus("Shopkeeper login required.");
+};$("signupBtn").onclick = async () => {
+  if (!sb) return;
+
+  const fullName = $("signupName").value.trim();
+  const phone = $("signupPhone").value.replace(/\D/g, "");
+  const businessName = $("signupBusinessName").value.trim();
+  const category = $("signupCategory").value;
+  const email = $("signupEmail").value.trim().toLowerCase();
+  const password = $("signupPassword").value;
+  const confirmPassword = $("signupConfirmPassword").value;
+
+  if (!fullName) {
+    setStatus("Enter your full name.");
+    $("signupName").focus();
+    return;
+  }
+
+  if (!/^\d{10}$/.test(phone)) {
+    setStatus("Enter a valid 10-digit mobile number.");
+    $("signupPhone").focus();
+    return;
+  }
+
+  if (!businessName) {
+    setStatus("Enter your business / shop name.");
+    $("signupBusinessName").focus();
+    return;
+  }
+
+  if (!category) {
+    setStatus("Select your shop category.");
+    $("signupCategory").focus();
+    return;
+  }
+
+  if (!email) {
+    setStatus("Enter your email address.");
+    $("signupEmail").focus();
+    return;
+  }
+
+  if (password.length < 8) {
+    setStatus("Password must be at least 8 characters.");
+    $("signupPassword").focus();
+    return;
+  }
+
+  if (password !== confirmPassword) {
+    setStatus("Passwords do not match.");
+    $("signupConfirmPassword").focus();
+    return;
+  }
+
+  $("signupBtn").disabled = true;
+  $("signupBtn").textContent = "Creating account...";
+
+  try {
+    const { data, error } = await sb.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+          phone: phone,
+          business_name: businessName,
+          requested_category: category,
+          account_type: "shopkeeper"
+        },
+        emailRedirectTo: window.location.origin + "/shopkeeper-app/"
+      }
+    });
+
+    if (error) throw error;
+
+    $("signupPassword").value = "";
+    $("signupConfirmPassword").value = "";
+    $("email").value = email;
+
+    if (data.session) {
+      await sb.auth.signOut();
+    }
+
+    showLoggedOut();
+
+    setStatus(
+      "Account created successfully. Please check your email and confirm your email address. HUNKART Admin will assign your shop before product access is enabled."
+    );
+
+  } catch (e) {
+    setStatus("Could not create account: " + (e.message || e));
+  } finally {
+    $("signupBtn").disabled = false;
+    $("signupBtn").textContent = "Create Account";
+  }
+};
 $("forgotPasswordBtn").onclick=async()=>{
   if(!sb)return;
   const email=$("email").value.trim().toLowerCase();
