@@ -262,12 +262,27 @@ function configured(){return cfg.supabaseUrl&&cfg.supabaseAnonKey&&!String(cfg.s
 function setStatus(msg){$("status").textContent=msg}
 function showLoggedOut(){
   stopOrderPolling();
+
   $("loginBox").classList.remove("hidden");
+  $("signupBox").classList.add("hidden");
   $("app").classList.add("hidden");
   $("logoutBtn").classList.add("hidden");
 }
+
+function showSignup(){
+  stopOrderPolling();
+
+  $("loginBox").classList.add("hidden");
+  $("signupBox").classList.remove("hidden");
+  $("app").classList.add("hidden");
+  $("logoutBtn").classList.add("hidden");
+
+  setStatus("Create your HUNKART shopkeeper account.");
+}
+
 function showLoggedIn(){
   $("loginBox").classList.add("hidden");
+  $("signupBox").classList.add("hidden");
   $("app").classList.remove("hidden");
   $("logoutBtn").classList.remove("hidden");
 }
