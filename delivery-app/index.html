@@ -1523,7 +1523,14 @@ async function markDelivered(
     return;
   }
 
+const otp = String(
+  prompt("Customer se 4-digit Delivery OTP lekar enter karein:") || ""
+).trim();
 
+if (!/^\d{4}$/.test(otp)) {
+  setStatus("Valid 4-digit Delivery OTP required.");
+  return;
+}
   btn.disabled =
     true;
 
@@ -1557,21 +1564,30 @@ async function markDelivered(
     catch(_){}
 
 
-    const {error} =
-      await sb.rpc(
-        "delivery_mark_delivered",
-        {
-          p_order_id:orderId,
-          p_lat:lat,
-          p_lng:lng,
-          p_accuracy:accuracy
-        }
-      );
-
-
-    if(error){
-      throw error;
+    const { data, error } =
+  await sb.rpc(
+    "delivery_verify_otp_and_mark_delivered",
+    {
+      p_order_id: orderId,
+      p_otp: otp,
+      p_lat: lat,
+      p_lng: lng,
+      p_accuracy: accuracy
     }
+  );
+
+if (error) {
+  throw error;
+}
+
+if (!data || data.success !== true) {
+  setStatus(
+    data?.message || "Delivery OTP verification failed."
+  );
+  return;
+}
+
+    
 
 
     stopGps();
