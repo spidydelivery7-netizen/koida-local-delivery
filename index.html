@@ -376,14 +376,23 @@ async function openOrderDetails(o){
   const platformFee=Number(o.platform_fee||0);
   const address=[o.address,o.landmark,o.area].filter(Boolean).join(" · ");
   let tracking=null;
-
+$("orderDetailsBody").innerHTML='<div class="small">Loading order details...</div>';
+openModal($("#orderDetailsModal"));
 try{
-  const {data,error}=await sb.rpc(
+  const {data,error}=await Promise.race([
+  sb.rpc(
     "get_customer_delivery_tracking",
     {
       p_order_id:o.id
     }
-  );
+  ),
+  new Promise(resolve=>{
+    setTimeout(
+      ()=>resolve({data:null,error:null}),
+      3000
+    );
+  })
+]);
 
   if(!error && Array.isArray(data) && data.length){
     tracking=data[0];
