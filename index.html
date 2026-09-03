@@ -408,9 +408,12 @@ if(tracking){
   const partnerName=
     esc(tracking.delivery_partner || "Delivery Partner");
 
-  const hasLocation=
-    tracking.current_lat!=null &&
-    tracking.current_lng!=null;
+  const isDelivered=
+  String(o.status||"").toLowerCase()==="delivered";
+
+const hasLocation=
+  tracking.current_lat!=null &&
+  tracking.current_lng!=null;
 
   const lastUpdate=
     tracking.location_updated_at
@@ -426,7 +429,7 @@ if(tracking){
     </div>
 
     ${
-      hasLocation
+      !isDelivered && hasLocation
       ? `
         <div style="margin-top:12px">
           <button
@@ -448,7 +451,7 @@ if(tracking){
       `
       : `
         <div class="small" style="margin-top:8px">
-          Live tracking will be available after the delivery partner starts delivery.
+          ${isDelivered ? "Delivery completed. Live tracking has ended." : "Live tracking will be available after the delivery partner starts delivery."}
         </div>
       `
     }
