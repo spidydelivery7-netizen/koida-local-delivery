@@ -472,10 +472,53 @@ if(tracking){
     ${address?`<div class="sum-row"><span>Delivery Address</span><span style="text-align:right;max-width:65%">${esc(address)}</span></div>`:""}
     ${o.delivery_note?`<div class="sum-row"><span>Delivery Note</span><span style="text-align:right;max-width:65%">${esc(o.delivery_note)}</span></div>`:""}
     ${o.distance_km!=null?`<div class="sum-row"><span>Distance</span><b>${Number(o.distance_km)} km</b></div>`:""}
-  `;
+
+${trackingHtml}
+`;
   openModal($("orderDetailsModal"));
 }
+async function openCustomerLiveLocation(orderId){
+  try{
+    const {data,error}=await sb.rpc(
+      "get_customer_delivery_tracking",
+      {
+        p_order_id:orderId
+      }
+    );
 
+    if(error) throw error;
+
+    const tracking=
+      Array.isArray(data) && data.length
+        ? data[0]
+        : null;
+
+    if(
+      !tracking ||
+      tracking.current_lat==null ||
+      tracking.current_lng==null
+    ){
+      alert("Live location is not available yet.");
+      return;
+    }
+
+    const lat=Number(tracking.current_lat);
+    const lng=Number(tracking.current_lng);
+
+    if(!Number.isFinite(lat) || !Number.isFinite(lng)){
+      alert("Live location is not available yet.");
+      return;
+    }
+
+    window.location.href=
+      `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+
+  }catch(e){
+    console.error("Could not load live location",e);
+    alert("Could not load live location. Please try again.");
+  }
+}
+  window.openCustomerLiveLocation = openCustomerLiveLocation;
 async function loadMyOrders(){
   const box=$("myOrders");
   if(!currentSession?.user){box.innerHTML='<div class="small">Please login first.</div>';return}
