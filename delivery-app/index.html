@@ -1347,7 +1347,19 @@ async function startDelivery(
       throw error;
     }
 
+const { error: otpError } = await sb.rpc(
+  "delivery_issue_otp",
+  {
+    p_order_id: orderId
+  }
+);
 
+if (otpError) {
+  throw new Error(
+    "Delivery started, but OTP could not be generated: " +
+    (otpError.message || otpError)
+  );
+}
     setStatus(
       "Delivery started. Live location tracking is ON."
     );
