@@ -377,7 +377,7 @@ async function openOrderDetails(o){
   const address=[o.address,o.landmark,o.area].filter(Boolean).join(" · ");
   let tracking=null;
 $("orderDetailsBody").innerHTML='<div class="small">Loading order details...</div>';
-openModal($("#orderDetailsModal"));
+openModal($("orderDetailsModal"));
 try{
   const {data,error}=await Promise.race([
   sb.rpc(
@@ -414,7 +414,7 @@ if(tracking){
 
   const lastUpdate=
     tracking.location_updated_at
-      ? fmtDate(tracking.location_updated_at)
+      ? fmtOrderDate(tracking.location_updated_at)
       : "";
 
   trackingHtml=`
