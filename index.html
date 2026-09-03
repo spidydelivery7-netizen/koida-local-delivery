@@ -400,7 +400,69 @@ try{
 }catch(e){
   console.error("Customer delivery tracking load failed",e);
 }
+let deliveryOtp = null;
 
+if (String(o.status || "").toLowerCase() === "out_for_delivery") {
+  try {
+    const { data: otpData, error: otpError } = await Promise.race([
+      sb.rpc(
+        "get_customer_delivery_otp",
+        {
+          p_order_id: o.id
+        }
+      ),
+      new Promise(resolve =>
+        setTimeout(
+          () => resolve({ data: null, error: null }),
+          3000
+        )
+      )
+    ]);
+
+    if (
+      !otpError &&
+      Array.isArray(otpData) &&
+      otpData.length &&
+      otpData[0].delivery_otp
+    ) {
+      deliveryOtp = otpData[0].delivery_otp;
+    }
+  } catch (e) {
+    console.error("Delivery OTP load failed", e);
+  }
+}
+  let deliveryOtpHtml = "";
+
+if (deliveryOtp) {
+  deliveryOtpHtml = `
+    <div style="
+      margin:12px 0;
+      padding:14px;
+      border:1px solid #fbbf24;
+      border-radius:12px;
+      background:#fffbeb;
+      text-align:center;
+    ">
+      <div style="font-size:13px;font-weight:700;color:#92400e;">
+        DELIVERY OTP
+      </div>
+
+      <div style="
+        font-size:30px;
+        font-weight:900;
+        letter-spacing:8px;
+        margin:5px 0;
+        color:#111827;
+      ">
+        ${esc(deliveryOtp)}
+      </div>
+
+      <div style="font-size:12px;color:#92400e;">
+        Parcel receive karne ke baad hi Delivery Partner ko OTP batayein.
+      </div>
+    </div>
+  `;
+}
 let trackingHtml="";
 
 if(tracking){
@@ -462,6 +524,7 @@ const hasLocation=
     <div class="sum-row"><span>Order Status</span><b>${esc(statusLabel(o.status))}</b></div>
     <div class="sum-row"><span>Payment</span><b>${esc(statusLabel(o.payment_status))}</b></div>
     ${o.payment_id?`<div class="sum-row"><span>Payment ID</span><span style="text-align:right;word-break:break-all">${esc(o.payment_id)}</span></div>`:""}
+    ${deliveryOtpHtml}
     <hr style="border:0;border-top:1px solid #e5e7eb">
     ${items.map(i=>`<div class="sum-row"><span>${esc(i.product_name)}${i.variant_label?` (${esc(i.variant_label)})`:""} × ${Number(i.qty||0)}</span><b>₹${Number(i.line_total ?? (Number(i.unit_price||0)*Number(i.qty||0)))}</b></div>`).join("")||'<div class="small">No item details available.</div>'}
     <hr style="border:0;border-top:1px solid #e5e7eb">
