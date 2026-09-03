@@ -955,29 +955,21 @@ function renderDeliveries(){
       .join("");
 
 
-    const mapsLink =
-      (
-        o.delivery_lat != null &&
-        o.delivery_lng != null
-      )
+    const hasCustomerGps =
+  o.delivery_lat != null &&
+  o.delivery_lng != null &&
+  Number.isFinite(Number(o.delivery_lat)) &&
+  Number.isFinite(Number(o.delivery_lng));
 
-      ? `https://www.google.com/maps/dir/?api=1&destination=${
-          encodeURIComponent(o.delivery_lat)
-        },${
-          encodeURIComponent(o.delivery_lng)
-        }`
-
-      : `https://www.google.com/maps/search/?api=1&query=${
-          encodeURIComponent(
-            [
-              o.address,
-              o.landmark,
-              o.area
-            ]
-            .filter(Boolean)
-            .join(", ")
-          )
-        }`;
+const mapsLink = hasCustomerGps
+  ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+      `${Number(o.delivery_lat)},${Number(o.delivery_lng)}`
+    )}&travelmode=driving&dir_action=navigate`
+  : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+      [o.address, o.landmark, o.area]
+        .filter(Boolean)
+        .join(", ")
+    )}`;
 
 
     const statusClass =
