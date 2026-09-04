@@ -396,6 +396,121 @@ header{
     border-radius:24px 24px 0 0;
   }
 }
+  /* ===== HUNKART PREMIUM CUSTOMER ACCOUNT ===== */
+
+#accountModalTitle{
+  margin:0 0 18px;
+  font-size:28px;
+  line-height:1.1;
+  font-weight:900;
+  color:#0B1220;
+}
+
+#accountModal #authGuest .tabs{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:6px;
+  padding:5px;
+  margin-bottom:16px;
+  background:#F1F5F9;
+  border-radius:15px;
+}
+
+#accountModal #authGuest .tabs button{
+  min-height:46px;
+  border:0;
+  border-radius:11px;
+  font-size:14px;
+  font-weight:900;
+  box-shadow:none;
+}
+
+#accountModal #authGuest .tabs .dark{
+  background:#081220;
+  color:#FFFFFF;
+}
+
+#accountModal #authGuest .tabs .gray{
+  background:transparent;
+  color:#64748B;
+}
+
+#accountModal .auth-note{
+  margin:0 0 16px;
+  padding:12px 14px;
+  border:1px solid #E2E8F0;
+  border-radius:13px;
+  background:#F8FAFC;
+  color:#64748B;
+  font-size:12px;
+  line-height:1.45;
+}
+
+#accountModal .form{
+  display:grid;
+  gap:13px;
+}
+
+#accountModal .form label.full{
+  display:grid;
+  gap:7px;
+  font-size:13px;
+  font-weight:800;
+  color:#475569;
+}
+
+#accountModal .form input{
+  width:100%;
+  height:50px;
+  padding:0 14px;
+  border:1px solid #E2E8F0;
+  border-radius:13px;
+  background:#FFFFFF;
+  color:#0B1220;
+  font-size:15px;
+  outline:none;
+}
+
+#accountModal .form input:focus{
+  border-color:#FFB703;
+  box-shadow:0 0 0 3px rgba(255,183,3,.14);
+}
+
+#accountModal #loginCustomer,
+#accountModal #signupCustomer{
+  min-height:48px;
+  padding:0 18px;
+  border:0;
+  border-radius:13px;
+  background:#081220;
+  color:#FFFFFF;
+  font-size:15px;
+  font-weight:900;
+  box-shadow:0 6px 16px rgba(15,23,42,.18);
+}
+
+#accountModal #forgotCustomer{
+  min-height:40px;
+  border-radius:11px;
+  font-weight:800;
+}
+
+#accountModal #accountProfileCard{
+  border:1px solid #E2E8F0;
+  border-radius:16px;
+  background:#F8FAFC;
+  box-shadow:none;
+}
+
+@media(max-width:700px){
+  #accountModalTitle{
+    font-size:26px;
+  }
+
+  #accountModal .form input{
+    height:48px;
+  }
+}
   /* ===== HUNKART PREMIUM ORDER DETAILS ===== */
 
 #orderDetailsModal .modal{
