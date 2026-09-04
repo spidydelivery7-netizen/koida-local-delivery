@@ -1572,7 +1572,8 @@ $("searchCategoriesBtn").onclick = () => {
 $("bottomCartBtn").onclick = () => {
   closeBottomNavOverlays();
   setBottomNavActive($("bottomCartBtn"));
-  $("openCart")?.click();
+  renderCart();
+openModal($("cartModal"));;
 };
 
 $("bottomOrdersBtn").onclick = () => {
