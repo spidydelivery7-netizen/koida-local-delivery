@@ -308,6 +308,209 @@ header{
     padding-bottom:95px;
   }
 }
+  /* ===== HUNKART PREMIUM HEADER ===== */
+
+header.hk-header{
+  background:
+    radial-gradient(circle at top right,rgba(255,183,3,.18),transparent 32%),
+    linear-gradient(135deg,#071A2F,#0B2B4A);
+  color:#fff;
+  border-bottom:0;
+  box-shadow:0 7px 24px rgba(2,12,27,.22);
+  padding:12px 14px 14px;
+}
+
+.hk-topbar{
+  max-width:1180px;
+  margin:auto;
+  padding:0;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+
+.hk-brand-wrap{
+  min-width:0;
+}
+
+.hk-header .brand{
+  color:#fff;
+  font-size:23px;
+  font-weight:900;
+  line-height:1;
+  letter-spacing:.3px;
+  display:flex;
+  align-items:center;
+  gap:5px;
+}
+
+.hk-header .brand span{
+  color:#FFB703;
+}
+
+.hk-logo-icon{
+  font-size:23px;
+}
+
+.hk-tagline{
+  margin-top:5px;
+  font-size:10px;
+  color:#CBD5E1;
+  font-weight:600;
+  white-space:nowrap;
+}
+
+.hk-header-actions{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  flex-shrink:0;
+}
+
+.hk-round-btn,
+header.hk-header .menu-btn{
+  width:38px;
+  height:38px;
+  min-width:38px;
+
+  border:1px solid rgba(255,255,255,.20);
+  border-radius:50%;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  background:rgba(255,255,255,.09);
+  color:#fff;
+
+  text-decoration:none;
+  padding:0;
+  font-size:17px;
+
+  cursor:pointer;
+  position:relative;
+}
+
+.hk-round-btn:active,
+header.hk-header .menu-btn:active{
+  transform:scale(.95);
+}
+
+.hk-top-badge{
+  display:none;
+
+  position:absolute;
+  right:-4px;
+  top:-5px;
+
+  min-width:18px;
+  height:18px;
+  padding:0 4px;
+
+  border-radius:999px;
+
+  background:#FF7A00;
+  color:#fff;
+
+  font-size:10px;
+  line-height:18px;
+  font-weight:900;
+
+  border:2px solid #0B2B4A;
+}
+
+.hk-top-badge.show{
+  display:block;
+}
+
+.hk-location-pill{
+  width:100%;
+  max-width:1180px;
+  margin:11px auto 0;
+
+  border:1px solid rgba(255,255,255,.20);
+  border-radius:15px;
+
+  background:rgba(255,255,255,.09);
+  color:#fff;
+
+  padding:9px 12px;
+
+  display:flex;
+  align-items:center;
+  gap:9px;
+
+  text-align:left;
+  cursor:pointer;
+}
+
+.hk-location-icon{
+  font-size:20px;
+}
+
+.hk-location-text{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  flex:1;
+}
+
+.hk-location-text small{
+  color:#CBD5E1;
+  font-size:10px;
+  line-height:1.2;
+}
+
+.hk-location-text b{
+  margin-top:2px;
+  color:#fff;
+  font-size:13px;
+  line-height:1.2;
+}
+
+.hk-location-arrow{
+  color:#FFB703;
+  font-size:20px;
+  font-weight:900;
+}
+
+@media(max-width:500px){
+
+  header.hk-header{
+    padding:11px 12px 13px;
+  }
+
+  .hk-header .brand{
+    font-size:21px;
+  }
+
+  .hk-logo-icon{
+    font-size:21px;
+  }
+
+  .hk-tagline{
+    font-size:9px;
+  }
+
+  .hk-header-actions{
+    gap:5px;
+  }
+
+  .hk-round-btn,
+  header.hk-header .menu-btn{
+    width:35px;
+    height:35px;
+    min-width:35px;
+    font-size:15px;
+  }
+}
+
+@media(max-width:370px){
+  .hk-tagline{
+    display:none;
+  }
+}
 </style>
 
 <link rel="manifest" href="/manifest.webmanifest">
@@ -320,8 +523,49 @@ header{
 
 </head>
 <body>
-<header><div class="nav"><div><div class="brand">HUN<span>KART</span></div></div><div class="nav-actions"><a id="helpWa" class="btn wa" href="#">WhatsApp Help</a><button id="menuBtn" class="menu-btn" aria-label="Open menu">⋮</button></div></div></header>
+<header class="hk-header">
+  <div class="nav hk-topbar">
 
+    <div class="hk-brand-wrap">
+      <div class="brand">
+        <span class="hk-logo-icon">🛒</span>
+        HUN<span>KART</span>
+      </div>
+      <div class="hk-tagline">Food & Grocery Delivery in Koida</div>
+    </div>
+
+    <div class="hk-header-actions">
+      <button type="button" id="topAccountBtn" class="hk-round-btn" aria-label="My Account">
+        👤
+      </button>
+
+      <button type="button" id="topCartBtn" class="hk-round-btn hk-top-cart" aria-label="Cart">
+        🛒
+        <span id="topCartBadge" class="hk-top-badge">0</span>
+      </button>
+
+      <a id="helpWa" class="hk-round-btn hk-help-btn" href="#" aria-label="WhatsApp Help">
+        💬
+      </a>
+
+      <button id="menuBtn" class="menu-btn" aria-label="Open menu">
+        ☰
+      </button>
+    </div>
+
+  </div>
+
+  <button type="button" id="topLocationBtn" class="hk-location-pill">
+    <span class="hk-location-icon">📍</span>
+
+    <span class="hk-location-text">
+      <small>Deliver to</small>
+      <b>Koida, Sundargarh</b>
+    </span>
+
+    <span class="hk-location-arrow">⌄</span>
+  </button>
+</header>
 <section class="hero"><div class="hero-in">
   <div class="hero-copy">
     <div class="hero-kicker">⚡ Local delivery made simple</div>
@@ -1239,12 +1483,27 @@ $("bottomAccountBtn").onclick = () => {
   setBottomNavActive($("bottomAccountBtn"));
   $("accountBtn")?.click();
 };
+$("topAccountBtn").onclick = () => {
+  closeBottomNavOverlays();
+  $("accountBtn")?.click();
+};
+  $("topCartBtn").onclick = () => {
+  closeBottomNavOverlays();
+  $("openCart")?.click();
+};
+  $("topLocationBtn").onclick = () => {
+  closeBottomNavOverlays();
 
+  $("homeAddressCard")?.scrollIntoView({
+    behavior:"smooth",
+    block:"center"
+  });
+}};
 /* Keep bottom cart badge synced with existing cart count */
 function syncBottomCartBadge(){
   const source = $("cartCount");
   const badge = $("bottomCartBadge");
-
+const topBadge = $("topCartBadge");
   if(!source || !badge) return;
 
   const qty =
@@ -1252,11 +1511,21 @@ function syncBottomCartBadge(){
 
   badge.textContent = qty;
 
+  if(topBadge){
+  topBadge.textContent = qty;
+
   if(qty > 0){
-    badge.classList.add("show");
+    topBadge.classList.add("show");
   }else{
-    badge.classList.remove("show");
+    topBadge.classList.remove("show");
   }
+}
+
+if(qty > 0){
+  badge.classList.add("show");
+}else{
+  badge.classList.remove("show");
+}
 }
 
 syncBottomCartBadge();
