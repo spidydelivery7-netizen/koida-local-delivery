@@ -1193,8 +1193,17 @@ function setBottomNavActive(activeBtn){
     activeBtn.classList.add("active");
   }
 }
+function closeBottomNavOverlays(){
+  ["cartModal", "accountModal", "orderDetailsModal"].forEach(id => {
+    const modal = $(id);
 
+    if(modal){
+      closeModal(modal);
+    }
+  });
+}
 $("bottomHomeBtn").onclick = () => {
+  closeBottomNavOverlays();
   setBottomNavActive($("bottomHomeBtn"));
 
   window.scrollTo({
@@ -1204,6 +1213,7 @@ $("bottomHomeBtn").onclick = () => {
 };
 
 $("bottomCategoriesBtn").onclick = () => {
+  closeBottomNavOverlays();
   setBottomNavActive($("bottomCategoriesBtn"));
 
   $("cats")?.scrollIntoView({
@@ -1213,16 +1223,19 @@ $("bottomCategoriesBtn").onclick = () => {
 };
 
 $("bottomCartBtn").onclick = () => {
+  closeBottomNavOverlays();
   setBottomNavActive($("bottomCartBtn"));
   $("openCart")?.click();
 };
 
 $("bottomOrdersBtn").onclick = () => {
+  closeBottomNavOverlays();
   setBottomNavActive($("bottomOrdersBtn"));
   $("drawerOrders")?.click();
 };
 
 $("bottomAccountBtn").onclick = () => {
+  closeBottomNavOverlays();
   setBottomNavActive($("bottomAccountBtn"));
   $("accountBtn")?.click();
 };
