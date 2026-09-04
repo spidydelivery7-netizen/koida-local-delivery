@@ -1992,6 +1992,9 @@ $("drawerLogout").onclick=async()=>{
 $("helpWa").href="https://wa.me/"+cfg.whatsappNumber+"?text="+encodeURIComponent("Hello HUNKART, I need help with an order.");$("drawerWa").href=$("helpWa").href;
 $("accountBtn").onclick=async()=>{
   await refreshAccountState();
+  const isLoggedIn = !!currentSession?.user;
+$("authGuest").style.display = isLoggedIn ? "none" : "block";
+$("authAccount").style.display = isLoggedIn ? "block" : "none";
   $("accountModalTitle").textContent="My Account";
   $("accountProfileCard").style.display=currentSession?.user?"block":"none";
   $("accountOrdersSection").style.display="none";
