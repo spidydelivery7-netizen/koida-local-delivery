@@ -396,6 +396,77 @@ header{
     border-radius:24px 24px 0 0;
   }
 }
+  /* ===== HUNKART PREMIUM ORDER DETAILS ===== */
+
+#orderDetailsModal .modal{
+  width:min(680px,100%);
+  max-height:88vh;
+  background:#ffffff;
+  border-radius:24px 24px 0 0;
+  padding:20px;
+  box-shadow:0 -10px 35px rgba(15,23,42,.16);
+}
+
+#orderDetailsModal h2{
+  margin:0 0 14px;
+  font-size:22px;
+  font-weight:900;
+  color:#0B1220;
+}
+
+#orderDetailsBody.receipt{
+  margin:0;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  color:#334155;
+  font-size:14px;
+  line-height:1.5;
+}
+
+#orderDetailsBody hr{
+  border:0;
+  border-top:1px solid #E5E7EB;
+  margin:14px 0;
+}
+
+#orderDetailsBody b,
+#orderDetailsBody strong{
+  color:#0B1220;
+  font-weight:900;
+}
+
+#orderDetailsBody button[onclick*="openCustomerLiveLocation"]{
+  width:100%;
+  min-height:48px;
+  margin-top:10px;
+  border:0 !important;
+  border-radius:13px !important;
+  background:#0B1220 !important;
+  color:#ffffff !important;
+  font-weight:900 !important;
+  box-shadow:0 6px 16px rgba(15,23,42,.18);
+}
+
+#closeOrderDetails{
+  width:100%;
+  min-height:46px;
+  margin-top:4px;
+  border:1px solid #E2E8F0;
+  border-radius:13px;
+  background:#F8FAFC;
+  color:#0B1220;
+  font-weight:900;
+}
+
+@media(max-width:700px){
+  #orderDetailsModal .modal{
+    width:100%;
+    margin:auto 0 0;
+    border-radius:24px 24px 0 0;
+  }
+}
 /* ===== Bottom Navigation ===== */
 
 .customer-bottom-nav{
