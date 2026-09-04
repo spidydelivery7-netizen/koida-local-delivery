@@ -1566,14 +1566,17 @@ $("bottomCategoriesBtn").onclick = () => {
     block:"start"
   });
 };
-$("searchCategoriesBtn").onclick = () => {
-  $("bottomCategoriesBtn")?.click();
-};
+const searchCategoriesBtn = $("searchCategoriesBtn");
+if(searchCategoriesBtn){
+  searchCategoriesBtn.onclick = () => {
+    $("bottomCategoriesBtn")?.click();
+  };
+}
 $("bottomCartBtn").onclick = () => {
   closeBottomNavOverlays();
   setBottomNavActive($("bottomCartBtn"));
   renderCart();
-openModal($("cartModal"));;
+openModal($("cartModal"));
 };
 
 $("bottomOrdersBtn").onclick = () => {
@@ -1602,7 +1605,7 @@ $("topAccountBtn").onclick = () => {
     behavior:"smooth",
     block:"center"
   });
-}};
+};
 /* Keep bottom cart badge synced with existing cart count */
 function syncBottomCartBadge(){
   const source = $("cartCount");
