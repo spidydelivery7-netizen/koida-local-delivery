@@ -501,7 +501,64 @@ header{
   background:#F8FAFC;
   box-shadow:none;
 }
+#accountModal #accountProfileCard .account-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  padding:4px;
+}
 
+#accountModal #accountName{
+  display:block;
+  margin-bottom:4px;
+  font-size:21px;
+  line-height:1.15;
+  font-weight:900;
+  color:#0B1220;
+}
+
+#accountModal #accountPhone,
+#accountModal #accountEmail{
+  margin-top:3px;
+  font-size:13px;
+  line-height:1.35;
+  color:#64748B;
+  overflow-wrap:anywhere;
+}
+
+#accountModal #logoutCustomer{
+  flex:0 0 auto;
+  min-height:44px;
+  padding:0 18px;
+  border:0;
+  border-radius:13px;
+  background:#EEF2F7;
+  color:#0B1220;
+  font-size:14px;
+  font-weight:900;
+}
+
+#accountModal #closeAccount{
+  min-width:112px;
+  min-height:46px;
+  border:0;
+  border-radius:13px;
+  background:#EEF2F7;
+  color:#0B1220;
+  font-size:15px;
+  font-weight:900;
+}
+
+@media(max-width:500px){
+  #accountModal #accountProfileCard .account-head{
+    align-items:flex-start;
+  }
+
+  #accountModal #logoutCustomer{
+    padding:0 15px;
+  }
+}
 @media(max-width:700px){
   #accountModalTitle{
     font-size:26px;
