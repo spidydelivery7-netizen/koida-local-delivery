@@ -137,7 +137,177 @@ footer{margin-top:12px}
   .name{font-size:16px}
   .price{font-size:15px}
 }
+/* ===== HUNKART NEW CUSTOMER UI ===== */
 
+body{
+  background:#F6F7FB;
+  padding-bottom:92px;
+}
+
+/* Header */
+header{
+  background:#ffffff;
+  color:#0B1220;
+  border-bottom:1px solid #E5E7EB;
+  box-shadow:0 3px 16px rgba(15,23,42,.07);
+}
+
+.brand{
+  color:#0B1220;
+  font-weight:900;
+}
+
+.brand span{
+  color:#FFB703;
+}
+
+/* Hero */
+.hero{
+  background:
+    radial-gradient(circle at top right,
+      rgba(255,183,3,.22),
+      transparent 34%
+    ),
+    linear-gradient(135deg,#0B1220,#163A5F);
+}
+
+/* Search */
+.search{
+  border:1px solid #E2E8F0;
+  box-shadow:0 6px 20px rgba(15,23,42,.06);
+}
+
+/* Product Cards */
+.card{
+  border:1px solid #EDF0F3;
+  box-shadow:0 7px 22px rgba(15,23,42,.07);
+}
+
+/* Cart bar stays above bottom nav */
+.cartbar{
+  bottom:92px;
+}
+
+/* ===== Bottom Navigation ===== */
+
+.customer-bottom-nav{
+  position:fixed;
+  left:50%;
+  transform:translateX(-50%);
+  bottom:calc(10px + env(safe-area-inset-bottom));
+
+  width:min(560px,calc(100% - 20px));
+  height:70px;
+
+  z-index:90;
+
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  align-items:center;
+
+  padding:7px 6px;
+
+  background:rgba(255,255,255,.97);
+  border:1px solid #E5E7EB;
+  border-radius:22px;
+
+  box-shadow:0 12px 35px rgba(15,23,42,.18);
+
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+}
+
+.customer-bottom-nav button{
+  border:0;
+  background:transparent;
+  color:#64748B;
+
+  height:56px;
+  border-radius:16px;
+
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:3px;
+
+  font-size:10px;
+  font-weight:800;
+  cursor:pointer;
+}
+
+.customer-bottom-nav .bn-icon{
+  font-size:21px;
+  line-height:1;
+}
+
+.customer-bottom-nav button.active{
+  background:#FFF7DB;
+  color:#0B1220;
+}
+
+/* Center Cart Button */
+.customer-bottom-nav .bn-cart{
+  position:relative;
+
+  width:58px;
+  height:58px;
+  margin:auto;
+
+  transform:translateY(-10px);
+
+  border-radius:19px;
+
+  background:#FFB703;
+  color:#0B1220;
+
+  box-shadow:0 9px 22px rgba(255,183,3,.35);
+}
+
+.customer-bottom-nav .bn-cart .bn-icon{
+  font-size:25px;
+}
+
+/* Cart quantity badge */
+.bn-cart-wrap{
+  position:relative;
+  display:inline-flex;
+}
+
+.bn-cart-badge{
+  display:none;
+
+  position:absolute;
+  right:-12px;
+  top:-10px;
+
+  min-width:19px;
+  height:19px;
+  padding:0 5px;
+
+  border-radius:999px;
+
+  background:#DC2626;
+  color:#ffffff;
+
+  font-size:10px;
+  font-weight:900;
+
+  align-items:center;
+  justify-content:center;
+
+  border:2px solid #ffffff;
+}
+
+.bn-cart-badge.show{
+  display:flex;
+}
+
+@media(max-width:700px){
+  footer{
+    padding-bottom:95px;
+  }
+}
 </style>
 
 <link rel="manifest" href="/manifest.webmanifest">
@@ -182,7 +352,37 @@ footer{margin-top:12px}
   <div><b id="cartCount">0 items</b><div id="cartTotal" class="small"></div></div>
   <button id="openCart" class="btn yellow">View Cart & Checkout</button>
 </div></div>
+<nav class="customer-bottom-nav" id="customerBottomNav" aria-label="Customer navigation">
 
+  <button type="button" id="bottomHomeBtn" class="active">
+    <span class="bn-icon">🏠</span>
+    <span>Home</span>
+  </button>
+
+  <button type="button" id="bottomCategoriesBtn">
+    <span class="bn-icon">🗂️</span>
+    <span>Categories</span>
+  </button>
+
+  <button type="button" id="bottomCartBtn" class="bn-cart">
+    <span class="bn-cart-wrap">
+      <span class="bn-icon">🛒</span>
+      <span id="bottomCartBadge" class="bn-cart-badge">0</span>
+    </span>
+    <span>Cart</span>
+  </button>
+
+  <button type="button" id="bottomOrdersBtn">
+    <span class="bn-icon">📦</span>
+    <span>Orders</span>
+  </button>
+
+  <button type="button" id="bottomAccountBtn">
+    <span class="bn-icon">👤</span>
+    <span>Account</span>
+  </button>
+
+</nav>
 
 <div id="menuDrawerBg" class="mobile-drawer-bg" aria-hidden="true">
   <aside class="mobile-drawer">
