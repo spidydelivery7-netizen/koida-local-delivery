@@ -678,7 +678,25 @@ header.hk-header .menu-btn:active{
 
 <main class="wrap">
 <div class="toolbar">
-  <div class="search-shell"><input id="search" class="search" placeholder="Search dishes or items..."></div>
+  <div class="hk-search-row">
+  <div class="search-shell hk-premium-search">
+    <input
+      id="search"
+      class="search"
+      placeholder="Search food, groceries & essentials..."
+      autocomplete="off"
+    >
+  </div>
+
+  <button
+    type="button"
+    id="searchCategoriesBtn"
+    class="hk-search-filter"
+    aria-label="Browse categories"
+  >
+    ☷
+  </button>
+</div>
   <button id="addressBtn" class="btn gray">📍 Saved Address</button>
   <button id="accountBtn" class="btn dark">👤 Login</button>
 </div>
