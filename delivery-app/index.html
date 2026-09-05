@@ -961,10 +961,18 @@ function renderDeliveries(){
   Number.isFinite(Number(o.delivery_lat)) &&
   Number.isFinite(Number(o.delivery_lng));
 
+const gpsDestination = hasCustomerGps
+  ? `${Number(o.delivery_lat)},${Number(o.delivery_lng)}`
+  : "";
+
 const mapsLink = hasCustomerGps
-  ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
-      `${Number(o.delivery_lat)},${Number(o.delivery_lng)}`
-    )}&travelmode=driving&dir_action=navigate`
+  ? (
+      /Android/i.test(navigator.userAgent)
+        ? `google.navigation:q=${gpsDestination}&mode=d`
+        : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+            gpsDestination
+          )}&travelmode=driving&dir_action=navigate`
+    )
   : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
       [o.address, o.landmark, o.area]
         .filter(Boolean)
