@@ -1739,6 +1739,35 @@ function renderCheckoutSummary(){
   $("checkoutSummary").innerHTML=`<div class="sum-row"><span>Items</span><b>${count}</b></div><div class="sum-row"><span>Subtotal</span><b>₹${cartSubtotal()}</b></div>${pf>0?`<div class="sum-row"><span>Platform fee (${count} item${count===1?"":"s"})</span><b>₹${pf}</b></div>`:""}<div class="sum-row"><span>Delivery charge</span><b>${dc==null?"Detect location":(dc===0?"FREE":"₹"+dc)}</b></div><div class="sum-row total"><span>Payable</span><span>${dc==null?"—":"₹"+cartTotal()}</span></div>`
 }
 function renderCats(){const arr=["All",...new Set(products.map(p=>p.category).filter(Boolean))];$("cats").innerHTML="";arr.forEach(c=>{const b=document.createElement("button");b.className="chip"+(c===activeCat?" active":"");b.textContent=c;b.onclick=()=>{activeCat=c;renderCats();renderProducts()};$("cats").appendChild(b)})}
+  function renderShops(){
+  const box=$("shopTabs");
+  if(!box)return;
+
+  box.innerHTML="";
+
+  shops.forEach(s=>{
+    const b=document.createElement("button");
+
+    b.className=
+      "chip"+(s.id===activeShopId?" active":"");
+
+    b.textContent=s.name;
+
+    b.onclick=()=>{
+      activeShopId=s.id;
+      activeCat="All";
+
+      const title=$("productSectionTitle");
+      if(title) title.textContent=s.name;
+
+      renderShops();
+      renderCats();
+      renderProducts();
+    };
+
+    box.appendChild(b);
+  });
+  }
 function renderProducts(){const q=$("search").value.trim().toLowerCase();const arr=products.filter(p=>(activeCat==="All"||p.category===activeCat)&&(!q||p.name.toLowerCase().includes(q)||(p.description||"").toLowerCase().includes(q)));$("grid").innerHTML="";if(!arr.length){$("grid").innerHTML='<div class="empty" style="grid-column:1/-1">No items found.</div>';return}arr.forEach(p=>{const v=variants(p),selector=v.length>1?`<select class="variant">${v.map(x=>`<option value="${x.key}">${x.label} — ₹${x.price}</option>`).join("")}</select>`:"";const c=document.createElement("article");c.className="card";c.innerHTML=`<img class="img" src="${p.image_url||ph(p.name)}" alt="${p.name}"><div class="body"><div class="cat">${p.category||"Food"}</div><div class="name">${p.name}</div><div class="desc">${p.description||""}</div><div class="price">${priceText(p)}</div>${selector}<div class="stock ${p.available===false?"out":""}">${p.available===false?"Out of Stock":"Available"}</div><div class="card-actions"><button class="btn dark buy" ${p.available===false?"disabled":""}>Add to Cart</button><button class="btn yellow add" ${p.available===false?"disabled":""}>＋</button></div></div>`;c.querySelector(".img").onerror=e=>e.currentTarget.src=ph(p.name);if(p.available!==false){c.querySelector(".buy").onclick=()=>addCart(p,selectedVariant(c,p));c.querySelector(".add").onclick=()=>addCart(p,selectedVariant(c,p))}$("grid").appendChild(c)})}
   /* ===== Product Image Full Screen Viewer ===== */
 function openProductImageViewer(src, alt="Product image"){
