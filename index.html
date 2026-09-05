@@ -1703,7 +1703,28 @@ async function customerLogout(){
   await refreshAccountState();
   updateCart();
 }
-function addCart(p,v){if(!v){alert("Price is not set for this item yet.");return}const key=p.id+"_"+v.key,found=cart.find(x=>x.key===key);if(found)found.qty++;else cart.push({key,product_id:p.id,name:p.name,variant:v.key,variant_label:v.label,unit_price:v.price,qty:1});updateCart()}
+function addCart(p,v){if(cart.length){
+  const existingProduct=products.find(x=>x.id===cart[0].product_id);
+  const existingShopId=
+    existingProduct?.shop_id||
+    cart[0].shop_id||
+    null;
+
+  if(
+    existingShopId &&
+    p.shop_id &&
+    existingShopId!==p.shop_id
+  ){
+    const existingShop=shops.find(s=>s.id===existingShopId);
+    const newShop=shops.find(s=>s.id===p.shop_id);
+
+    alert(
+      `Your cart already contains items from ${existingShop?.name||"another restaurant"}. `+
+      `Please complete or clear that cart before ordering from ${newShop?.name||"this restaurant"}.`
+    );
+    return;
+  }
+}if(!v){alert("Price is not set for this item yet.");return}const key=p.id+"_"+v.key,found=cart.find(x=>x.key===key);if(found)found.qty++;else cart.push({key,product_id:p.id,name:p.name,variant:v.key,variant_label:v.label,unit_price:v.price,qty:1});updateCart()}
 function updateCart(){
   const count=cartItemCount();
   $("cartCount").textContent=count+" item"+(count===1?"":"s");
