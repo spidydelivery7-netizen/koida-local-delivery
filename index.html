@@ -1883,10 +1883,22 @@ document.addEventListener("click",(e)=>{
   }
 
   products=productData||[];
-  shops=shopData||[];
+shops=shopData||[];
 
-  renderCats();
-  renderProducts();
+if(!shops.some(s=>s.id===activeShopId)){
+  activeShopId=shops[0]?.id||null;
+}
+
+const activeShop=shops.find(s=>s.id===activeShopId);
+
+if($("productSectionTitle")){
+  $("productSectionTitle").textContent=
+    activeShop?.name||"Popular near you";
+}
+
+renderShops();
+renderCats();
+renderProducts();
 }
 async function loadSettings(){const {data,error}=await sb.from("delivery_settings").select("*").eq("id",1).single();if(!error)deliverySettings=data}
 function haversineKm(lat1,lng1,lat2,lng2){const R=6371,toRad=x=>x*Math.PI/180,dLat=toRad(lat2-lat1),dLng=toRad(lng2-lng1),a=Math.sin(dLat/2)**2+Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;return 2*R*Math.asin(Math.sqrt(a))}
