@@ -1738,6 +1738,95 @@ function renderCheckoutSummary(){
 }
 function renderCats(){const arr=["All",...new Set(products.map(p=>p.category).filter(Boolean))];$("cats").innerHTML="";arr.forEach(c=>{const b=document.createElement("button");b.className="chip"+(c===activeCat?" active":"");b.textContent=c;b.onclick=()=>{activeCat=c;renderCats();renderProducts()};$("cats").appendChild(b)})}
 function renderProducts(){const q=$("search").value.trim().toLowerCase();const arr=products.filter(p=>(activeCat==="All"||p.category===activeCat)&&(!q||p.name.toLowerCase().includes(q)||(p.description||"").toLowerCase().includes(q)));$("grid").innerHTML="";if(!arr.length){$("grid").innerHTML='<div class="empty" style="grid-column:1/-1">No items found.</div>';return}arr.forEach(p=>{const v=variants(p),selector=v.length>1?`<select class="variant">${v.map(x=>`<option value="${x.key}">${x.label} — ₹${x.price}</option>`).join("")}</select>`:"";const c=document.createElement("article");c.className="card";c.innerHTML=`<img class="img" src="${p.image_url||ph(p.name)}" alt="${p.name}"><div class="body"><div class="cat">${p.category||"Food"}</div><div class="name">${p.name}</div><div class="desc">${p.description||""}</div><div class="price">${priceText(p)}</div>${selector}<div class="stock ${p.available===false?"out":""}">${p.available===false?"Out of Stock":"Available"}</div><div class="card-actions"><button class="btn dark buy" ${p.available===false?"disabled":""}>Add to Cart</button><button class="btn yellow add" ${p.available===false?"disabled":""}>＋</button></div></div>`;c.querySelector(".img").onerror=e=>e.currentTarget.src=ph(p.name);if(p.available!==false){c.querySelector(".buy").onclick=()=>addCart(p,selectedVariant(c,p));c.querySelector(".add").onclick=()=>addCart(p,selectedVariant(c,p))}$("grid").appendChild(c)})}
+  /* ===== Product Image Full Screen Viewer ===== */
+function openProductImageViewer(src, alt="Product image"){
+  if(!src) return;
+
+  let viewer = document.getElementById("productImageViewer");
+
+  if(!viewer){
+    viewer = document.createElement("div");
+    viewer.id = "productImageViewer";
+
+    viewer.innerHTML = `
+      <button type="button" id="closeProductImageViewer"
+        aria-label="Close image"
+        style="
+          position:absolute;
+          top:18px;
+          right:18px;
+          width:48px;
+          height:48px;
+          border:0;
+          border-radius:50%;
+          background:#ffffff;
+          color:#111827;
+          font-size:32px;
+          font-weight:700;
+          z-index:2;
+          cursor:pointer;
+        ">×</button>
+
+      <img id="productImageViewerImg"
+        alt=""
+        style="
+          max-width:94vw;
+          max-height:86vh;
+          width:auto;
+          height:auto;
+          object-fit:contain;
+          border-radius:16px;
+          background:#ffffff;
+          touch-action:pinch-zoom;
+        ">
+    `;
+
+    Object.assign(viewer.style,{
+      position:"fixed",
+      inset:"0",
+      zIndex:"99999",
+      background:"rgba(0,0,0,.92)",
+      display:"none",
+      alignItems:"center",
+      justifyContent:"center",
+      padding:"20px"
+    });
+
+    document.body.appendChild(viewer);
+
+    viewer.addEventListener("click",(e)=>{
+      if(e.target === viewer){
+        closeProductImageViewer();
+      }
+    });
+
+    viewer.querySelector("#closeProductImageViewer").onclick =
+      closeProductImageViewer;
+  }
+
+  const img = viewer.querySelector("#productImageViewerImg");
+  img.src = src;
+  img.alt = alt;
+
+  viewer.style.display = "flex";
+  document.body.style.overflow = "hidden";
+}
+
+function closeProductImageViewer(){
+  const viewer = document.getElementById("productImageViewer");
+  if(viewer) viewer.style.display = "none";
+  document.body.style.overflow = "";
+}
+
+document.addEventListener("click",(e)=>{
+  const img = e.target.closest?.(".card .img");
+  if(!img) return;
+
+  openProductImageViewer(
+    img.currentSrc || img.src,
+    img.alt || "Product image"
+  );
+});
 async function loadProducts(){const {data,error}=await sb.from("products").select("*").order("sort_order",{ascending:true}).order("name",{ascending:true});if(error){$("grid").innerHTML='<div class="empty" style="grid-column:1/-1">Could not load menu.</div>';return}products=data||[];renderCats();renderProducts()}
 async function loadSettings(){const {data,error}=await sb.from("delivery_settings").select("*").eq("id",1).single();if(!error)deliverySettings=data}
 function haversineKm(lat1,lng1,lat2,lng2){const R=6371,toRad=x=>x*Math.PI/180,dLat=toRad(lat2-lat1),dLng=toRad(lng2-lng1),a=Math.sin(dLat/2)**2+Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;return 2*R*Math.asin(Math.sqrt(a))}
