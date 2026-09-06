@@ -1422,35 +1422,54 @@ function renderShopkeepers(){
 
     card.querySelector(".approveBtn").onclick=async()=>{
 
-      const shop_id=
-        card.querySelector(".shopSelect").value;
+  const shop_id =
+    card.querySelector(".shopSelect").value;
 
-      if(!shop_id){
-        setStatus("Select a shop first.");
-        return;
-      }
+  if(!shop_id){
+    setStatus("Select a shop first.");
+    return;
+  }
 
-      const {error}=await sb
-        .from("shopkeepers")
-        .update({
-          shop_id,
-          active:true
-        })
-        .eq("id",sk.id);
+  setStatus("Approving shopkeeper...");
 
-      if(error){
-        setStatus(
-          "Shopkeeper approval error: "+
-          error.message
-        );
-      }else{
-        setStatus(
-          "Shop assigned and shopkeeper activated."
-        );
+  const {error:shopError}=await sb
+    .from("shops")
+    .update({
+      approval_status:"approved",
+      active:true
+    })
+    .eq("id",shop_id);
 
-        await loadShopkeepers();
-      }
-    };
+  if(shopError){
+    setStatus(
+      "Shop approval error: "+
+      shopError.message
+    );
+    return;
+  }
+
+  const {error}=await sb
+    .from("shopkeepers")
+    .update({
+      shop_id,
+      active:true
+    })
+    .eq("id",sk.id);
+
+  if(error){
+    setStatus(
+      "Shopkeeper approval error: "+
+      error.message
+    );
+    return;
+  }
+
+  setStatus(
+    "Shop approved and shopkeeper activated."
+  );
+
+  await loadShopkeepers();
+};
 
 
     card.querySelector(".deactivateBtn").onclick=
