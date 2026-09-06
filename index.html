@@ -1888,7 +1888,7 @@ document.addEventListener("click",(e)=>{
       .order("sort_order",{ascending:true}),
 
     sb.from("shops")
-      .select("id,name,active")
+      .select("id,name,active,approval_status")
       .eq("active",true)
       .order("name",{ascending:true})
   ]);
@@ -1903,8 +1903,20 @@ document.addEventListener("click",(e)=>{
     return;
   }
 
-  products=productData||[];
-shops=shopData||[];
+  shops = shopData || [];
+
+const approvedShopIds = new Set(
+  shops
+    .filter(
+      s =>
+        String(s.approval_status || "").toLowerCase() === "approved"
+    )
+    .map(s => s.id)
+);
+
+products = (productData || []).filter(
+  p => approvedShopIds.has(p.shop_id)
+);
 
 if(!shops.some(s=>s.id===activeShopId)){
   activeShopId=shops[0]?.id||null;
