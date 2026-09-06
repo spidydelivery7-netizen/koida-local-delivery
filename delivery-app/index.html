@@ -1219,6 +1219,11 @@ const mapsLink = hasCustomerGps
           live
 
           ? `
+          <button
+  class="blue otpBtn"
+>
+  🔄 Generate / Refresh Delivery OTP
+</button>
             <button
               class="red deliveredBtn"
             >
@@ -1250,7 +1255,58 @@ const mapsLink = hasCustomerGps
 
     }
 
+const otpBtn = card.querySelector(".otpBtn");
 
+if(otpBtn){
+
+  otpBtn.onclick = async () => {
+
+    otpBtn.disabled = true;
+
+    try{
+
+      setStatus(
+        "Generating / refreshing Delivery OTP..."
+      );
+
+      const {data,error} = await sb.rpc(
+        "delivery_issue_otp",
+        {
+          p_order_id: o.order_id
+        }
+      );
+
+      if(error){
+        throw error;
+      }
+
+      if(!data || data.success !== true){
+        throw new Error(
+          data?.message ||
+          "Delivery OTP could not be generated."
+        );
+      }
+
+      setStatus(
+        "Delivery OTP is ready. Customer can open My Orders to see the OTP."
+      );
+
+    }catch(e){
+
+      setStatus(
+        "OTP error: " +
+        (e.message || e)
+      );
+
+    }finally{
+
+      otpBtn.disabled = false;
+
+    }
+
+  };
+
+}
     const deliveredBtn =
       card.querySelector(
         ".deliveredBtn"
