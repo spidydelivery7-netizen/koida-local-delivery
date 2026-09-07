@@ -1667,26 +1667,129 @@ box.onkeydown=(e)=>{
 };
 }
 async function refreshAccountState(){
-  const {data:{session}}=await sb.auth.getSession();currentSession=session;await loadCustomerProfile();
-  const logged=!!currentSession?.user;$("accountBtn").textContent=logged?"👤 My Account":"👤 Login";$("authGuest").style.display=logged?"none":"block";$("authAccount").style.display=logged?"block":"none";
-  $("drawerName").textContent=logged?(currentCustomer?.full_name||"Customer"):"Guest";
-  $("drawerPhone").textContent=logged?(currentCustomer?.phone?`+91 ${currentCustomer.phone}`:"Customer account"):"Login or create an account";
-  $("drawerAccountTitle").textContent=logged?"My Account":"Login / Create Account";
-  $("drawerAccountDesc").textContent=logged?"View your profile & orders":"Login to continue ordering";
-  $("drawerLogout").style.display=logged?"flex":"none";
-  if(logged){
-    const savedProfileAddress=loadAddress()||{};
-    const profileName=currentCustomer?.full_name||currentSession?.user?.user_metadata?.full_name||savedProfileAddress.name||"Customer";
-    const profilePhone=currentCustomer?.phone||currentSession?.user?.user_metadata?.phone||normalizePhone(savedProfileAddress.phone||"");
-    const profileEmail=currentSession?.user?.email||"";
-    $("accountName").textContent=profileName;
-    $("accountPhone").textContent=profilePhone?`Mobile: +91 ${normalizePhone(profilePhone)}`:"Mobile: Not added";
-    $("accountEmail").textContent=profileEmail?`Email: ${profileEmail}`:"Email: Not added";
-    await loadMyOrders();
+
+  const {data:{session}} = await sb.auth.getSession();
+
+  currentSession = session;
+
+  let accessDenied = false;
+  let profileError = false;
+
+  if(currentSession?.user){
+
+    const profileState =
+      await loadCustomerProfile();
+
+    if(!profileState?.ok){
+
+      profileError = true;
+
+      await sb.auth.signOut();
+
+      currentSession = null;
+      currentCustomer = null;
+
+    }else if(!profileState.isCustomer){
+
+      accessDenied = true;
+
+      await sb.auth.signOut();
+
+      currentSession = null;
+      currentCustomer = null;
+    }
+
   }else{
-    $("loginPin").value="";
+
+    currentCustomer = null;
+  }
+
+  const logged =
+    !!currentSession?.user &&
+    !!currentCustomer;
+
+  $("accountBtn").textContent =
+    logged ? "👤 My Account" : "👤 Login";
+
+  $("authGuest").style.display =
+    logged ? "none" : "block";
+
+  $("authAccount").style.display =
+    logged ? "block" : "none";
+
+  $("drawerName").textContent =
+    logged
+      ? (currentCustomer?.full_name || "Customer")
+      : "Guest";
+
+  $("drawerPhone").textContent =
+    logged
+      ? (
+          currentCustomer?.phone
+            ? `+91 ${currentCustomer.phone}`
+            : "Customer account"
+        )
+      : "Login or create an account";
+
+  $("drawerAccountTitle").textContent =
+    logged
+      ? "My Account"
+      : "Login / Create Account";
+
+  $("drawerAccountDesc").textContent =
+    logged
+      ? "View your profile & orders"
+      : "Login to continue ordering";
+
+  $("drawerLogout").style.display =
+    logged ? "flex" : "none";
+
+  if(logged){
+
+    const savedProfileAddress =
+      loadAddress() || {};
+
+    const profileName =
+      currentCustomer?.full_name ||
+      savedProfileAddress.name ||
+      "Customer";
+
+    const profilePhone =
+      currentCustomer?.phone ||
+      normalizePhone(
+        savedProfileAddress.phone || ""
+      );
+
+    const profileEmail =
+      currentSession?.user?.email || "";
+
+    $("accountName").textContent =
+      profileName;
+
+    $("accountPhone").textContent =
+      profilePhone
+        ? `Mobile: +91 ${normalizePhone(profilePhone)}`
+        : "Mobile: Not added";
+
+    $("accountEmail").textContent =
+      profileEmail
+        ? `Email: ${profileEmail}`
+        : "Email: Not added";
+
+    await loadMyOrders();
+
+  }else{
+
+    $("loginPin").value = "";
+
     switchAuthTab("login");
   }
+
+  return {
+    logged,
+    accessDenied,
+    profileError
+  };
 }
 async function customerSignup(){
   const name=$("signupName").value.trim(),phone=normalizePhone($("signupPhone").value),email=normalizeEmail($("signupEmail").value),pin=$("signupPin").value.trim(),pin2=$("signupPin2").value.trim();
@@ -1707,11 +1810,93 @@ async function customerSignup(){
   }catch(e){const m=String(e.message||e);alert(m.toLowerCase().includes("already")?"An account already exists for this email. Please use Login or Forgot PIN.":"Could not create account: "+m)}finally{$("signupCustomer").disabled=false;$("signupCustomer").textContent="Create Account"}
 }
 async function customerLogin(){
-  const email=normalizeEmail($("loginEmail").value),pin=$("loginPin").value.trim();
-  if(!validEmail(email)){alert("Please enter your registered email address.");return}
-  if(!validPin(pin)){alert("Please enter your 6-digit PIN.");return}
-  $("loginCustomer").disabled=true;$("loginCustomer").textContent="Logging in...";
-  try{const {error}=await sb.auth.signInWithPassword({email,password:pin});if(error)throw error;await refreshAccountState();closeModal($("accountModal"));alert("Login successful.")}catch(e){alert("Login failed. Check your email and PIN.")}finally{$("loginCustomer").disabled=false;$("loginCustomer").textContent="Login"}
+
+  const email =
+    normalizeEmail($("loginEmail").value);
+
+  const pin =
+    $("loginPin").value.trim();
+
+  if(!validEmail(email)){
+    alert(
+      "Please enter your registered email address."
+    );
+    return;
+  }
+
+  if(!validPin(pin)){
+    alert(
+      "Please enter your 6-digit PIN."
+    );
+    return;
+  }
+
+  $("loginCustomer").disabled = true;
+  $("loginCustomer").textContent =
+    "Logging in...";
+
+  try{
+
+    const {error} =
+      await sb.auth.signInWithPassword({
+        email,
+        password:pin
+      });
+
+    if(error){
+      throw error;
+    }
+
+    const state =
+      await refreshAccountState();
+
+    if(state?.accessDenied){
+
+      alert(
+        "This app is for HUNKART customers only."
+      );
+
+      return;
+    }
+
+    if(state?.profileError){
+
+      alert(
+        "Customer account could not be verified. Please try again."
+      );
+
+      return;
+    }
+
+    if(!state?.logged){
+
+      alert(
+        "Login failed. Customer account could not be verified."
+      );
+
+      return;
+    }
+
+    closeModal(
+      $("accountModal")
+    );
+
+    alert(
+      "Login successful."
+    );
+
+  }catch(e){
+
+    alert(
+      "Login failed. Check your email and PIN."
+    );
+
+  }finally{
+
+    $("loginCustomer").disabled = false;
+    $("loginCustomer").textContent =
+      "Login";
+  }
 }
 async function customerForgotPin(){
   const email=normalizeEmail($("loginEmail").value);
