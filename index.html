@@ -1375,10 +1375,41 @@ function validEmail(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmail(v
 function validPin(pin){return /^\d{6}$/.test(pin)}
 function switchAuthTab(tab){const login=tab==="login";$("loginBox").style.display=login?"grid":"none";$("signupBox").style.display=login?"none":"grid";$("loginTab").className="btn "+(login?"dark":"gray");$("signupTab").className="btn "+(login?"gray":"dark")}
 async function loadCustomerProfile(){
-  if(!currentSession?.user){currentCustomer=null;return}
-  const {data,error}=await sb.from("customers").select("id,phone,full_name,created_at").eq("id",currentSession.user.id).maybeSingle();
-  if(!error&&data)currentCustomer=data;
-  else currentCustomer={id:currentSession.user.id,phone:currentSession.user.user_metadata?.phone||"",full_name:currentSession.user.user_metadata?.full_name||""};
+
+  if(!currentSession?.user){
+    currentCustomer=null;
+    return {
+      ok:true,
+      isCustomer:false
+    };
+  }
+
+  const {data,error}=await sb
+    .from("customers")
+    .select("id,phone,full_name,created_at")
+    .eq("id",currentSession.user.id)
+    .maybeSingle();
+
+  if(error){
+    console.error(
+      "Customer profile check failed",
+      error
+    );
+
+    currentCustomer=null;
+
+    return {
+      ok:false,
+      isCustomer:false
+    };
+  }
+
+  currentCustomer=data||null;
+
+  return {
+    ok:true,
+    isCustomer:!!data
+  };
 }
 function statusLabel(s){return String(s||"new").replaceAll("_"," ").replace(/\b\w/g,c=>c.toUpperCase())}
 function fmtOrderDate(v){try{return new Date(v).toLocaleString("en-IN")}catch{return v||""}}
