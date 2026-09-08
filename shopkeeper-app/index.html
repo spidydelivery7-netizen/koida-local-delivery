@@ -629,8 +629,8 @@ $("signupBackBtn").onclick = () => {
     showLoggedOut();
 
     setStatus(
-      "Account created successfully. Please check your email and confirm your email address. HUNKART Admin will assign your shop before product access is enabled."
-    );
+  "Account created successfully. Please check your email and confirm your email address. Your shop has been created automatically. HUNKART Admin approval is required before your products are visible to customers."
+);
 
   } catch (e) {
     setStatus("Could not create account: " + (e.message || e));
