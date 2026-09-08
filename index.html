@@ -1063,8 +1063,8 @@ header.hk-header .menu-btn:active{
     min-width:54px;
   }
 }  
-/* ===== HUNKART App Install Banner ===== */
 
+/* ===== HUNKART App Install Banner ===== */
 .app-install-banner{
   display:none;
   align-items:center;
@@ -1077,7 +1077,6 @@ header.hk-header .menu-btn:active{
   position:relative;
   z-index:40;
 }
-
 .app-install-icon{
   width:46px;
   height:46px;
@@ -1085,7 +1084,6 @@ header.hk-header .menu-btn:active{
   object-fit:cover;
   flex:0 0 46px;
 }
-
 .app-install-info{
   min-width:0;
   flex:1;
@@ -1093,13 +1091,11 @@ header.hk-header .menu-btn:active{
   flex-direction:column;
   line-height:1.25;
 }
-
 .app-install-info b{
   font-size:16px;
   font-weight:900;
   color:#111827;
 }
-
 .app-install-info span{
   margin-top:3px;
   font-size:12px;
@@ -1108,7 +1104,6 @@ header.hk-header .menu-btn:active{
   overflow:hidden;
   text-overflow:ellipsis;
 }
-
 .app-install-btn{
   border:0;
   border-radius:12px;
@@ -1120,36 +1115,15 @@ header.hk-header .menu-btn:active{
   cursor:pointer;
   white-space:nowrap;
 }
-
-.app-install-btn:active{
-  transform:scale(.97);
-}
-
+.app-install-btn:active{transform:scale(.97)}
 @media(max-width:420px){
-  .app-install-banner{
-    padding:9px 10px;
-    gap:9px;
-  }
-
-  .app-install-icon{
-    width:42px;
-    height:42px;
-    flex-basis:42px;
-  }
-
-  .app-install-info b{
-    font-size:15px;
-  }
-
-  .app-install-info span{
-    font-size:11px;
-  }
-
-  .app-install-btn{
-    padding:10px 11px;
-    font-size:12px;
-  }
+  .app-install-banner{padding:9px 10px;gap:9px}
+  .app-install-icon{width:42px;height:42px;flex-basis:42px}
+  .app-install-info b{font-size:15px}
+  .app-install-info span{font-size:11px}
+  .app-install-btn{padding:10px 11px;font-size:12px}
 }
+
 </style>
 
 <link rel="manifest" href="/manifest.webmanifest">
@@ -1163,28 +1137,13 @@ header.hk-header .menu-btn:active{
 </head>
 <body>
 <div id="appInstallBanner" class="app-install-banner">
-
-  <img
-    src="/icons/icon-192.png"
-    alt="HUNKART"
-    class="app-install-icon"
-  >
-
+  <img src="/icons/icon-192.png" alt="HUNKART" class="app-install-icon">
   <div class="app-install-info">
     <b>HUNKART</b>
     <span>Fast ordering • Live tracking</span>
   </div>
-
-  <button
-    type="button"
-    id="installHunkartApp"
-    class="app-install-btn"
-  >
-    Download App
-  </button>
-
+  <button type="button" id="installHunkartApp" class="app-install-btn">Download App</button>
 </div>
-
 <header class="hk-header">
   <div class="nav hk-topbar">
 
@@ -2270,38 +2229,29 @@ async function routeDistanceKm(storeLat,storeLng,userLat,userLng){
   return {km:haversineKm(storeLat,storeLng,userLat,userLng),source:"straight-line fallback"};
 }
 async function detectLocation(){
-
   if(
     !deliverySettings ||
     deliverySettings.store_lat == null ||
     deliverySettings.store_lng == null
   ){
-    alert(
-      "Shop location is not set yet. Admin must set it in Delivery Settings."
-    );
+    alert("Shop location is not set yet. Admin must set it in Delivery Settings.");
     return;
   }
 
   if(!navigator.geolocation){
-    alert(
-      "Location is not supported on this phone/browser."
-    );
+    alert("Location is not supported on this phone/browser.");
     return;
   }
 
   const btn = $("detectLocation");
-
   btn.disabled = true;
   btn.textContent = "⏳ Detecting Location...";
   btn.style.background = "#0B1220";
   btn.style.color = "#ffffff";
 
   navigator.geolocation.getCurrentPosition(
-
     async pos => {
-
       try{
-
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
 
@@ -2320,9 +2270,7 @@ async function detectLocation(){
         };
 
         const dc = calculatedDelivery();
-
         $("distanceBox").classList.remove("warn");
-
         $("distanceResult").innerHTML =
           deliverySettings.free_delivery_enabled === true
             ? `Distance: <b>${deliveryInfo.distance_km} km</b> · Delivery charge: <b>FREE</b> 🎁`
@@ -2334,49 +2282,28 @@ async function detectLocation(){
         btn.textContent = "✅ Location Detected";
         btn.style.background = "#16a34a";
         btn.style.color = "#ffffff";
-
       }catch(e){
-
-        console.error(
-          "Location detect error",
-          e
-        );
-
-        alert(
-          "Could not calculate delivery distance. Please try again."
-        );
-
+        console.error("Location detect error",e);
+        alert("Could not calculate delivery distance. Please try again.");
         btn.textContent = "📍 Detect My Location";
         btn.style.background = "#0B1220";
         btn.style.color = "#ffffff";
-
       }finally{
-
         btn.disabled = false;
-
       }
-
     },
-
     err => {
-
-      alert(
-        "Location permission is required to calculate delivery charge."
-      );
-
+      alert("Location permission is required to calculate delivery charge.");
       btn.disabled = false;
       btn.textContent = "📍 Detect My Location";
       btn.style.background = "#0B1220";
       btn.style.color = "#ffffff";
-
     },
-
     {
       enableHighAccuracy:true,
       timeout:15000,
       maximumAge:60000
     }
-
   );
 }
 let lastOrderCtx=null;
@@ -2775,6 +2702,58 @@ $("search").oninput=renderProducts;$("addressBtn").onclick=()=>{fillAddress();re
 </html>`);
   w.document.close();
 };$("closeSuccess").onclick=()=>closeModal($("successModal"));[$("accountModal"),$("orderDetailsModal"),$("cartModal"),$("checkoutModal"),$("successModal")].forEach(m=>m.addEventListener("click",e=>{if(e.target===m)closeModal(m)}));$("placeOrder").textContent=cfg.onlinePaymentEnabled?"Place Order & Pay":"Place Order";refreshSavedAddress();switchAuthTab("login");await refreshAccountState();await loadSettings();loadProducts();
+</script>
+
+<script>
+let hunkartInstallPrompt = null;
+const appInstallBanner = document.getElementById("appInstallBanner");
+const installHunkartApp = document.getElementById("installHunkartApp");
+
+function hunkartIsStandalone(){
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    window.navigator.standalone === true
+  );
+}
+function hideHunkartInstallBanner(){
+  if(appInstallBanner) appInstallBanner.style.display = "none";
+}
+
+if(hunkartIsStandalone()) hideHunkartInstallBanner();
+
+window.addEventListener("beforeinstallprompt", e => {
+  e.preventDefault();
+  hunkartInstallPrompt = e;
+  if(appInstallBanner && !hunkartIsStandalone()){
+    appInstallBanner.style.display = "flex";
+  }
+});
+
+if(installHunkartApp){
+  installHunkartApp.onclick = async () => {
+    if(!hunkartInstallPrompt) return;
+
+    installHunkartApp.disabled = true;
+    installHunkartApp.textContent = "Opening...";
+
+    try{
+      hunkartInstallPrompt.prompt();
+      await hunkartInstallPrompt.userChoice;
+      hunkartInstallPrompt = null;
+      hideHunkartInstallBanner();
+    }catch(e){
+      console.error("HUNKART app install error",e);
+    }finally{
+      installHunkartApp.disabled = false;
+      installHunkartApp.textContent = "Download App";
+    }
+  };
+}
+
+window.addEventListener("appinstalled", () => {
+  hunkartInstallPrompt = null;
+  hideHunkartInstallBanner();
+});
 </script>
 
 <script>
