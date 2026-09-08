@@ -56,6 +56,14 @@ button{border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:poin
 .shop-actions{align-items:flex-end}
 .shop-pill{display:inline-block;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:800;background:#e5e7eb}
 
+/* Flexible product variants */
+.variant-box{border:1px solid var(--line);border-radius:12px;padding:13px;background:#f9fafb}
+.variant-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.variant-head .small{margin-top:3px}
+.variant-row{display:grid;grid-template-columns:minmax(0,1fr) 150px auto;gap:8px;align-items:end;margin-top:8px}
+.variant-row input{margin-top:0}
+.variant-remove{min-width:44px;height:44px;padding:0}
+
 @media(max-width:700px){
 .grid,.order-grid,.shopkeeper-grid{grid-template-columns:1fr}
 .full{grid-column:auto}
@@ -65,6 +73,9 @@ button{border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:poin
 .tabs{overflow-x:auto}
 .tabs button{min-width:120px}
 .shopAssign{min-width:100%}
+.variant-head{align-items:flex-start}
+.variant-row{grid-template-columns:minmax(0,1fr) 105px auto}
+.variant-row input{font-size:14px;padding:10px}
 }
 </style>
 </head>
@@ -167,6 +178,17 @@ Half Price
 Full Price
 <input id="price_full" type="number" min="0">
 </label>
+
+<div class="full variant-box">
+<div class="variant-head">
+<div>
+<b>Custom Variants</b>
+<div class="small">For grocery/other sizes such as 500g, 1kg, 2kg, 500ml or 1L. Existing Normal / Half / Full prices stay unchanged.</div>
+</div>
+<button id="addVariant" type="button" class="gray">+ Add Variant</button>
+</div>
+<div id="variantRows"></div>
+</div>
 
 <label>
 Sort Order
@@ -423,6 +445,89 @@ const v=$(id).value.trim();
 return v===""?null:Number(v);
 }
 
+function normalizeVariants(value){
+if(!Array.isArray(value))return [];
+
+return value
+.map(v=>({
+label:String(v?.label??"").trim(),
+price:Number(v?.price)
+}))
+.filter(v=>
+  v.label &&
+  Number.isFinite(v.price) &&
+  v.price>=0
+);
+}
+
+function addVariantRow(label="",price=""){
+const row=document.createElement("div");
+row.className="variant-row";
+
+const labelInput=document.createElement("input");
+labelInput.type="text";
+labelInput.className="variant-label";
+labelInput.placeholder="Variant e.g. 1kg";
+labelInput.value=label;
+
+const priceInput=document.createElement("input");
+priceInput.type="number";
+priceInput.className="variant-price";
+priceInput.min="0";
+priceInput.step="0.01";
+priceInput.placeholder="Price ₹";
+priceInput.value=price===""?"":String(price);
+
+const remove=document.createElement("button");
+remove.type="button";
+remove.className="red variant-remove";
+remove.textContent="×";
+remove.title="Remove variant";
+remove.onclick=()=>row.remove();
+
+row.append(labelInput,priceInput,remove);
+$("variantRows").appendChild(row);
+}
+
+function setVariantsInForm(value){
+$("variantRows").innerHTML="";
+normalizeVariants(value).forEach(v=>
+  addVariantRow(v.label,v.price)
+);
+}
+
+function getVariantsFromForm(){
+const rows=[...$("variantRows").querySelectorAll(".variant-row")];
+const variants=[];
+const seen=new Set();
+
+for(const row of rows){
+  const label=row.querySelector(".variant-label").value.trim();
+  const rawPrice=row.querySelector(".variant-price").value.trim();
+
+  if(!label && rawPrice==="")continue;
+
+  if(!label || rawPrice===""){
+    throw new Error("Each custom variant needs both a name and price.");
+  }
+
+  const price=Number(rawPrice);
+  if(!Number.isFinite(price) || price<0){
+    throw new Error("Variant price must be 0 or more.");
+  }
+
+  const key=label.toLowerCase();
+  if(seen.has(key)){
+    throw new Error("Duplicate variant name: "+label);
+  }
+  seen.add(key);
+
+  variants.push({label,price});
+}
+
+return variants;
+}
+
 function reset(){
 
 editing=null;
@@ -446,6 +551,7 @@ $("shop_id").value="";
 $("image_file").value="";
 $("preview").classList.add("hidden");
 $("cancel").classList.add("hidden");
+setVariantsInForm([]);
 
 }
 
@@ -558,6 +664,10 @@ const r=document.createElement("div");
 
 r.className="row";
 
+const variantText=normalizeVariants(p.variants)
+.map(v=>`${v.label} ₹${v.price}`)
+.join(" · ");
+
 r.innerHTML=`
 
 <img
@@ -576,6 +686,7 @@ ${shopNameById(p.shop_id)}
 · ${p.price_half!=null?"Half ₹"+p.price_half+" ":""}
 ${p.price_full!=null?"Full ₹"+p.price_full+" ":""}
 ${p.price!=null?"₹"+p.price:""}
+${variantText?" · "+variantText:""}
 </div>
 
 </div>
@@ -650,6 +761,8 @@ p.price_half??"";
 
 $("price_full").value=
 p.price_full??"";
+
+setVariantsInForm(p.variants);
 
 $("description").value=
 p.description||"";
@@ -1996,6 +2109,9 @@ $("shopkeepersTab").onclick=
 
 $("cancel").onclick=reset;
 
+$("addVariant").onclick=()=>
+  addVariantRow();
+
 
 $("refreshProducts").onclick=
 async()=>{
@@ -2225,6 +2341,9 @@ $("save").onclick=async()=>{
 
   try{
 
+    const variants=
+      getVariantsFromForm();
+
     setStatus(
       "Saving product..."
     );
@@ -2248,6 +2367,9 @@ $("save").onclick=async()=>{
       price_half:n("price_half"),
 
       price_full:n("price_full"),
+
+      variants:
+        variants.length?variants:null,
 
       description:
         $("description").value.trim()||null,
