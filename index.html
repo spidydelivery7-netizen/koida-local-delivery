@@ -1401,6 +1401,32 @@ const ADDRESS_KEY="koida_delivery_address_v2";
 
 function ph(name){return "https://placehold.co/640x480/f3f4f6/111827?text="+encodeURIComponent(name)}
 function variants(p){
+  const custom=[];
+  const seen=new Set();
+
+  if(Array.isArray(p?.variants)){
+    for(const row of p.variants){
+      const label=String(row?.label ?? "").trim();
+      const rawPrice=row?.price;
+
+      if(!label) continue;
+      if(rawPrice==null || String(rawPrice).trim()==="") continue;
+
+      const price=Number(rawPrice);
+      if(!Number.isFinite(price) || price<0) continue;
+
+      const key=label.toLowerCase();
+      if(seen.has(key)) continue;
+      seen.add(key);
+
+      custom.push({key,label,price});
+    }
+  }
+
+  // If Admin has configured custom variants, use those for this product.
+  // Otherwise keep the existing Half / Full / Regular pricing unchanged.
+  if(custom.length) return custom;
+
   const v=[];
   if(p.price_half!=null) v.push({key:"half",label:"Half",price:Number(p.price_half)});
   if(p.price_full!=null) v.push({key:"full",label:"Full",price:Number(p.price_full)});
