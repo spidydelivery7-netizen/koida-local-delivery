@@ -2160,24 +2160,114 @@ async function routeDistanceKm(storeLat,storeLng,userLat,userLng){
   return {km:haversineKm(storeLat,storeLng,userLat,userLng),source:"straight-line fallback"};
 }
 async function detectLocation(){
-  if(!deliverySettings||deliverySettings.store_lat==null||deliverySettings.store_lng==null){
-    alert("Shop location is not set yet. Admin must set it in Delivery Settings.");return;
+
+  if(
+    !deliverySettings ||
+    deliverySettings.store_lat == null ||
+    deliverySettings.store_lng == null
+  ){
+    alert(
+      "Shop location is not set yet. Admin must set it in Delivery Settings."
+    );
+    return;
   }
-  if(!navigator.geolocation){alert("Location is not supported on this phone/browser.");return}
-  $("detectLocation").disabled=true;$("detectLocation").textContent="Detecting...";
-  navigator.geolocation.getCurrentPosition(async pos=>{
-    try{
-      const lat=pos.coords.latitude,lng=pos.coords.longitude;
-      const r=await routeDistanceKm(Number(deliverySettings.store_lat),Number(deliverySettings.store_lng),lat,lng);
-      deliveryInfo={distance_km:Number(r.km.toFixed(2)),lat,lng,route_source:r.source};
-      const dc=calculatedDelivery();
-      $("distanceBox").classList.remove("warn");
-      $("distanceResult").innerHTML=deliverySettings.free_delivery_enabled===true
-        ? `Distance: <b>${deliveryInfo.distance_km} km</b> · Delivery charge: <b>FREE</b> 🎁`
-        : `Distance: <b>${deliveryInfo.distance_km} km</b> · Delivery charge: <b>₹${dc}</b>${deliverySettings.rain_mode?` · Rain extra included ₹${Number(deliverySettings.rain_extra ?? 0)}`:""}`;
-      renderCheckoutSummary();updateCart();
-    }finally{$("detectLocation").disabled=false;$("detectLocation").textContent="Detect My Location"}
-  },err=>{alert("Location permission is required to calculate delivery charge.");$("detectLocation").disabled=false;$("detectLocation").textContent="Detect My Location"},{enableHighAccuracy:true,timeout:15000,maximumAge:60000});
+
+  if(!navigator.geolocation){
+    alert(
+      "Location is not supported on this phone/browser."
+    );
+    return;
+  }
+
+  const btn = $("detectLocation");
+
+  btn.disabled = true;
+  btn.textContent = "⏳ Detecting Location...";
+  btn.style.background = "#0B1220";
+  btn.style.color = "#ffffff";
+
+  navigator.geolocation.getCurrentPosition(
+
+    async pos => {
+
+      try{
+
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+
+        const r = await routeDistanceKm(
+          Number(deliverySettings.store_lat),
+          Number(deliverySettings.store_lng),
+          lat,
+          lng
+        );
+
+        deliveryInfo = {
+          distance_km:Number(r.km.toFixed(2)),
+          lat,
+          lng,
+          route_source:r.source
+        };
+
+        const dc = calculatedDelivery();
+
+        $("distanceBox").classList.remove("warn");
+
+        $("distanceResult").innerHTML =
+          deliverySettings.free_delivery_enabled === true
+            ? `Distance: <b>${deliveryInfo.distance_km} km</b> · Delivery charge: <b>FREE</b> 🎁`
+            : `Distance: <b>${deliveryInfo.distance_km} km</b> · Delivery charge: <b>₹${dc}</b>${deliverySettings.rain_mode ? ` · Rain extra included ₹${Number(deliverySettings.rain_extra ?? 0)}` : ""}`;
+
+        renderCheckoutSummary();
+        updateCart();
+
+        btn.textContent = "✅ Location Detected";
+        btn.style.background = "#16a34a";
+        btn.style.color = "#ffffff";
+
+      }catch(e){
+
+        console.error(
+          "Location detect error",
+          e
+        );
+
+        alert(
+          "Could not calculate delivery distance. Please try again."
+        );
+
+        btn.textContent = "📍 Detect My Location";
+        btn.style.background = "#0B1220";
+        btn.style.color = "#ffffff";
+
+      }finally{
+
+        btn.disabled = false;
+
+      }
+
+    },
+
+    err => {
+
+      alert(
+        "Location permission is required to calculate delivery charge."
+      );
+
+      btn.disabled = false;
+      btn.textContent = "📍 Detect My Location";
+      btn.style.background = "#0B1220";
+      btn.style.color = "#ffffff";
+
+    },
+
+    {
+      enableHighAccuracy:true,
+      timeout:15000,
+      maximumAge:60000
+    }
+
+  );
 }
 let lastOrderCtx=null;
 function renderReceipt(ctx,paymentStatus="Pending",paymentId=""){
