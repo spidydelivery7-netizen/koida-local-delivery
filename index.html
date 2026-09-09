@@ -1551,6 +1551,7 @@ try{
   console.error("Customer delivery tracking load failed",e);
 }
 let deliveryOtp = null;
+let deliveryOtpExpiresAt = null;
 
 if (String(o.status || "").toLowerCase() === "out_for_delivery") {
   try {
@@ -1576,6 +1577,7 @@ if (String(o.status || "").toLowerCase() === "out_for_delivery") {
       otpData[0].delivery_otp
     ) {
       deliveryOtp = otpData[0].delivery_otp;
+      deliveryOtpExpiresAt = otpData[0].expires_at || null;
     }
   } catch (e) {
     console.error("Delivery OTP load failed", e);
@@ -1610,6 +1612,12 @@ if (deliveryOtp) {
       <div style="font-size:12px;color:#92400e;">
         Parcel receive karne ke baad hi Delivery Partner ko OTP batayein.
       </div>
+
+      ${deliveryOtpExpiresAt ? `
+        <div style="font-size:11px;color:#92400e;margin-top:6px;">
+          Valid until: ${esc(fmtOrderDate(deliveryOtpExpiresAt))}
+        </div>
+      ` : ""}
     </div>
   `;
 }
