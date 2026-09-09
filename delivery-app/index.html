@@ -258,25 +258,6 @@ button:disabled{
   margin-top:12px;
 }
 
-.otp-panel{
-  margin-top:12px;
-  padding:12px;
-  border:1px solid #bfdbfe;
-  border-radius:12px;
-  background:#eff6ff;
-}
-
-.otp-panel label{
-  margin-top:0;
-}
-
-.deliveryOtpInput{
-  text-align:center;
-  font-size:24px;
-  font-weight:900;
-  letter-spacing:8px;
-}
-
 .empty{
   text-align:center;
   padding:26px 10px;
@@ -600,6 +581,9 @@ let activeTrackingOrderId = null;
 let lastSentAt = 0;
 let sendingLocation = false;
 
+/* HUNKART Reached: latest live GPS fix for the active delivery */
+let lastKnownDeliveryPosition = null;
+
 let passwordRecoveryMode = false;
 
 
@@ -807,6 +791,7 @@ function stopGps(){
   activeTrackingOrderId = null;
   lastSentAt = 0;
   sendingLocation = false;
+  lastKnownDeliveryPosition = null;
 
 }
   async function getSession(){
@@ -861,7 +846,7 @@ async function loadDeliveries(){
 
   const {data,error} =
     await sb.rpc(
-      "get_my_deliveries"
+      "get_my_deliveries_v2"
     );
 
   if(error){
@@ -901,6 +886,267 @@ async function loadDeliveries(){
 
   }
 
+}
+
+
+function distanceMeters(
+  lat1,
+  lng1,
+  lat2,
+  lng2
+){
+  const r = 6371000;
+  const toRad = value =>
+    value * Math.PI / 180;
+
+  const a1 = toRad(Number(lat1));
+  const a2 = toRad(Number(lat2));
+  const da = toRad(
+    Number(lat2) - Number(lat1)
+  );
+  const dl = toRad(
+    Number(lng2) - Number(lng1)
+  );
+
+  const a =
+    Math.sin(da / 2) ** 2 +
+    Math.cos(a1) *
+    Math.cos(a2) *
+    Math.sin(dl / 2) ** 2;
+
+  return (
+    r * 2 *
+    Math.atan2(
+      Math.sqrt(a),
+      Math.sqrt(1 - a)
+    )
+  );
+}
+
+
+function updateReachedButtonForOrder(
+  orderId,
+  pos
+){
+  const order =
+    deliveries.find(
+      d =>
+        String(d.order_id) ===
+        String(orderId)
+    );
+
+  const btn =
+    document.querySelector(
+      `.reachedBtn[data-order-id="${orderId}"]`
+    );
+
+  const hint =
+    document.querySelector(
+      `.reachedHint[data-order-id="${orderId}"]`
+    );
+
+  if(
+    !order ||
+    !btn ||
+    order.reached_at
+  ){
+    return;
+  }
+
+  const destLat =
+    Number(order.delivery_lat);
+
+  const destLng =
+    Number(order.delivery_lng);
+
+  const lat =
+    Number(pos?.coords?.latitude);
+
+  const lng =
+    Number(pos?.coords?.longitude);
+
+  if(
+    !Number.isFinite(destLat) ||
+    !Number.isFinite(destLng) ||
+    !Number.isFinite(lat) ||
+    !Number.isFinite(lng)
+  ){
+    btn.disabled = true;
+    btn.className =
+      "gray reachedBtn";
+
+    if(hint){
+      hint.textContent =
+        "Customer GPS location is not available.";
+    }
+
+    return;
+  }
+
+  const metres =
+    distanceMeters(
+      lat,
+      lng,
+      destLat,
+      destLng
+    );
+
+  const inside =
+    metres <= 100;
+
+  btn.disabled =
+    !inside;
+
+  btn.className =
+    inside
+      ? "green reachedBtn"
+      : "gray reachedBtn";
+
+  btn.textContent =
+    inside
+      ? "📍 Reached Customer"
+      : "📍 Reached Customer";
+
+  if(hint){
+    hint.textContent =
+      inside
+        ? `You are about ${Math.round(metres)} m from the customer. Reached button is ready.`
+        : `Customer is about ${Math.round(metres)} m away. Reached unlocks within 100 m.`;
+  }
+}
+
+
+async function markReached(
+  orderId,
+  btn
+){
+  try{
+    btn.disabled = true;
+
+    setStatus(
+      "Checking distance to customer..."
+    );
+
+    const pos =
+      await currentPosition();
+
+    lastKnownDeliveryPosition =
+      pos;
+
+    updateReachedButtonForOrder(
+      orderId,
+      pos
+    );
+
+    const order =
+      deliveries.find(
+        d =>
+          String(d.order_id) ===
+          String(orderId)
+      );
+
+    if(!order){
+      throw new Error(
+        "Delivery could not be found."
+      );
+    }
+
+    const metres =
+      distanceMeters(
+        pos.coords.latitude,
+        pos.coords.longitude,
+        Number(order.delivery_lat),
+        Number(order.delivery_lng)
+      );
+
+    if(
+      !Number.isFinite(metres) ||
+      metres > 100
+    ){
+      setStatus(
+        Number.isFinite(metres)
+          ? `You are about ${Math.round(metres)} m away. Reached unlocks within 100 m.`
+          : "Customer GPS location is not available."
+      );
+
+      updateReachedButtonForOrder(
+        orderId,
+        pos
+      );
+
+      return;
+    }
+
+    const {data,error} =
+      await sb.rpc(
+        "delivery_mark_reached",
+        {
+          p_order_id:orderId,
+          p_lat:
+            pos.coords.latitude,
+          p_lng:
+            pos.coords.longitude,
+          p_accuracy:
+            pos.coords.accuracy
+        }
+      );
+
+    if(error){
+      throw error;
+    }
+
+    if(
+      !data ||
+      data.success !== true
+    ){
+      const distanceText =
+        data?.distance_m != null
+          ? ` (${Math.round(
+              Number(data.distance_m)
+            )} m away)`
+          : "";
+
+      throw new Error(
+        (data?.message ||
+          "Reached could not be confirmed.") +
+        distanceText
+      );
+    }
+
+    setStatus(
+      "Reached confirmed. Customer has been notified in HUNKART."
+    );
+
+    await loadDeliveries();
+  }
+  catch(e){
+    setStatus(
+      "Could not mark Reached: " +
+      (e.message || e)
+    );
+  }
+  finally{
+    const latestOrder =
+      deliveries.find(
+        d =>
+          String(d.order_id) ===
+          String(orderId)
+      );
+
+    if(
+      btn &&
+      !latestOrder?.reached_at
+    ){
+      if(lastKnownDeliveryPosition){
+        updateReachedButtonForOrder(
+          orderId,
+          lastKnownDeliveryPosition
+        );
+      }else{
+        btn.disabled = true;
+      }
+    }
+  }
 }
 
 
@@ -1022,6 +1268,9 @@ const mapsLink = hasCustomerGps
     const delivered =
       o.delivery_status ===
       "delivered";
+
+    const reached =
+      !!o.reached_at;
 
 
     card.innerHTML = `
@@ -1185,6 +1434,41 @@ const mapsLink = hasCustomerGps
 
 
       ${
+        reached
+
+        ? `
+          <div class="live">
+
+            <b>
+              📍 Reached Customer
+            </b>
+
+            <div class="small">
+              Reached at:
+              ${esc(
+                fmt(
+                  o.reached_at
+                )
+              )}
+              ${
+                o.reached_distance_m != null
+                  ? ` · ${Math.round(
+                      Number(
+                        o.reached_distance_m
+                      )
+                    )} m from saved customer location`
+                  : ""
+              }
+            </div>
+
+          </div>
+        `
+
+        : ""
+      }
+
+
+      ${
         delivered
 
         ? `
@@ -1211,24 +1495,15 @@ const mapsLink = hasCustomerGps
 
 
       ${
-        live
+        live && !reached
 
         ? `
-          <div class="otp-panel">
-            <label>
-              Customer Delivery OTP
-              <input
-                class="deliveryOtpInput"
-                type="text"
-                inputmode="numeric"
-                pattern="[0-9]*"
-                maxlength="4"
-                autocomplete="one-time-code"
-                placeholder="0000">
-            </label>
-            <div class="small" style="margin-top:7px">
-              Parcel customer ko dene ke baad unse 4-digit OTP lein.
-            </div>
+          <div
+            class="small reachedHint"
+            data-order-id="${esc(o.order_id)}"
+            style="margin-top:10px"
+          >
+            Checking distance to customer...
           </div>
         `
 
@@ -1254,6 +1529,23 @@ const mapsLink = hasCustomerGps
               class="green startBtn"
             >
               🚚 Start Delivery
+            </button>
+          `
+
+          : ""
+        }
+
+        ${
+          live && !reached
+
+          ? `
+            <button
+              type="button"
+              class="gray reachedBtn"
+              data-order-id="${esc(o.order_id)}"
+              disabled
+            >
+              📍 Reached Customer
             </button>
           `
 
@@ -1299,6 +1591,33 @@ const mapsLink = hasCustomerGps
           );
 
     }
+
+const reachedBtn =
+  card.querySelector(
+    ".reachedBtn"
+  );
+
+if(reachedBtn){
+
+  reachedBtn.onclick =
+    () =>
+      markReached(
+        o.order_id,
+        reachedBtn
+      );
+
+  if(
+    lastKnownDeliveryPosition &&
+    activeTrackingOrderId ===
+      o.order_id
+  ){
+    updateReachedButtonForOrder(
+      o.order_id,
+      lastKnownDeliveryPosition
+    );
+  }
+
+}
 
 const otpBtn = card.querySelector(".otpBtn");
 
@@ -1357,31 +1676,13 @@ if(otpBtn){
         ".deliveredBtn"
       );
 
-    const deliveryOtpInput =
-      card.querySelector(
-        ".deliveryOtpInput"
-      );
-
-    if(deliveryOtpInput){
-      deliveryOtpInput.addEventListener(
-        "input",
-        () => {
-          deliveryOtpInput.value =
-            deliveryOtpInput.value
-              .replace(/\D/g, "")
-              .slice(0, 4);
-        }
-      );
-    }
-
     if(deliveredBtn){
 
       deliveredBtn.onclick =
         () =>
           markDelivered(
             o.order_id,
-            deliveredBtn,
-            deliveryOtpInput
+            deliveredBtn
           );
 
     }
@@ -1450,81 +1751,43 @@ async function startDelivery(
       pos.coords.accuracy;
 
 
-    const {
-      data:startData,
-      error:startError
-    } = await sb.rpc(
-      "delivery_start",
-      {
-        p_order_id:orderId,
-        p_lat:lat,
-        p_lng:lng,
-        p_accuracy:accuracy
-      }
-    );
-
-    if(startError){
-      throw startError;
-    }
-
-    if(
-      !startData ||
-      startData.success !== true
-    ){
-      throw new Error(
-        startData?.message ||
-        "Delivery could not be started."
-      );
-    }
-
-    let otpWarning = "";
-
-    try{
-      const {
-        data:otpData,
-        error:otpError
-      } = await sb.rpc(
-        "delivery_issue_otp",
+    const {error} =
+      await sb.rpc(
+        "delivery_start",
         {
-          p_order_id:orderId
+          p_order_id:orderId,
+          p_lat:lat,
+          p_lng:lng,
+          p_accuracy:accuracy
         }
       );
 
-      if(otpError){
-        throw otpError;
-      }
-
-      if(
-        !otpData ||
-        otpData.success !== true
-      ){
-        throw new Error(
-          otpData?.message ||
-          "Delivery OTP could not be prepared."
-        );
-      }
-
-    }catch(otpErr){
-      otpWarning =
-        " OTP warning: " +
-        (otpErr.message || otpErr);
+    if(error){
+      throw error;
     }
 
+const { error: otpError } = await sb.rpc(
+  "delivery_issue_otp",
+  {
+    p_order_id: orderId
+  }
+);
+
+if (otpError) {
+  throw new Error(
+    "Delivery started, but OTP could not be generated: " +
+    (otpError.message || otpError)
+  );
+}
     setStatus(
-      "Delivery started. Live location tracking is ON." +
-      otpWarning
+      "Delivery started. Live location tracking is ON."
     );
 
     await loadDeliveries();
 
-    if(
-      activeTrackingOrderId !==
+    startGpsWatch(
       orderId
-    ){
-      startGpsWatch(
-        orderId
-      );
-    }
+    );
 
   }
   catch(e){
@@ -1581,6 +1844,14 @@ function startGpsWatch(
             return;
           }
 
+          lastKnownDeliveryPosition =
+            pos;
+
+          updateReachedButtonForOrder(
+            orderId,
+            pos
+          );
+
 
           const now =
             Date.now();
@@ -1608,7 +1879,7 @@ function startGpsWatch(
                     pos.coords.latitude,
                   p_lng:
                     pos.coords.longitude,
-                  p_accuracy:
+                  p_accuracy_m:
                     pos.coords.accuracy
                 }
               );
@@ -1668,94 +1939,83 @@ function startGpsWatch(
 
 async function markDelivered(
   orderId,
-  btn,
-  otpInput
+  btn
 ){
-
-  const otp = String(
-    otpInput?.value || ""
-  ).trim();
-
-  if(!/^\d{4}$/.test(otp)){
-    setStatus(
-      "Customer ka valid 4-digit Delivery OTP enter karein."
-    );
-
-    otpInput?.focus();
-    return;
-  }
 
   if(
     !confirm(
-      "OTP verify karke is order ko Delivered mark karein?"
+      "Confirm that this order has been delivered?"
     )
   ){
     return;
   }
 
-  btn.disabled = true;
+const otp = String(
+  prompt("Customer se 4-digit Delivery OTP lekar enter karein:") || ""
+).trim();
 
-  if(otpInput){
-    otpInput.disabled = true;
-  }
+if (!/^\d{4}$/.test(otp)) {
+  setStatus("Valid 4-digit Delivery OTP required.");
+  return;
+}
+  btn.disabled =
+    true;
 
   setStatus(
-    "Verifying Delivery OTP..."
+    "Marking order as delivered..."
   );
 
 
   try{
 
-    const pos =
-      await currentPosition();
+    let lat = null;
+    let lng = null;
+    let accuracy = null;
 
-    const {
-      data,
-      error
-    } = await sb.rpc(
-      "delivery_verify_otp_and_mark_delivered",
-      {
-        p_order_id:orderId,
-        p_otp:otp,
-        p_lat:pos.coords.latitude,
-        p_lng:pos.coords.longitude,
-        p_accuracy:pos.coords.accuracy
-      }
-    );
 
-    if(error){
-      throw error;
+    try{
+
+      const pos =
+        await currentPosition();
+
+      lat =
+        pos.coords.latitude;
+
+      lng =
+        pos.coords.longitude;
+
+      accuracy =
+        pos.coords.accuracy;
+
     }
+    catch(_){}
 
-    if(
-      !data ||
-      data.success !== true
-    ){
-      const remaining =
-        Number.isInteger(
-          data?.attempts_remaining
-        )
-          ? ` (${data.attempts_remaining} attempts remaining)`
-          : "";
 
-      setStatus(
-        (
-          data?.message ||
-          "Delivery OTP verification failed."
-        ) + remaining
-      );
-
-      if(otpInput){
-        otpInput.value = "";
-        otpInput.focus();
-      }
-
-      return;
+    const { data, error } =
+  await sb.rpc(
+    "delivery_verify_otp_and_mark_delivered",
+    {
+      p_order_id: orderId,
+      p_otp: otp,
+      p_lat: lat,
+      p_lng: lng,
+      p_accuracy: accuracy
     }
+  );
 
-    if(otpInput){
-      otpInput.value = "";
-    }
+if (error) {
+  throw error;
+}
+
+if (!data || data.success !== true) {
+  setStatus(
+    data?.message || "Delivery OTP verification failed."
+  );
+  return;
+}
+
+    
+
 
     stopGps();
 
@@ -1763,9 +2023,11 @@ async function markDelivered(
       .classList
       .add("hidden");
 
+
     setStatus(
-      "OTP verified. Order delivered successfully."
+      "Order marked as delivered."
     );
+
 
     await loadDeliveries();
 
@@ -1773,18 +2035,15 @@ async function markDelivered(
   catch(e){
 
     setStatus(
-      "Could not complete delivery: " +
+      "Could not mark delivered: " +
       (e.message || e)
     );
 
   }
   finally{
 
-    btn.disabled = false;
-
-    if(otpInput){
-      otpInput.disabled = false;
-    }
+    btn.disabled =
+      false;
 
   }
 
