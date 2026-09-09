@@ -1399,6 +1399,11 @@ let products=[],shops=[],activeShopId=null,activeCat="All",cart=[],deliverySetti
 let currentSession=null,currentCustomer=null;
 const ADDRESS_KEY="koida_delivery_address_v2";
 
+/* HUNKART Delivery Partner Reached notification state */
+const REACHED_SEEN_KEY="hunkart_reached_seen_v1";
+let reachedPollTimer=null;
+let reachedAudioContext=null;
+
 function ph(name){return "https://placehold.co/640x480/f3f4f6/111827?text="+encodeURIComponent(name)}
 function variants(p){
   const custom=[];
@@ -1520,6 +1525,346 @@ function fmtOrderDate(v){try{return new Date(v).toLocaleString("en-IN")}catch{re
 function esc(v){
   return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 }
+function getReachedSeen(){
+  try{
+    const parsed=JSON.parse(
+      localStorage.getItem(REACHED_SEEN_KEY)||"{}"
+    );
+    return parsed && typeof parsed==="object" ? parsed : {};
+  }catch(_){
+    return {};
+  }
+}
+
+function saveReachedSeen(seen){
+  try{
+    localStorage.setItem(
+      REACHED_SEEN_KEY,
+      JSON.stringify(seen)
+    );
+  }catch(_){}
+}
+
+function primeReachedAlarmAudio(){
+  try{
+    if(!reachedAudioContext){
+      const Ctx=
+        window.AudioContext||
+        window.webkitAudioContext;
+
+      if(Ctx){
+        reachedAudioContext=
+          new Ctx();
+      }
+    }
+
+    if(
+      reachedAudioContext &&
+      reachedAudioContext.state==="suspended"
+    ){
+      reachedAudioContext.resume().catch(()=>{});
+    }
+  }catch(_){}
+}
+
+["pointerdown","touchstart","keydown"].forEach(
+  eventName=>{
+    window.addEventListener(
+      eventName,
+      primeReachedAlarmAudio,
+      {once:true,passive:true}
+    );
+  }
+);
+
+async function playReachedAlarm(){
+  try{
+    primeReachedAlarmAudio();
+
+    const ctx=reachedAudioContext;
+
+    if(ctx){
+      if(ctx.state==="suspended"){
+        try{
+          await ctx.resume();
+        }catch(_){}
+      }
+
+      const start=ctx.currentTime+0.03;
+
+      [
+        [0.00,880],
+        [0.28,988],
+        [0.56,1175],
+        [0.92,988]
+      ].forEach(([offset,freq])=>{
+        const osc=ctx.createOscillator();
+        const gain=ctx.createGain();
+
+        osc.type="sine";
+        osc.frequency.value=freq;
+
+        gain.gain.setValueAtTime(
+          0.0001,
+          start+offset
+        );
+        gain.gain.exponentialRampToValueAtTime(
+          0.28,
+          start+offset+0.02
+        );
+        gain.gain.exponentialRampToValueAtTime(
+          0.0001,
+          start+offset+0.20
+        );
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(start+offset);
+        osc.stop(start+offset+0.22);
+      });
+    }
+
+  }catch(e){
+    console.warn(
+      "Reached alarm sound unavailable",
+      e
+    );
+  }
+
+  try{
+    if(navigator.vibrate){
+      navigator.vibrate(
+        [450,180,450,180,800]
+      );
+    }
+  }catch(_){}
+}
+
+function showReachedAlert(event){
+  const old=
+    document.getElementById(
+      "hunkartReachedAlert"
+    );
+
+  if(old){
+    old.remove();
+  }
+
+  const box=
+    document.createElement("div");
+
+  box.id="hunkartReachedAlert";
+  box.setAttribute("role","alert");
+
+  box.style.cssText=`
+    position:fixed;
+    left:14px;
+    right:14px;
+    top:max(14px,env(safe-area-inset-top));
+    z-index:99999;
+    max-width:620px;
+    margin:0 auto;
+    background:#ecfdf5;
+    border:2px solid #16a34a;
+    border-radius:18px;
+    box-shadow:0 18px 45px rgba(0,0,0,.28);
+    padding:16px;
+    color:#052e16;
+  `;
+
+  box.innerHTML=`
+    <div style="
+      display:flex;
+      gap:12px;
+      align-items:flex-start;
+    ">
+      <div style="
+        font-size:28px;
+        line-height:1;
+      ">🛵</div>
+
+      <div style="flex:1;min-width:0">
+        <div style="
+          font-weight:900;
+          font-size:18px;
+        ">
+          Delivery Partner Reached
+        </div>
+
+        <div style="
+          margin-top:5px;
+          font-size:13px;
+          line-height:1.45;
+        ">
+          Your delivery partner has arrived at your delivery location.
+          Please collect your order as soon as possible.
+        </div>
+
+        <div style="
+          margin-top:8px;
+          font-size:12px;
+          line-height:1.45;
+          font-weight:700;
+        ">
+          Order: ${esc(event?.order_number||"")}
+        </div>
+      </div>
+
+      <button
+        type="button"
+        aria-label="Close"
+        style="
+          border:0;
+          background:#dcfce7;
+          border-radius:999px;
+          width:34px;
+          height:34px;
+          font-size:18px;
+          font-weight:900;
+          cursor:pointer;
+        "
+      >×</button>
+    </div>
+  `;
+
+  box.querySelector("button").onclick=
+    ()=>box.remove();
+
+  document.body.appendChild(box);
+
+  setTimeout(
+    ()=>{
+      if(box.isConnected){
+        box.remove();
+      }
+    },
+    12000
+  );
+}
+
+async function checkCustomerReachedEvents(){
+  if(
+    !currentSession?.user ||
+    !currentCustomer
+  ){
+    return;
+  }
+
+  try{
+    const {data,error}=
+      await sb.rpc(
+        "get_customer_reached_events"
+      );
+
+    if(error){
+      throw error;
+    }
+
+    const events=
+      Array.isArray(data)
+        ? data
+        : [];
+
+    if(!events.length){
+      return;
+    }
+
+    const seen=getReachedSeen();
+
+    const unseen=
+      events.filter(event=>{
+        const key=
+          String(event.order_id||"");
+
+        const stamp=
+          String(event.reached_at||"");
+
+        return (
+          key &&
+          stamp &&
+          seen[key]!==stamp
+        );
+      });
+
+    if(!unseen.length){
+      return;
+    }
+
+    const newest=unseen[0];
+
+    await playReachedAlarm();
+    showReachedAlert(newest);
+
+    events.forEach(event=>{
+      const key=
+        String(event.order_id||"");
+
+      const stamp=
+        String(event.reached_at||"");
+
+      if(key && stamp){
+        seen[key]=stamp;
+      }
+    });
+
+    saveReachedSeen(seen);
+
+  }catch(e){
+    console.warn(
+      "Reached notification check failed",
+      e
+    );
+  }
+}
+
+function stopCustomerReachedWatcher(){
+  if(reachedPollTimer){
+    clearInterval(reachedPollTimer);
+  }
+
+  reachedPollTimer=null;
+}
+
+function startCustomerReachedWatcher(){
+  stopCustomerReachedWatcher();
+
+  if(
+    !currentSession?.user ||
+    !currentCustomer
+  ){
+    return;
+  }
+
+  checkCustomerReachedEvents();
+
+  reachedPollTimer=
+    setInterval(
+      ()=>{
+        if(
+          document.visibilityState==="visible"
+        ){
+          checkCustomerReachedEvents();
+        }
+      },
+      10000
+    );
+}
+
+document.addEventListener(
+  "visibilitychange",
+  ()=>{
+    if(
+      document.visibilityState==="visible" &&
+      currentSession?.user &&
+      currentCustomer
+    ){
+      checkCustomerReachedEvents();
+    }
+  }
+);
+
+
 async function openOrderDetails(o){
   const items=o.order_items||[];
   const deliveryCharge=Number(o.delivery_charge||0);
@@ -1531,7 +1876,7 @@ openModal($("orderDetailsModal"));
 try{
   const {data,error}=await Promise.race([
   sb.rpc(
-    "get_customer_delivery_tracking",
+    "get_customer_delivery_tracking_v2",
     {
       p_order_id:o.id
     }
@@ -1550,8 +1895,68 @@ try{
 }catch(e){
   console.error("Customer delivery tracking load failed",e);
 }
+let reachedHtml="";
+
+if(
+  tracking?.reached_at &&
+  String(o.status||"").toLowerCase()!=="delivered"
+){
+  reachedHtml=`
+    <div style="
+      margin:12px 0;
+      padding:14px;
+      border:2px solid #16a34a;
+      border-radius:14px;
+      background:#ecfdf5;
+      color:#052e16;
+    ">
+      <div style="
+        font-size:17px;
+        font-weight:900;
+      ">
+        🛵 Delivery Partner Reached
+      </div>
+
+      <div style="
+        margin-top:7px;
+        font-size:13px;
+        line-height:1.5;
+      ">
+        Your delivery partner has arrived at your delivery location.
+        Please collect your order as soon as possible.
+      </div>
+
+      <div style="
+        margin-top:9px;
+        padding-top:9px;
+        border-top:1px solid #86efac;
+        font-size:12px;
+        line-height:1.5;
+        font-weight:700;
+      ">
+        Important: Once the order is marked as “Reached”, HUNKART and the
+        Delivery Partner will not be responsible for any delay caused by
+        the customer in collecting the order.
+      </div>
+
+      <div style="
+        margin-top:8px;
+        font-size:11px;
+        color:#166534;
+      ">
+        Reached at:
+        ${esc(fmtOrderDate(tracking.reached_at))}
+        ${
+          tracking.reached_distance_m!=null
+            ? ` · ${Math.round(Number(tracking.reached_distance_m))} m from your saved delivery location`
+            : ""
+        }
+      </div>
+    </div>
+  `;
+}
+
 let deliveryOtp = null;
-let deliveryOtpExpiresAt = null;
 
 if (String(o.status || "").toLowerCase() === "out_for_delivery") {
   try {
@@ -1577,7 +1982,6 @@ if (String(o.status || "").toLowerCase() === "out_for_delivery") {
       otpData[0].delivery_otp
     ) {
       deliveryOtp = otpData[0].delivery_otp;
-      deliveryOtpExpiresAt = otpData[0].expires_at || null;
     }
   } catch (e) {
     console.error("Delivery OTP load failed", e);
@@ -1612,12 +2016,6 @@ if (deliveryOtp) {
       <div style="font-size:12px;color:#92400e;">
         Parcel receive karne ke baad hi Delivery Partner ko OTP batayein.
       </div>
-
-      ${deliveryOtpExpiresAt ? `
-        <div style="font-size:11px;color:#92400e;margin-top:6px;">
-          Valid until: ${esc(fmtOrderDate(deliveryOtpExpiresAt))}
-        </div>
-      ` : ""}
     </div>
   `;
 }
@@ -1680,6 +2078,7 @@ const hasLocation=
     <div class="sum-row"><span>Order ID</span><b>${esc(o.order_number)}</b></div>
     <div class="sum-row"><span>Date & Time</span><span>${esc(fmtOrderDate(o.created_at))}</span></div>
     <div class="sum-row"><span>Order Status</span><b>${esc(statusLabel(o.status))}</b></div>
+    ${reachedHtml}
     <div class="sum-row"><span>Payment</span><b>${esc(statusLabel(o.payment_status))}</b></div>
     ${o.payment_id?`<div class="sum-row"><span>Payment ID</span><span style="text-align:right;word-break:break-all">${esc(o.payment_id)}</span></div>`:""}
     ${deliveryOtpHtml}
@@ -1704,7 +2103,7 @@ ${trackingHtml}
 async function openCustomerLiveLocation(orderId){
   try{
     const {data,error}=await sb.rpc(
-      "get_customer_delivery_tracking",
+      "get_customer_delivery_tracking_v2",
       {
         p_order_id:orderId
       }
@@ -1889,7 +2288,11 @@ async function refreshAccountState(){
 
     await loadMyOrders();
 
+    startCustomerReachedWatcher();
+
   }else{
+
+    stopCustomerReachedWatcher();
 
     $("loginPin").value = "";
 
