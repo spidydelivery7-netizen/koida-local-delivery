@@ -1,8 +1,10 @@
-const CACHE_NAME = "hunkart-delivery-v1";
+const CACHE_NAME = "hunkart-delivery-v2";
 
 const APP_FILES = [
-  "/delivery.html",
+  "/delivery-app/",
+  "/delivery-app/index.html",
   "/delivery-app/manifest.webmanifest",
+  "/config.js",
   "/icons/icon-192.png",
   "/icons/icon-512.png"
 ];
@@ -11,46 +13,74 @@ self.addEventListener("install", (event) => {
   self.skipWaiting();
 
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(APP_FILES);
-    })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_FILES))
   );
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys
-          .filter((key) => key !== CACHE_NAME)
-          .map((key) => caches.delete(key))
+    caches.keys()
+      .then((keys) =>
+        Promise.all(
+          keys
+            .filter((key) => key !== CACHE_NAME)
+            .map((key) => caches.delete(key))
+        )
       )
-    ).then(() => self.clients.claim())
+      .then(() => self.clients.claim())
   );
 });
 
 self.addEventListener("fetch", (event) => {
-  if (event.request.method !== "GET") return;
+  const req = event.request;
 
-  event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        const copy = response.clone();
+  if (req.method !== "GET") return;
 
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, copy);
-        });
+  const url = new URL(req.url);
 
-        return response;
-      })
-      .catch(() => {
-        return caches.match(event.request).then((cached) => {
-          if (cached) return cached;
+  // Authentication, database and payment traffic must always stay network-live.
+  if (
+    url.hostname.includes("supabase") ||
+    url.hostname.includes("razorpay")
+  ) {
+    return;
+  }
 
-          if (event.request.mode === "navigate") {
-            return caches.match("/delivery.html");
-          }
-        });
-      })
-  );
+  // Keep app navigations fresh, but retain the latest successful page offline.
+  if (req.mode === "navigate") {
+    event.respondWith(
+      fetch(req)
+        .then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+          return response;
+        })
+        .catch(() =>
+          caches.match(req).then(
+            (cached) =>
+              cached ||
+              caches.match("/delivery-app/index.html") ||
+              caches.match("/delivery-app/")
+          )
+        )
+    );
+    return;
+  }
+
+  // Same-origin static assets use cache fallback.
+  if (url.origin === self.location.origin) {
+    event.respondWith(
+      caches.match(req).then(
+        (cached) =>
+          cached ||
+          fetch(req).then((response) => {
+            if (response.ok) {
+              const copy = response.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+            }
+            return response;
+          })
+      )
+    );
+  }
 });
