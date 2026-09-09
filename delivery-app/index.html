@@ -258,6 +258,25 @@ button:disabled{
   margin-top:12px;
 }
 
+.otp-panel{
+  margin-top:12px;
+  padding:12px;
+  border:1px solid #bfdbfe;
+  border-radius:12px;
+  background:#eff6ff;
+}
+
+.otp-panel label{
+  margin-top:0;
+}
+
+.deliveryOtpInput{
+  text-align:center;
+  font-size:24px;
+  font-weight:900;
+  letter-spacing:8px;
+}
+
 .empty{
   text-align:center;
   padding:26px 10px;
@@ -1191,6 +1210,32 @@ const mapsLink = hasCustomerGps
       }
 
 
+      ${
+        live
+
+        ? `
+          <div class="otp-panel">
+            <label>
+              Customer Delivery OTP
+              <input
+                class="deliveryOtpInput"
+                type="text"
+                inputmode="numeric"
+                pattern="[0-9]*"
+                maxlength="4"
+                autocomplete="one-time-code"
+                placeholder="0000">
+            </label>
+            <div class="small" style="margin-top:7px">
+              Parcel customer ko dene ke baad unse 4-digit OTP lein.
+            </div>
+          </div>
+        `
+
+        : ""
+      }
+
+
       <div class="actions">
 
         <a
@@ -1312,13 +1357,31 @@ if(otpBtn){
         ".deliveredBtn"
       );
 
+    const deliveryOtpInput =
+      card.querySelector(
+        ".deliveryOtpInput"
+      );
+
+    if(deliveryOtpInput){
+      deliveryOtpInput.addEventListener(
+        "input",
+        () => {
+          deliveryOtpInput.value =
+            deliveryOtpInput.value
+              .replace(/\D/g, "")
+              .slice(0, 4);
+        }
+      );
+    }
+
     if(deliveredBtn){
 
       deliveredBtn.onclick =
         () =>
           markDelivered(
             o.order_id,
-            deliveredBtn
+            deliveredBtn,
+            deliveryOtpInput
           );
 
     }
@@ -1387,43 +1450,81 @@ async function startDelivery(
       pos.coords.accuracy;
 
 
-    const {error} =
-      await sb.rpc(
-        "delivery_start",
+    const {
+      data:startData,
+      error:startError
+    } = await sb.rpc(
+      "delivery_start",
+      {
+        p_order_id:orderId,
+        p_lat:lat,
+        p_lng:lng,
+        p_accuracy:accuracy
+      }
+    );
+
+    if(startError){
+      throw startError;
+    }
+
+    if(
+      !startData ||
+      startData.success !== true
+    ){
+      throw new Error(
+        startData?.message ||
+        "Delivery could not be started."
+      );
+    }
+
+    let otpWarning = "";
+
+    try{
+      const {
+        data:otpData,
+        error:otpError
+      } = await sb.rpc(
+        "delivery_issue_otp",
         {
-          p_order_id:orderId,
-          p_lat:lat,
-          p_lng:lng,
-          p_accuracy:accuracy
+          p_order_id:orderId
         }
       );
 
-    if(error){
-      throw error;
+      if(otpError){
+        throw otpError;
+      }
+
+      if(
+        !otpData ||
+        otpData.success !== true
+      ){
+        throw new Error(
+          otpData?.message ||
+          "Delivery OTP could not be prepared."
+        );
+      }
+
+    }catch(otpErr){
+      otpWarning =
+        " OTP warning: " +
+        (otpErr.message || otpErr);
     }
 
-const { error: otpError } = await sb.rpc(
-  "delivery_issue_otp",
-  {
-    p_order_id: orderId
-  }
-);
-
-if (otpError) {
-  throw new Error(
-    "Delivery started, but OTP could not be generated: " +
-    (otpError.message || otpError)
-  );
-}
     setStatus(
-      "Delivery started. Live location tracking is ON."
+      "Delivery started. Live location tracking is ON." +
+      otpWarning
     );
 
     await loadDeliveries();
 
-    startGpsWatch(
+    if(
+      activeTrackingOrderId !==
       orderId
-    );
+    ){
+      startGpsWatch(
+        orderId
+      );
+    }
 
   }
   catch(e){
@@ -1507,7 +1608,7 @@ function startGpsWatch(
                     pos.coords.latitude,
                   p_lng:
                     pos.coords.longitude,
-                  p_accuracy_m:
+                  p_accuracy:
                     pos.coords.accuracy
                 }
               );
@@ -1567,83 +1668,94 @@ function startGpsWatch(
 
 async function markDelivered(
   orderId,
-  btn
+  btn,
+  otpInput
 ){
+
+  const otp = String(
+    otpInput?.value || ""
+  ).trim();
+
+  if(!/^\d{4}$/.test(otp)){
+    setStatus(
+      "Customer ka valid 4-digit Delivery OTP enter karein."
+    );
+
+    otpInput?.focus();
+    return;
+  }
 
   if(
     !confirm(
-      "Confirm that this order has been delivered?"
+      "OTP verify karke is order ko Delivered mark karein?"
     )
   ){
     return;
   }
 
-const otp = String(
-  prompt("Customer se 4-digit Delivery OTP lekar enter karein:") || ""
-).trim();
+  btn.disabled = true;
 
-if (!/^\d{4}$/.test(otp)) {
-  setStatus("Valid 4-digit Delivery OTP required.");
-  return;
-}
-  btn.disabled =
-    true;
+  if(otpInput){
+    otpInput.disabled = true;
+  }
 
   setStatus(
-    "Marking order as delivered..."
+    "Verifying Delivery OTP..."
   );
 
 
   try{
 
-    let lat = null;
-    let lng = null;
-    let accuracy = null;
+    const pos =
+      await currentPosition();
 
+    const {
+      data,
+      error
+    } = await sb.rpc(
+      "delivery_verify_otp_and_mark_delivered",
+      {
+        p_order_id:orderId,
+        p_otp:otp,
+        p_lat:pos.coords.latitude,
+        p_lng:pos.coords.longitude,
+        p_accuracy:pos.coords.accuracy
+      }
+    );
 
-    try{
-
-      const pos =
-        await currentPosition();
-
-      lat =
-        pos.coords.latitude;
-
-      lng =
-        pos.coords.longitude;
-
-      accuracy =
-        pos.coords.accuracy;
-
+    if(error){
+      throw error;
     }
-    catch(_){}
 
+    if(
+      !data ||
+      data.success !== true
+    ){
+      const remaining =
+        Number.isInteger(
+          data?.attempts_remaining
+        )
+          ? ` (${data.attempts_remaining} attempts remaining)`
+          : "";
 
-    const { data, error } =
-  await sb.rpc(
-    "delivery_verify_otp_and_mark_delivered",
-    {
-      p_order_id: orderId,
-      p_otp: otp,
-      p_lat: lat,
-      p_lng: lng,
-      p_accuracy: accuracy
+      setStatus(
+        (
+          data?.message ||
+          "Delivery OTP verification failed."
+        ) + remaining
+      );
+
+      if(otpInput){
+        otpInput.value = "";
+        otpInput.focus();
+      }
+
+      return;
     }
-  );
 
-if (error) {
-  throw error;
-}
-
-if (!data || data.success !== true) {
-  setStatus(
-    data?.message || "Delivery OTP verification failed."
-  );
-  return;
-}
-
-    
-
+    if(otpInput){
+      otpInput.value = "";
+    }
 
     stopGps();
 
@@ -1651,11 +1763,9 @@ if (!data || data.success !== true) {
       .classList
       .add("hidden");
 
-
     setStatus(
-      "Order marked as delivered."
+      "OTP verified. Order delivered successfully."
     );
-
 
     await loadDeliveries();
 
@@ -1663,15 +1773,18 @@ if (!data || data.success !== true) {
   catch(e){
 
     setStatus(
-      "Could not mark delivered: " +
+      "Could not complete delivery: " +
       (e.message || e)
     );
 
   }
   finally{
 
-    btn.disabled =
-      false;
+    btn.disabled = false;
+
+    if(otpInput){
+      otpInput.disabled = false;
+    }
 
   }
 
