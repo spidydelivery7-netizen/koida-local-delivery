@@ -1027,8 +1027,46 @@ async function markReached(
       "Checking distance to customer..."
     );
 
-    const pos =
-      await currentPosition();
+    /*
+      Reached button is unlocked by the live watchPosition feed.
+      Reuse that fresh fix first so Android does not need to obtain a
+      second high-accuracy GPS fix at the exact moment the button is tapped.
+    */
+    let pos = null;
+
+    const cachedPos =
+      lastKnownDeliveryPosition;
+
+    const cachedAgeMs =
+      cachedPos?.timestamp
+        ? Date.now() - Number(cachedPos.timestamp)
+        : Infinity;
+
+    if(
+      cachedPos &&
+      cachedAgeMs <= 30000
+    ){
+      pos = cachedPos;
+    }else{
+      try{
+        pos =
+          await currentPosition();
+      }catch(gpsError){
+        /*
+          If a second GPS request times out, allow the latest live tracking
+          fix only when it is still reasonably recent. The backend will
+          independently verify that its coordinates are within 100 m.
+        */
+        if(
+          cachedPos &&
+          cachedAgeMs <= 60000
+        ){
+          pos = cachedPos;
+        }else{
+          throw gpsError;
+        }
+      }
+    }
 
     lastKnownDeliveryPosition =
       pos;
@@ -1714,8 +1752,8 @@ if(otpBtn){
         reject,
         {
           enableHighAccuracy:true,
-          timeout:15000,
-          maximumAge:0
+          timeout:20000,
+          maximumAge:10000
         }
       );
 
