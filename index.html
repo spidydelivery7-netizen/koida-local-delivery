@@ -1443,8 +1443,10 @@ async function ensurePushSubscription(){
         onConflict: "endpoint"
       });
 
-    if(error) console.warn("Push subscription save failed:", error);
-
+    if(error){
+  alert("Push save failed: " + (error.message || JSON.stringify(error)));
+  console.warn("Push subscription save failed:", error);
+}
   }catch(err){
     console.warn("Push subscription error:", err);
   }
