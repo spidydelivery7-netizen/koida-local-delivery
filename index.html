@@ -1447,9 +1447,10 @@ async function ensurePushSubscription(){
   alert("Push save failed: " + (error.message || JSON.stringify(error)));
   console.warn("Push subscription save failed:", error);
 }
-  }catch(err){
-    console.warn("Push subscription error:", err);
-  }
+}catch(err){
+  alert("Push subscription error: " + (err?.message || String(err)));
+  console.warn("Push subscription error:", err);
+}
 }
 const ADDRESS_KEY="koida_delivery_address_v2";
 
