@@ -428,7 +428,8 @@ shops=[],
 shopkeepers=[],
 deliveryBoys=[],
 activeView="products",
-poll=null;
+poll=null,
+adminAccessToken="";
 
 function configured(){
 return cfg.supabaseUrl &&
@@ -881,6 +882,82 @@ return true;
    ORDERS
 ========================= */
 
+
+async function sendCustomerPush(customerId,title,body,url="/"){
+  if(!customerId){
+    console.warn("Push skipped: customer_id missing");
+    return {ok:false,error:"customer_id missing"};
+  }
+
+  try{
+    // Always read the current session so an old/expired token is not reused.
+    const {data:{session},error:sessionError}=await sb.auth.getSession();
+
+    if(sessionError || !session?.access_token){
+      return {
+        ok:false,
+        error:sessionError?.message||"Admin login session missing"
+      };
+    }
+
+    adminAccessToken=session.access_token;
+
+    const res=await fetch(
+      cfg.supabaseUrl + "/functions/v1/bright-task",
+      {
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json",
+          "Authorization":"Bearer "+adminAccessToken
+        },
+        body:JSON.stringify({
+          customer_id:customerId,
+          title:title||"HUNKART",
+          body:body||"Your order has been updated.",
+          url:url||"/"
+        })
+      }
+    );
+
+    const raw=await res.text();
+    let data=null;
+    try{ data=JSON.parse(raw); }catch(_){ data={raw}; }
+
+    if(!res.ok){
+      console.error("Push notification failed:",res.status,data);
+      return {ok:false,status:res.status,data};
+    }
+
+    // bright-task can return HTTP 200 with sent: 0.
+    // Do not report that as a successful notification delivery.
+    if(Number(data?.sent||0)<1){
+      return {
+        ok:false,
+        status:res.status,
+        data,
+        error:data?.message||"No push notification was delivered"
+      };
+    }
+
+    return {ok:true,status:res.status,data};
+  }catch(error){
+    console.error("Push notification error:",error);
+    return {ok:false,error:error?.message||String(error)};
+  }
+}
+
+function orderStatusLabel(status){
+  const labels={
+    new:"New",
+    confirmed:"Confirmed",
+    preparing:"Preparing",
+    out_for_delivery:"Out for Delivery",
+    delivered:"Delivered",
+    cancelled:"Cancelled"
+  };
+  return labels[status]||String(status||"Updated").replaceAll("_"," ");
+}
+
 function renderOrders(){
 
 const q=
@@ -1319,9 +1396,33 @@ error.message
 
 }else{
 
+const newStatus=payload.status;
+const statusLabel=orderStatusLabel(newStatus);
+
 setStatus(
-"Order updated."
+"Order updated. Sending customer notification..."
 );
+
+const pushResult=await sendCustomerPush(
+  o.customer_id,
+  "HUNKART Order Update",
+  `Order ${o.order_number}: ${statusLabel}`,
+  "/"
+);
+
+if(pushResult.ok){
+  setStatus("Order updated and customer notification sent.");
+}else{
+  setStatus(
+    "Order updated, but push notification failed: "+
+    (
+      pushResult?.data?.error ||
+      pushResult?.data?.message ||
+      pushResult?.error ||
+      ("HTTP "+(pushResult?.status||"error"))
+    )
+  );
+}
 
 loadOrders();
 
@@ -1963,28 +2064,21 @@ async function checkAdmin(){
 
     return;
   }
-const adminAccessToken = session.access_token;
+adminAccessToken = session.access_token || "";
 
 window.testPushNotification = async function(customerId){
-  const res = await fetch(
-    cfg.supabaseUrl + "/functions/v1/bright-task",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + adminAccessToken
-      },
-      body: JSON.stringify({
-        customer_id: customerId,
-        title: "HUNKART Test Notification",
-        body: "Push notification test successful",
-        url: "/"
-      })
-    }
+  const result=await sendCustomerPush(
+    customerId,
+    "HUNKART Test Notification",
+    "Push notification test successful",
+    "/"
   );
-
-  const text = await res.text();
-  alert("Status: " + res.status + "\n" + text);
+  alert(
+    result.ok
+      ? "Push test sent successfully."
+      : "Push test failed: "+
+        (result?.data?.error||result?.data?.message||result?.error||("HTTP "+(result?.status||"error")))
+  );
 };
   $("login").classList.add(
     "hidden"
