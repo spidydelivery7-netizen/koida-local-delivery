@@ -1963,7 +1963,29 @@ async function checkAdmin(){
 
     return;
   }
+const adminAccessToken = session.access_token;
 
+window.testPushNotification = async function(customerId){
+  const res = await fetch(
+    cfg.supabaseUrl + "/functions/v1/bright-task",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + adminAccessToken
+      },
+      body: JSON.stringify({
+        customer_id: customerId,
+        title: "HUNKART Test Notification",
+        body: "Push notification test successful",
+        url: "/"
+      })
+    }
+  );
+
+  const text = await res.text();
+  alert("Status: " + res.status + "\n" + text);
+};
   $("login").classList.add(
     "hidden"
   );
