@@ -1397,7 +1397,7 @@ const sb=createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{storageKey:"kld
 const $=id=>document.getElementById(id);
 let products=[],shops=[],activeShopId=null,activeCat="All",cart=[],deliverySettings=null,deliveryInfo=null;
 let currentSession=null,currentCustomer=null;
-  const VAPID_PUBLIC_KEY = "BKmsKO35lwibvNIeM965EOetW83ZiCA7Bm-Uj5fzzS8K34w3BgmCAUq6FNT_AIieyuTrp7cgG3cF-WF_2qij-VU";
+  const VAPID_PUBLIC_KEY = "BPhyk1yZs-dvNmMrig4iTXGh0J0ASun2NVqO7T4YLuy3UZ1UYb6EXxTsYbM3mdU866ZV3vpG60biVoJ0IlweRws";
 
 function urlBase64ToUint8Array(base64String){
   const padding = "=".repeat((4 - base64String.length % 4) % 4);
@@ -1418,13 +1418,31 @@ async function ensurePushSubscription(){
     if(permission !== "granted") return;
 
     const registration = await navigator.serviceWorker.ready;
+    const expectedKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
 
     let subscription = await registration.pushManager.getSubscription();
+
+    // If this browser still has a subscription created with an older VAPID key,
+    // remove it first so FCM accepts notifications signed by the current key pair.
+    if(subscription){
+      const existingKey = subscription.options?.applicationServerKey;
+      if(existingKey){
+        const existingBytes = new Uint8Array(existingKey);
+        const sameKey =
+          existingBytes.length === expectedKey.length &&
+          existingBytes.every((value, index) => value === expectedKey[index]);
+
+        if(!sameKey){
+          await subscription.unsubscribe();
+          subscription = null;
+        }
+      }
+    }
 
     if(!subscription){
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+        applicationServerKey: expectedKey
       });
     }
 
@@ -1444,14 +1462,15 @@ async function ensurePushSubscription(){
       });
 
     if(error){
-  alert("Push save failed: " + (error.message || JSON.stringify(error)));
-  console.warn("Push subscription save failed:", error);
+      alert("Push save failed: " + (error.message || JSON.stringify(error)));
+      console.warn("Push subscription save failed:", error);
+    }
+  }catch(err){
+    alert("Push subscription error: " + (err?.message || String(err)));
+    console.warn("Push subscription error:", err);
+  }
 }
-}catch(err){
-  alert("Push subscription error: " + (err?.message || String(err)));
-  console.warn("Push subscription error:", err);
-}
-}
+
 const ADDRESS_KEY="koida_delivery_address_v2";
 
 /* HUNKART Delivery Partner Reached notification state */
@@ -2449,7 +2468,7 @@ async function customerLogin(){
     closeModal(
       $("accountModal")
     );
-ensurePushSubscription();
+    await ensurePushSubscription();
     alert(
       "Login successful."
     );
@@ -3201,7 +3220,7 @@ $("search").oninput=renderProducts;$("addressBtn").onclick=()=>{fillAddress();re
 </body>
 </html>`);
   w.document.close();
-};$("closeSuccess").onclick=()=>closeModal($("successModal"));[$("accountModal"),$("orderDetailsModal"),$("cartModal"),$("checkoutModal"),$("successModal")].forEach(m=>m.addEventListener("click",e=>{if(e.target===m)closeModal(m)}));$("placeOrder").textContent=cfg.onlinePaymentEnabled?"Place Order & Pay":"Place Order";refreshSavedAddress();switchAuthTab("login");await refreshAccountState();await loadSettings();loadProducts();
+};$("closeSuccess").onclick=()=>closeModal($("successModal"));[$("accountModal"),$("orderDetailsModal"),$("cartModal"),$("checkoutModal"),$("successModal")].forEach(m=>m.addEventListener("click",e=>{if(e.target===m)closeModal(m)}));$("placeOrder").textContent=cfg.onlinePaymentEnabled?"Place Order & Pay":"Place Order";refreshSavedAddress();switchAuthTab("login");await refreshAccountState();await ensurePushSubscription();await loadSettings();loadProducts();
 </script>
 
 <script>
