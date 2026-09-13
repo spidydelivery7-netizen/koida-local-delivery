@@ -54,3 +54,28 @@ self.addEventListener("fetch", (event) => {
       })
   );
 });
+
+self.addEventListener("push", event => {
+  let data = {};
+  try { data = event.data?.json() || {}; } catch { data = { body: event.data?.text() }; }
+  event.waitUntil(self.registration.showNotification(data.title || "HUNKART • New Order", {
+    body: data.body || "A new order needs your attention.",
+    icon: "/icons/icon-192.png",
+    badge: "/icons/icon-192.png",
+    tag: data.tag || "hunkart-shop-order",
+    renotify: true,
+    requireInteraction: true,
+    vibrate: [500, 180, 500, 180, 700, 250, 900],
+    data: { url: data.url || "/shopkeeper-app/" }
+  }));
+});
+
+self.addEventListener("notificationclick", event => {
+  event.notification.close();
+  const url = event.notification?.data?.url || "/shopkeeper-app/";
+  event.waitUntil(clients.matchAll({type:"window",includeUncontrolled:true}).then(list => {
+    const client = list[0];
+    if (client) { client.navigate(url); return client.focus(); }
+    return clients.openWindow(url);
+  }));
+});
