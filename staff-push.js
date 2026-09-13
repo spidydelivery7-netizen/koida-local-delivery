@@ -9,7 +9,7 @@ function urlBase64ToUint8Array(value) {
 }
 
 export async function ensureStaffPushSubscription({ sb, user, role, serviceWorkerUrl, scope }) {
-  if (!sb || !user?.id || !["admin", "shopkeeper", "delivery_partner"].includes(role)) return false;
+  if (!sb || !user?.id || !["admin", "shopkeeper", "delivery_boy"].includes(role)) return false;
   if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) return false;
 
   const permission = Notification.permission === "default"
@@ -36,15 +36,13 @@ export async function ensureStaffPushSubscription({ sb, user, role, serviceWorke
   const json = subscription.toJSON();
   if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) return false;
 
-  const { error } = await sb.from("staff_push_subscriptions").upsert({
-    user_id: user.id,
-    role,
-    endpoint: json.endpoint,
-    p256dh: json.keys.p256dh,
-    auth_key: json.keys.auth,
-    user_agent: navigator.userAgent,
-    updated_at: new Date().toISOString()
-  }, { onConflict: "endpoint" });
+  const { error } = await sb.rpc("save_staff_push_subscription", {
+    p_role: role,
+    p_endpoint: json.endpoint,
+    p_p256dh: json.keys.p256dh,
+    p_auth: json.keys.auth,
+    p_user_agent: navigator.userAgent
+  });
   if (error) throw error;
 
   localStorage.setItem(versionKey, VAPID_VERSION);
