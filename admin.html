@@ -416,6 +416,7 @@ Create Shop
 <script type="module">
 
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+import { ensureStaffPushSubscription } from "/staff-push.js";
 
 const cfg=window.SPIDY_CONFIG||{},
 $=id=>document.getElementById(id);
@@ -1469,6 +1470,17 @@ return;
 
 }
 
+try{
+  const {data:{session}}=await sb.auth.getSession();
+  await fetch(cfg.supabaseUrl+"/functions/v1/staff-push",{
+    method:"POST",
+    headers:{"Content-Type":"application/json","Authorization":"Bearer "+session.access_token},
+    body:JSON.stringify({event_type:"delivery_assigned",order_id:o.id})
+  });
+}catch(pushError){
+  console.warn("Delivery assignment push:",pushError);
+}
+
 setStatus(
 `Order assigned to ${
 data?.delivery_boy ||
@@ -2065,6 +2077,13 @@ async function checkAdmin(){
     return;
   }
 adminAccessToken = session.access_token || "";
+  ensureStaffPushSubscription({
+    sb,
+    user:session.user,
+    role:"admin",
+    serviceWorkerUrl:"/sw.js",
+    scope:"/"
+  }).catch(error=>console.warn("Admin push subscription:",error));
 
 window.testPushNotification = async function(customerId){
   const result=await sendCustomerPush(
