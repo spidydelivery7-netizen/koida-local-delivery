@@ -565,6 +565,7 @@ button:disabled{
 import {
   createClient
 } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+import { ensureStaffPushSubscription } from "/staff-push.js";
 
 const cfg = window.SPIDY_CONFIG || {};
 
@@ -2138,6 +2139,15 @@ async function enterApp(){
     setStatus(
       "Delivery partner account ready."
     );
+
+    const staffSession = await getSession();
+    ensureStaffPushSubscription({
+      sb,
+      user:staffSession?.user,
+      role:"delivery_partner",
+      serviceWorkerUrl:"/delivery-app/sw.js",
+      scope:"/delivery-app/"
+    }).catch(error=>console.warn("Delivery push subscription:",error));
 
 
     await loadDeliveries();
