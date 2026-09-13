@@ -1,111 +1,52 @@
-const CACHE_NAME = "hunkart-delivery-v2";
+const VAPID_PUBLIC_KEY = "BEyKFl_KeSmIboBWWUhfItErCRw9AlwjoVRq55NBedCSX_iLskyLH2Bm4ZmCc4e3ZAWBMjn07NAEU5TeIcSqObg";
+const VAPID_VERSION = "hunkart-staff-vapid-20260912-v1";
 
-const APP_FILES = [
-  "/delivery-app/",
-  "/delivery-app/index.html",
-  "/delivery-app/manifest.webmanifest",
-  "/config.js",
-  "/icons/icon-192.png",
-  "/icons/icon-512.png"
-];
+function urlBase64ToUint8Array(value) {
+  const padding = "=".repeat((4 - value.length % 4) % 4);
+  const base64 = (value + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(base64);
+  return Uint8Array.from([...raw].map(char => char.charCodeAt(0)));
+}
 
-self.addEventListener("install", (event) => {
-  self.skipWaiting();
+export async function ensureStaffPushSubscription({ sb, user, role, serviceWorkerUrl, scope }) {
+  if (!sb || !user?.id || !["admin", "shopkeeper", "delivery_boy"].includes(role)) return false;
+  if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) return false;
 
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_FILES))
-  );
-});
+  const permission = Notification.permission === "default"
+    ? await Notification.requestPermission()
+    : Notification.permission;
+  if (permission !== "granted") return false;
 
-self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    caches.keys()
-      .then((keys) =>
-        Promise.all(
-          keys
-            .filter((key) => key !== CACHE_NAME)
-            .map((key) => caches.delete(key))
-        )
-      )
-      .then(() => self.clients.claim())
-  );
-});
+  const registration = await navigator.serviceWorker.register(serviceWorkerUrl, scope ? { scope } : undefined);
+  await navigator.serviceWorker.ready;
 
-self.addEventListener("fetch", (event) => {
-  const req = event.request;
-
-  if (req.method !== "GET") return;
-
-  const url = new URL(req.url);
-
-  // Authentication, database and payment traffic must always stay network-live.
-  if (
-    url.hostname.includes("supabase") ||
-    url.hostname.includes("razorpay")
-  ) {
-    return;
+  let subscription = await registration.pushManager.getSubscription();
+  const versionKey = `hunkart_staff_push_version_${role}`;
+  if (subscription && localStorage.getItem(versionKey) !== VAPID_VERSION) {
+    await subscription.unsubscribe().catch(() => {});
+    subscription = null;
+  }
+  if (!subscription) {
+    subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+    });
   }
 
-  // Keep app navigations fresh, but retain the latest successful page offline.
-  if (req.mode === "navigate") {
-    event.respondWith(
-      fetch(req)
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
-          return response;
-        })
-        .catch(() =>
-          caches.match(req).then(
-            (cached) =>
-              cached ||
-              caches.match("/delivery-app/index.html") ||
-              caches.match("/delivery-app/")
-          )
-        )
-    );
-    return;
-  }
+  const json = subscription.toJSON();
+  if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) return false;
 
-  // Same-origin static assets use cache fallback.
-  if (url.origin === self.location.origin) {
-    event.respondWith(
-      caches.match(req).then(
-        (cached) =>
-          cached ||
-          fetch(req).then((response) => {
-            if (response.ok) {
-              const copy = response.clone();
-              caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
-            }
-            return response;
-          })
-      )
-    );
-  }
-});
+  const { error } = await sb.from("staff_push_subscriptions").upsert({
+    user_id: user.id,
+    role,
+    endpoint: json.endpoint,
+    p256dh: json.keys.p256dh,
+    auth_key: json.keys.auth,
+    user_agent: navigator.userAgent,
+    updated_at: new Date().toISOString()
+  }, { onConflict: "endpoint" });
+  if (error) throw error;
 
-self.addEventListener("push", event => {
-  let data = {};
-  try { data = event.data?.json() || {}; } catch { data = { body: event.data?.text() }; }
-  event.waitUntil(self.registration.showNotification(data.title || "HUNKART • Delivery Assigned", {
-    body: data.body || "A delivery has been assigned to you.",
-    icon: "/icons/icon-192.png",
-    badge: "/icons/icon-192.png",
-    tag: data.tag || "hunkart-delivery-assignment",
-    renotify: true,
-    requireInteraction: true,
-    vibrate: [500, 180, 500, 180, 700, 250, 900],
-    data: { url: data.url || "/delivery-app/" }
-  }));
-});
-
-self.addEventListener("notificationclick", event => {
-  event.notification.close();
-  const url = event.notification?.data?.url || "/delivery-app/";
-  event.waitUntil(clients.matchAll({type:"window",includeUncontrolled:true}).then(list => {
-    const client = list[0];
-    if (client) { client.navigate(url); return client.focus(); }
-    return clients.openWindow(url);
-  }));
-});
+  localStorage.setItem(versionKey, VAPID_VERSION);
+  return true;
+}
