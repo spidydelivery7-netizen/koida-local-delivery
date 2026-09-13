@@ -253,6 +253,7 @@ button{border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:poin
 <script src="/config.js"></script>
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+import { ensureStaffPushSubscription } from "/staff-push.js";
 
 const cfg=window.SPIDY_CONFIG||{};
 const $=id=>document.getElementById(id);
@@ -518,6 +519,7 @@ async function checkSession(){
   const {data:{session}}=await sb.auth.getSession();
   if(!session){sessionUser=null;showLoggedOut();setStatus("Shopkeeper login required.");return}
   sessionUser=session.user;showLoggedIn();await loadShopAndProducts();
+  ensureStaffPushSubscription({sb,user:sessionUser,role:"shopkeeper",serviceWorkerUrl:"/shopkeeper-app/sw.js",scope:"/shopkeeper-app/"}).catch(error=>console.warn("Shopkeeper push subscription:",error));
 }
 
 if(!configured()){
@@ -525,7 +527,7 @@ if(!configured()){
 }else{
   sb=createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{storageKey:"kld-shopkeeper-auth",persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
   await checkSession();
-  sb.auth.onAuthStateChange(async(_event,session)=>{sessionUser=session?.user||null;if(sessionUser){showLoggedIn();await loadShopAndProducts()}else showLoggedOut()});
+  sb.auth.onAuthStateChange(async(_event,session)=>{sessionUser=session?.user||null;if(sessionUser){showLoggedIn();await loadShopAndProducts();ensureStaffPushSubscription({sb,user:sessionUser,role:"shopkeeper",serviceWorkerUrl:"/shopkeeper-app/sw.js",scope:"/shopkeeper-app/"}).catch(error=>console.warn("Shopkeeper push subscription:",error))}else showLoggedOut()});
 }
 
 $("loginBtn").onclick=async()=>{
