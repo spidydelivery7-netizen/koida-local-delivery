@@ -2144,7 +2144,7 @@ async function enterApp(){
     ensureStaffPushSubscription({
       sb,
       user:staffSession?.user,
-      role:"delivery_partner",
+      role:"delivery_boy",
       serviceWorkerUrl:"/delivery-app/sw.js",
       scope:"/delivery-app/"
     }).catch(error=>console.warn("Delivery push subscription:",error));
