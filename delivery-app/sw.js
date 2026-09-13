@@ -84,3 +84,28 @@ self.addEventListener("fetch", (event) => {
     );
   }
 });
+
+self.addEventListener("push", event => {
+  let data = {};
+  try { data = event.data?.json() || {}; } catch { data = { body: event.data?.text() }; }
+  event.waitUntil(self.registration.showNotification(data.title || "HUNKART • Delivery Assigned", {
+    body: data.body || "A delivery has been assigned to you.",
+    icon: "/icons/icon-192.png",
+    badge: "/icons/icon-192.png",
+    tag: data.tag || "hunkart-delivery-assignment",
+    renotify: true,
+    requireInteraction: true,
+    vibrate: [500, 180, 500, 180, 700, 250, 900],
+    data: { url: data.url || "/delivery-app/" }
+  }));
+});
+
+self.addEventListener("notificationclick", event => {
+  event.notification.close();
+  const url = event.notification?.data?.url || "/delivery-app/";
+  event.waitUntil(clients.matchAll({type:"window",includeUncontrolled:true}).then(list => {
+    const client = list[0];
+    if (client) { client.navigate(url); return client.focus(); }
+    return clients.openWindow(url);
+  }));
+});
