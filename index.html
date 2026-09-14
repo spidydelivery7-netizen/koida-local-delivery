@@ -2822,9 +2822,11 @@ async function routeDistanceKm(storeLat,storeLng,userLat,userLng){
     const r=await fetch(url,{headers:{"Accept":"application/json"}});
     if(r.ok){const j=await r.json();if(j.routes&&j.routes[0])return {km:j.routes[0].distance/1000,source:"road"}}
   }catch(e){}
-  return {km:haversineKm(storeLat,storeLng,userLat,userLng),source:"straight-line fallback"};
+  throw new Error("Unable to verify delivery distance. Please try again.");
 }
 async function detectLocation(){
+  deliveryInfo = null;
+  $("placeOrder").disabled = true;
   if(
     !deliverySettings ||
     deliverySettings.store_lat == null ||
@@ -2860,11 +2862,22 @@ async function detectLocation(){
 
         deliveryInfo = {
           distance_km:Number(r.km.toFixed(2)),
+          service_distance_km:r.km,
           lat,
           lng,
           route_source:r.source
         };
 
+        if (r.km > 8) {
+          $("distanceBox").classList.add("warn");
+          $("distanceResult").textContent = "Service is currently unavailable at your location. We’re coming to your area soon!";
+          $("placeOrder").disabled = true;
+          btn.textContent = "📍 Try Another Location";
+          renderCheckoutSummary();
+          updateCart();
+          return;
+        }
+        $("placeOrder").disabled = false;
         const dc = calculatedDelivery();
         $("distanceBox").classList.remove("warn");
         $("distanceResult").innerHTML =
@@ -2912,7 +2925,11 @@ function renderReceipt(ctx,paymentStatus="Pending",paymentId=""){
 }
 async function invokePaymentFunction(body){
   const {data,error}=await sb.functions.invoke("create-razorpay-order",{body});
-  if(error)throw new Error(error.message||"Payment service error");
+  if(error){
+    let message=error.message||"Payment service error";
+    try { const detail=await error.context.json(); if(detail?.error) message=detail.error; } catch {}
+    throw new Error(message);
+  }
   if(!data||data.error)throw new Error(data?.error||"Payment service returned no data");
   return data;
 }
@@ -3021,6 +3038,10 @@ async function startRazorpayPayment(ctx){
 }
 
 async function placeOrder(){
+  if (deliveryInfo && Number(deliveryInfo.service_distance_km ?? deliveryInfo.distance_km) > 8) {
+    alert("Service is currently unavailable at your location. We’re coming to your area soon!");
+    return;
+  }
   if(!currentSession?.user){
     alert("Please login or create your customer account before placing an order.");
     closeModal($("checkoutModal"));
