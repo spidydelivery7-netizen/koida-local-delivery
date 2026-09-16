@@ -2247,6 +2247,8 @@ const hasLocation=
     ${o.delivery_note?`<div class="sum-row"><span>Delivery Note</span><span style="text-align:right;max-width:65%">${esc(o.delivery_note)}</span></div>`:""}
     ${o.distance_km!=null?`<div class="sum-row"><span>Distance</span><b>${Number(o.distance_km)} km</b></div>`:""}
 
+    ${cancelPanel(o)}
+    ${ratingPanel(o)}
 ${trackingHtml}
 `;
   openModal($("orderDetailsModal"));
@@ -2293,15 +2295,78 @@ async function openCustomerLiveLocation(orderId){
   }
 }
   window.openCustomerLiveLocation = openCustomerLiveLocation;
+
+function refreshCancellationTimers(){
+  document.querySelectorAll("[data-cancel-until]").forEach(function(el){
+    const seconds=Math.max(0,Math.ceil((new Date(el.dataset.cancelUntil).getTime()-Date.now())/1000));
+    if(seconds>0){
+      el.textContent="Cancel available for "+Math.floor(seconds/60)+":"+String(seconds%60).padStart(2,"0");
+    }else{
+      el.textContent="Cancellation window closed. Your order is being sent to the shop.";
+      el.style.color="#64748b";
+    }
+  });
+}
+setInterval(refreshCancellationTimers,1000);
+
+
+function cancelPanel(o){
+  const end=o.customer_cancel_until?new Date(o.customer_cancel_until).getTime():0;
+  const allowed=end>Date.now()&&["new","confirmed"].includes(String(o.status||"").toLowerCase())&&String(o.payment_status||"").toLowerCase()==="paid";
+  if(!allowed)return "";
+  return '<button id="cancel-order-'+o.id+'" data-cancel-button="'+end+'" class="btn danger" style="width:100%;margin-top:12px" onclick="requestOrderCancellation(\''+o.id+'\')">Cancel Order</button>';
+}
+function refreshCancelButtons(){
+  document.querySelectorAll("[data-cancel-button]").forEach(function(button){
+    if(Date.now()>=Number(button.dataset.cancelButton)){
+      button.disabled=true;
+      button.textContent="Cancellation window closed";
+    }
+  });
+}
+setInterval(refreshCancelButtons,1000);
+async function requestOrderCancellation(orderId){
+  const reason=prompt("Cancellation reason: Ordered by mistake / Duplicate order / Wrong item or quantity / Wrong delivery address / Other");
+  if(!reason||!reason.trim())return;
+  const details=prompt("Please write a short explanation.");
+  if(!details||!details.trim()){alert("A short explanation is required.");return;}
+  try{
+    const result=await sb.rpc("hc_request",{p_order_id:orderId,p_request_type:"cancel",p_reason:reason.trim(),p_details:details.trim(),p_item_ids:[]});
+    if(result.error)throw result.error;
+    alert((result.data&&result.data.message)||"Cancellation request submitted.");
+    closeModal($("orderDetailsModal"));
+    await loadMyOrders();
+  }catch(e){alert(e.message||"Cancellation request could not be submitted.");}
+}
+window.requestOrderCancellation=requestOrderCancellation;
+function ratingPanel(o){
+  if(String(o.status||"").toLowerCase()!=="delivered")return "";
+  return '<div style="margin-top:14px;padding:14px;border:1px solid #fde68a;border-radius:14px;background:#fffbeb">'
+    +'<b>Rate your order</b><div class="small" style="margin:5px 0 8px">Give separate ratings for delivery and product / food.</div>'
+    +'<label class="small"><b>Delivery</b><select id="delivery-rating-'+o.id+'" style="width:100%;margin-top:5px;padding:10px;border:1px solid #d1d5db;border-radius:10px"><option value="">Select stars</option><option value="5">★★★★★ 5</option><option value="4">★★★★ 4</option><option value="3">★★★ 3</option><option value="2">★★ 2</option><option value="1">★ 1</option></select></label>'
+    +'<label class="small" style="display:block;margin-top:10px"><b>Product / Food</b><select id="product-rating-'+o.id+'" style="width:100%;margin-top:5px;padding:10px;border:1px solid #d1d5db;border-radius:10px"><option value="">Select stars</option><option value="5">★★★★★ 5</option><option value="4">★★★★ 4</option><option value="3">★★★ 3</option><option value="2">★★ 2</option><option value="1">★ 1</option></select></label>'
+    +'<button class="btn yellow" style="width:100%;margin-top:10px" onclick="submitOrderRating(\''+o.id+'\')">Submit Rating</button></div>';
+}
+async function submitOrderRating(orderId){
+  const delivery=Number(document.getElementById("delivery-rating-"+orderId).value||0);
+  const product=Number(document.getElementById("product-rating-"+orderId).value||0);
+  if(!delivery||!product){alert("Please select both Delivery and Product ratings.");return;}
+  try{
+    const result=await sb.rpc("submit_order_ratings",{p_order_id:orderId,p_delivery_rating:delivery,p_product_rating:product,p_delivery_comment:null,p_product_comment:null});
+    if(result.error)throw result.error;
+    alert((result.data&&result.data.message)||"Thank you for your rating.");
+  }catch(e){alert(e.message||"Could not save your rating.");}
+}
+window.submitOrderRating=submitOrderRating;
 async function loadMyOrders(){
   const box=$("myOrders");
   if(!currentSession?.user){box.innerHTML='<div class="small">Please login first.</div>';return}
   box.innerHTML='<div class="small">Loading orders...</div>';
-  const {data,error}=await sb.from("orders").select("id,order_number,created_at,customer_name,phone,address,landmark,area,delivery_note,subtotal,delivery_charge,platform_fee,total,payment_status,payment_id,status,distance_km,order_items(product_name,variant_label,qty,unit_price,line_total)").order("created_at",{ascending:false}).limit(50);
+  const {data,error}=await sb.from("orders").select("id,order_number,created_at,customer_name,phone,address,landmark,area,delivery_note,subtotal,delivery_charge,platform_fee,total,payment_status,payment_id,status,distance_km,customer_cancel_until,order_items(product_name,variant_label,qty,unit_price,line_total)").order("created_at",{ascending:false}).limit(50);
   if(error){box.innerHTML=`<div class="notice">Could not load orders: ${error.message}</div>`;return}
   const orders=data||[];
   if(!orders.length){box.innerHTML='<div class="account-card"><b>No orders yet</b><div class="small" style="margin-top:4px">Orders placed after you login will appear here.</div></div>';return}
-  box.innerHTML=orders.map((o,idx)=>`<div class="order-card-mini" data-order-idx="${idx}" role="button" tabindex="0" aria-label="Open details for ${o.order_number}"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><div><b>${o.order_number}</b><div class="small">${fmtOrderDate(o.created_at)}</div></div><div><span class="order-status">${statusLabel(o.status)}</span> <span class="order-status ${o.payment_status==="paid"?"paid":"pending"}">${statusLabel(o.payment_status)}</span></div></div><div class="small" style="margin-top:7px">${(o.order_items||[]).map(i=>`${i.product_name} (${i.variant_label||""}) × ${i.qty}`).join(" · ")||"Order items"}</div><div class="sum-row"><span>${o.distance_km!=null?`Distance ${o.distance_km} km`:""}</span><b>₹${o.total}</b></div><div class="small" style="margin-top:6px;color:#2563eb;font-weight:800">Tap to view details ›</div></div>`).join("");
+  box.innerHTML=orders.map((o,idx)=>`<div class="order-card-mini" data-order-idx="${idx}" role="button" tabindex="0" aria-label="Open details for ${o.order_number}"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><div><b>${o.order_number}</b><div class="small">${fmtOrderDate(o.created_at)}</div></div><div><span class="order-status">${statusLabel(o.status)}</span> <span class="order-status ${o.payment_status==="paid"?"paid":"pending"}">${statusLabel(o.payment_status)}</span></div></div><div class="small" style="margin-top:7px">${(o.order_items||[]).map(i=>`${i.product_name} (${i.variant_label||""}) × ${i.qty}`).join(" · ")||"Order items"}</div><div class="sum-row"><span>${o.distance_km!=null?`Distance ${o.distance_km} km`:""}</span><b>₹${o.total}</b></div>${o.customer_cancel_until?`<div class="small" data-cancel-until="${o.customer_cancel_until}" style="margin-top:7px;color:#92400e;font-weight:800"></div>`:""}<div class="small" style="margin-top:6px;color:#2563eb;font-weight:800">Tap to view details ›</div></div>`).join("");
   box.onclick=(e)=>{
   const card=e.target.closest(".order-card-mini");
   if(!card) return;
@@ -3414,3 +3479,4 @@ if ("serviceWorker" in navigator) {
 
 </body>
 </html>
+
