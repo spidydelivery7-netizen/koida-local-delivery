@@ -2298,6 +2298,11 @@ async function openCustomerLiveLocation(orderId){
 
 function refreshCancellationTimers(){
   document.querySelectorAll("[data-cancel-until]").forEach(function(el){
+    const status=el.closest(".order-card-mini")?.querySelector(".order-status")?.textContent.trim().toLowerCase();
+    if(!["new","confirmed"].includes(status)){
+      el.remove();
+      return;
+    }
     const seconds=Math.max(0,Math.ceil((new Date(el.dataset.cancelUntil).getTime()-Date.now())/1000));
     if(seconds>0){
       el.textContent="Cancel available for "+Math.floor(seconds/60)+":"+String(seconds%60).padStart(2,"0");
@@ -2357,7 +2362,7 @@ async function requestOrderCancellation(orderId){
       if(result.error)throw result.error;
       closeCancelDialog();
       closeModal($("orderDetailsModal"));
-      alert((result.data&&result.data.message)||"Cancellation request submitted.");
+      alert((result.data&&result.data.message)||"Order cancelled. Refund has been queued for processing.");
       await loadMyOrders();
     }catch(e){
       errorBox.textContent=e.message||"Cancellation request could not be submitted.";
