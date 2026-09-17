@@ -1395,7 +1395,7 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 const cfg=window.SPIDY_CONFIG||{};
 const sb=createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{storageKey:"kld-customer-auth",persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
 const $=id=>document.getElementById(id);
-let products=[],shops=[],activeShopId=null,activeCat="All",cart=[],deliverySettings=null,deliveryInfo=null;
+let products=[],shops=[],activeShopId=null,activeCat="All",cart=[],deliverySettings=null,deliveryInfo=null,productRatingSummaryById={};
 let currentSession=null,currentCustomer=null;
   const VAPID_PUBLIC_KEY = "BEyKFl_KeSmIboBWWUhfItErCRw9AlwjoVRq55NBedCSX_iLskyLH2Bm4ZmCc4e3ZAWBMjn07NAEU5TeIcSqObg";
 function urlBase64ToUint8Array(base64String){
@@ -2401,19 +2401,29 @@ function savedRatingPanel(rating){
 function ratingPanel(o,savedRating){
   if(String(o.status||"").toLowerCase()!=="delivered")return "";
   if(savedRating)return savedRatingPanel(savedRating);
+  const productsById={};
+  (o.order_items||[]).forEach(function(item){if(item.product_id&&!productsById[item.product_id])productsById[item.product_id]=item;});
+  const productFields=Object.values(productsById).map(function(item){
+    return '<label class="small" style="display:block;margin-top:10px"><b>'+esc(item.product_name||"Product")+'</b><select class="product-rating-select" data-product-id="'+item.product_id+'" style="width:100%;margin-top:5px;padding:10px;border:1px solid #d1d5db;border-radius:10px"><option value="">Select stars</option><option value="5">★★★★★ 5</option><option value="4">★★★★ 4</option><option value="3">★★★ 3</option><option value="2">★★ 2</option><option value="1">★ 1</option></select></label>';
+  }).join('');
   return '<div style="margin-top:14px;padding:14px;border:1px solid #fde68a;border-radius:14px;background:#fffbeb">'
-    +'<b>Rate your order</b><div class="small" style="margin:5px 0 8px">Give separate ratings for delivery and product / food.</div>'
+    +'<b>Rate your order</b><div class="small" style="margin:5px 0 8px">Rate delivery and each product separately.</div>'
     +'<label class="small"><b>Delivery</b><select id="delivery-rating-'+o.id+'" style="width:100%;margin-top:5px;padding:10px;border:1px solid #d1d5db;border-radius:10px"><option value="">Select stars</option><option value="5">★★★★★ 5</option><option value="4">★★★★ 4</option><option value="3">★★★ 3</option><option value="2">★★ 2</option><option value="1">★ 1</option></select></label>'
-    +'<label class="small" style="display:block;margin-top:10px"><b>Product / Food</b><select id="product-rating-'+o.id+'" style="width:100%;margin-top:5px;padding:10px;border:1px solid #d1d5db;border-radius:10px"><option value="">Select stars</option><option value="5">★★★★★ 5</option><option value="4">★★★★ 4</option><option value="3">★★★ 3</option><option value="2">★★ 2</option><option value="1">★ 1</option></select></label>'
+    +productFields
     +'<button class="btn yellow" style="width:100%;margin-top:10px" onclick="submitOrderRating(\''+o.id+'\')">Submit Rating</button></div>';
 }
 async function submitOrderRating(orderId){
   const delivery=Number(document.getElementById("delivery-rating-"+orderId).value||0);
-  const product=Number(document.getElementById("product-rating-"+orderId).value||0);
-  if(!delivery||!product){alert("Please select both Delivery and Product ratings.");return;}
+  const productRatings=Array.from(document.querySelectorAll(".product-rating-select")).map(function(select){return {product_id:select.dataset.productId,rating:Number(select.value||0)};});
+  if(!delivery||!productRatings.length||productRatings.some(function(item){return !item.rating;})){alert("Please select Delivery and every Product rating.");return;}
+  const product=Math.round(productRatings.reduce(function(sum,item){return sum+item.rating;},0)/productRatings.length);
   try{
     const result=await sb.rpc("submit_order_ratings",{p_order_id:orderId,p_delivery_rating:delivery,p_product_rating:product,p_delivery_comment:null,p_product_comment:null});
     if(result.error)throw result.error;
+    const productResult=await sb.rpc("submit_order_product_ratings",{p_order_id:orderId,p_product_ratings:productRatings});
+    if(productResult.error)throw productResult.error;
+    await loadProductRatingSummaries();
+    renderProducts();
     const panel=document.getElementById("delivery-rating-"+orderId)?.closest("div[style*='border:1px solid #fde68a']");
     if(panel)panel.outerHTML=savedRatingPanel({delivery_rating:delivery,product_rating:product});
     alert((result.data&&result.data.message)||"Thank you for your rating.");
@@ -2448,13 +2458,11 @@ async function loadMyOrders(){
   const box=$("myOrders");
   if(!currentSession?.user){box.innerHTML='<div class="small">Please login first.</div>';return}
   box.innerHTML='<div class="small">Loading orders...</div>';
-  const {data,error}=await sb.from("orders").select("id,order_number,created_at,customer_name,phone,address,landmark,area,delivery_note,subtotal,delivery_charge,platform_fee,total,payment_status,payment_id,status,distance_km,customer_cancel_until,order_items(product_name,variant_label,qty,unit_price,line_total)").order("created_at",{ascending:false}).limit(50);
+  const {data,error}=await sb.from("orders").select("id,order_number,created_at,customer_name,phone,address,landmark,area,delivery_note,subtotal,delivery_charge,platform_fee,total,payment_status,payment_id,status,distance_km,customer_cancel_until,order_items(product_id,product_name,variant_label,qty,unit_price,line_total)").order("created_at",{ascending:false}).limit(50);
   if(error){box.innerHTML=`<div class="notice">Could not load orders: ${error.message}</div>`;return}
   const orders=data||[];
-  const communityRatings=await loadCommunityRatingSummary();
-  const communityHtml=communityRatingHtml(communityRatings);
-  if(!orders.length){box.innerHTML=communityHtml+'<div class="account-card"><b>No orders yet</b><div class="small" style="margin-top:4px">Orders placed after you login will appear here.</div></div>';return}
-  box.innerHTML=communityHtml+orders.map((o,idx)=>`<div class="order-card-mini" data-order-idx="${idx}" role="button" tabindex="0" aria-label="Open details for ${o.order_number}"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><div><b>${o.order_number}</b><div class="small">${fmtOrderDate(o.created_at)}</div></div><div><span class="order-status">${statusLabel(o.status)}</span> <span class="order-status ${o.payment_status==="paid"?"paid":"pending"}">${statusLabel(o.payment_status)}</span></div></div><div class="small" style="margin-top:7px">${(o.order_items||[]).map(i=>`${i.product_name} (${i.variant_label||""}) × ${i.qty}`).join(" · ")||"Order items"}</div><div class="sum-row"><span>${o.distance_km!=null?`Distance ${o.distance_km} km`:""}</span><b>₹${o.total}</b></div>${o.customer_cancel_until?`<div class="small" data-cancel-until="${o.customer_cancel_until}" style="margin-top:7px;color:#92400e;font-weight:800"></div>`:""}<div class="small" style="margin-top:6px;color:#2563eb;font-weight:800">Tap to view details ›</div></div>`).join("");
+  if(!orders.length){box.innerHTML='<div class="account-card"><b>No orders yet</b><div class="small" style="margin-top:4px">Orders placed after you login will appear here.</div></div>';return}
+  box.innerHTML=orders.map((o,idx)=>`<div class="order-card-mini" data-order-idx="${idx}" role="button" tabindex="0" aria-label="Open details for ${o.order_number}"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><div><b>${o.order_number}</b><div class="small">${fmtOrderDate(o.created_at)}</div></div><div><span class="order-status">${statusLabel(o.status)}</span> <span class="order-status ${o.payment_status==="paid"?"paid":"pending"}">${statusLabel(o.payment_status)}</span></div></div><div class="small" style="margin-top:7px">${(o.order_items||[]).map(i=>`${i.product_name} (${i.variant_label||""}) × ${i.qty}`).join(" · ")||"Order items"}</div><div class="sum-row"><span>${o.distance_km!=null?`Distance ${o.distance_km} km`:""}</span><b>₹${o.total}</b></div>${o.customer_cancel_until?`<div class="small" data-cancel-until="${o.customer_cancel_until}" style="margin-top:7px;color:#92400e;font-weight:800"></div>`:""}<div class="small" style="margin-top:6px;color:#2563eb;font-weight:800">Tap to view details ›</div></div>`).join("");
   box.onclick=(e)=>{
   const card=e.target.closest(".order-card-mini");
   if(!card) return;
@@ -2823,7 +2831,7 @@ function renderCats(){const arr=["All",...new Set(products.filter(p=>!activeShop
     box.appendChild(b);
   });
   }
-function renderProducts(){const q=$("search").value.trim().toLowerCase();const arr=products.filter(p=>(!activeShopId||p.shop_id===activeShopId)&&(activeCat==="All"||p.category===activeCat)&&(!q||p.name.toLowerCase().includes(q)||(p.description||"").toLowerCase().includes(q)));$("grid").innerHTML="";if(!arr.length){$("grid").innerHTML='<div class="empty" style="grid-column:1/-1">No items found.</div>';return}arr.forEach(p=>{const v=variants(p),selector=v.length>1?`<select class="variant">${v.map(x=>`<option value="${x.key}">${x.label} — ₹${x.price}</option>`).join("")}</select>`:"";const c=document.createElement("article");c.className="card";c.innerHTML=`<img class="img" src="${p.image_url||ph(p.name)}" alt="${p.name}"><div class="body"><div class="cat">${p.category||"Food"}</div><div class="name">${p.name}</div><div class="desc">${p.description||""}</div><div class="price">${priceText(p)}</div>${selector}<div class="stock ${p.available===false?"out":""}">${p.available===false?"Out of Stock":"Available"}</div><div class="card-actions"><button class="btn dark buy" ${p.available===false?"disabled":""}>Add to Cart</button><button class="btn yellow add" ${p.available===false?"disabled":""}>＋</button></div></div>`;c.querySelector(".img").onerror=e=>e.currentTarget.src=ph(p.name);if(p.available!==false){c.querySelector(".buy").onclick=()=>addCart(p,selectedVariant(c,p));c.querySelector(".add").onclick=()=>addCart(p,selectedVariant(c,p))}$("grid").appendChild(c)})}
+function renderProducts(){const q=$("search").value.trim().toLowerCase();const arr=products.filter(p=>(!activeShopId||p.shop_id===activeShopId)&&(activeCat==="All"||p.category===activeCat)&&(!q||p.name.toLowerCase().includes(q)||(p.description||"").toLowerCase().includes(q)));$("grid").innerHTML="";if(!arr.length){$("grid").innerHTML='<div class="empty" style="grid-column:1/-1">No items found.</div>';return}arr.forEach(p=>{const v=variants(p),selector=v.length>1?`<select class="variant">${v.map(x=>`<option value="${x.key}">${x.label} — ₹${x.price}</option>`).join("")}</select>`:"";const rating=productRatingSummaryById[p.id];const ratingBadge=rating?`<div class="small" style="display:inline-flex;align-items:center;gap:4px;margin-top:6px;padding:4px 7px;border-radius:7px;background:#dcfce7;color:#166534;font-weight:800">${Number(rating.average_rating).toFixed(1)} ★ <span style="color:#64748b;font-weight:600">| ${Number(rating.rating_count)} rating${Number(rating.rating_count)===1?"":"s"}</span></div>`:"";const c=document.createElement("article");c.className="card";c.innerHTML=`<img class="img" src="${p.image_url||ph(p.name)}" alt="${p.name}"><div class="body"><div class="cat">${p.category||"Food"}</div><div class="name">${p.name}</div>${ratingBadge}<div class="desc">${p.description||""}</div><div class="price">${priceText(p)}</div>${selector}<div class="stock ${p.available===false?"out":""}">${p.available===false?"Out of Stock":"Available"}</div><div class="card-actions"><button class="btn dark buy" ${p.available===false?"disabled":""}>Add to Cart</button><button class="btn yellow add" ${p.available===false?"disabled":""}>＋</button></div></div>`;c.querySelector(".img").onerror=e=>e.currentTarget.src=ph(p.name);if(p.available!==false){c.querySelector(".buy").onclick=()=>addCart(p,selectedVariant(c,p));c.querySelector(".add").onclick=()=>addCart(p,selectedVariant(c,p))}$("grid").appendChild(c)})}
   /* ===== Product Image Full Screen Viewer ===== */
 function openProductImageViewer(src, alt="Product image"){
   if(!src) return;
@@ -2912,7 +2920,19 @@ document.addEventListener("click",(e)=>{
     img.currentSrc || img.src,
     img.alt || "Product image"
   );
-});async function loadProducts(){
+});
+async function loadProductRatingSummaries(){
+  try{
+    const {data,error}=await sb.rpc("get_product_rating_summaries");
+    if(error)throw error;
+    productRatingSummaryById={};
+    (data||[]).forEach(function(row){productRatingSummaryById[row.product_id]=row;});
+  }catch(e){
+    console.error("Product ratings load failed",e);
+    productRatingSummaryById={};
+  }
+}
+async function loadProducts(){
   const [
     {data:productData,error:productError},
     {data:shopData,error:shopError}
@@ -2937,6 +2957,7 @@ document.addEventListener("click",(e)=>{
     return;
   }
 
+  await loadProductRatingSummaries();
   shops = shopData || [];
 
 const approvedShopIds = new Set(
