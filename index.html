@@ -2109,6 +2109,7 @@ if(
 
 let deliveryOtp = null;
 let savedOrderRating = null;
+let cancellationContext = null;
 
 if (String(o.status || "").toLowerCase() === "out_for_delivery") {
   try {
@@ -2185,6 +2186,55 @@ if (String(o.status || "").toLowerCase() === "delivered") {
     console.error("Saved rating load failed",e);
   }
 }
+if (String(o.status || "").toLowerCase() === "cancelled") {
+  try {
+    const {data:cancelData,error:cancelError}=await Promise.race([
+      sb.rpc("hc_order_context",{p_order_id:o.id}),
+      new Promise(resolve=>setTimeout(()=>resolve({data:null,error:null}),3000))
+    ]);
+    if(!cancelError&&cancelData){
+      cancellationContext=typeof cancelData==="string"?JSON.parse(cancelData):cancelData;
+    }
+  } catch (e) {
+    console.error("Refund details load failed",e);
+  }
+}
+let refundDetailsHtml="";
+if (String(o.status || "").toLowerCase() === "cancelled") {
+  const cases=Array.isArray(cancellationContext?.cases)?cancellationContext.cases:[];
+  const refunds=cases.map(c=>c?.refund).filter(Boolean);
+  const refund=refunds.sort((a,b)=>String(b.updated_at||"").localeCompare(String(a.updated_at||"")))[0];
+  if(refund){
+    const refundStatus=String(refund.status||"queued").toLowerCase();
+    const meta={
+      processed:{label:"Refunded",color:"#047857",bg:"#ecfdf5",border:"#86efac",message:"Your refund has been processed to the original payment method."},
+      pending:{label:"Refund processing",color:"#92400e",bg:"#fffbeb",border:"#fcd34d",message:"Razorpay is processing your refund to the original payment method."},
+      submitting:{label:"Refund processing",color:"#92400e",bg:"#fffbeb",border:"#fcd34d",message:"Your refund request is being sent securely to Razorpay."},
+      queued:{label:"Refund queued",color:"#92400e",bg:"#fffbeb",border:"#fcd34d",message:"Your refund will be processed shortly to the original payment method."},
+      uncertain:{label:"Refund being verified",color:"#92400e",bg:"#fffbeb",border:"#fcd34d",message:"We are verifying the refund status with Razorpay. Please check again shortly."},
+      failed:{label:"Refund needs review",color:"#b91c1c",bg:"#fef2f2",border:"#fecaca",message:"We could not complete this refund automatically. Please contact HUNKART support."}
+    }[refundStatus]||{label:"Refund processing",color:"#92400e",bg:"#fffbeb",border:"#fcd34d",message:"Please check again shortly."};
+    const amount=Number(refund.amount_paise||0)/100;
+    refundDetailsHtml=`
+      <div style="margin:14px 0;padding:14px;border:2px solid ${meta.border};border-radius:14px;background:${meta.bg};color:${meta.color}">
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;font-weight:900;font-size:17px">
+          <span>↩ Refund details</span><span>${esc(meta.label)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;gap:10px;margin-top:10px;font-size:15px">
+          <span>Refund amount</span><b>₹${amount.toFixed(2).replace(/\.00$/,"")}</b>
+        </div>
+        <div style="margin-top:8px;font-size:12px;line-height:1.45">${esc(meta.message)}</div>
+        ${refund.provider_id?`<div style="margin-top:9px;padding-top:9px;border-top:1px solid ${meta.border};font-size:11px;word-break:break-all"><b>Razorpay refund reference:</b> ${esc(refund.provider_id)}</div>`:""}
+      </div>
+    `;
+  } else {
+    refundDetailsHtml=`
+      <div style="margin:14px 0;padding:13px;border:1px solid #fcd34d;border-radius:14px;background:#fffbeb;color:#92400e;font-size:13px;line-height:1.45">
+        <b>↩ Refund status:</b> Your cancellation has been recorded. Refund details will appear here once processing begins.
+      </div>
+    `;
+  }
+}
 let trackingHtml="";
 
 if(tracking){
@@ -2255,6 +2305,7 @@ const hasLocation=
     ${platformFee>0?`<div class="sum-row"><span>Platform fee</span><b>₹${platformFee}</b></div>`:""}
     <div class="sum-row"><span>Delivery</span><b>${deliveryCharge===0?"FREE":"₹"+deliveryCharge}</b></div>
     <div class="sum-row total"><span>Total</span><span>₹${Number(o.total||0)}</span></div>
+    ${refundDetailsHtml}
     <hr style="border:0;border-top:1px solid #e5e7eb">
     ${o.customer_name?`<div class="sum-row"><span>Name</span><span>${esc(o.customer_name)}</span></div>`:""}
     ${o.phone?`<div class="sum-row"><span>Mobile</span><span>${esc(o.phone)}</span></div>`:""}
