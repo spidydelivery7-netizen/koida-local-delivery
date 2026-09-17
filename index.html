@@ -2108,6 +2108,7 @@ if(
 }
 
 let deliveryOtp = null;
+let savedOrderRating = null;
 
 if (String(o.status || "").toLowerCase() === "out_for_delivery") {
   try {
@@ -2169,6 +2170,20 @@ if (deliveryOtp) {
       </div>
     </div>
   `;
+}
+
+if (String(o.status || "").toLowerCase() === "delivered") {
+  try {
+    const {data:ratingData,error:ratingError}=await sb.rpc(
+      "get_my_order_rating",
+      {p_order_id:o.id}
+    );
+    if(!ratingError&&Array.isArray(ratingData)&&ratingData.length){
+      savedOrderRating=ratingData[0];
+    }
+  } catch (e) {
+    console.error("Saved rating load failed",e);
+  }
 }
 let trackingHtml="";
 
@@ -2248,7 +2263,7 @@ const hasLocation=
     ${o.distance_km!=null?`<div class="sum-row"><span>Distance</span><b>${Number(o.distance_km)} km</b></div>`:""}
 
     ${cancelPanel(o)}
-    ${ratingPanel(o)}
+    ${ratingPanel(o,savedOrderRating)}
 ${trackingHtml}
 `;
   openModal($("orderDetailsModal"));
@@ -2372,8 +2387,20 @@ async function requestOrderCancellation(orderId){
   };
 }
 window.requestOrderCancellation=requestOrderCancellation;
-function ratingPanel(o){
+function ratingStars(value){
+  const n=Math.max(0,Math.min(5,Number(value)||0));
+  return "★".repeat(n)+"☆".repeat(5-n);
+}
+function savedRatingPanel(rating){
+  return '<div style="margin-top:14px;padding:14px;border:1px solid #bbf7d0;border-radius:14px;background:#f0fdf4">'
+    +'<b>Your rating</b><div class="small" style="margin:5px 0 10px">Thank you for sharing your experience.</div>'
+    +'<div class="sum-row"><span>Delivery</span><b style="color:#d97706;letter-spacing:2px">'+ratingStars(rating.delivery_rating)+'</b></div>'
+    +'<div class="sum-row"><span>Product / Food</span><b style="color:#d97706;letter-spacing:2px">'+ratingStars(rating.product_rating)+'</b></div>'
+    +'</div>';
+}
+function ratingPanel(o,savedRating){
   if(String(o.status||"").toLowerCase()!=="delivered")return "";
+  if(savedRating)return savedRatingPanel(savedRating);
   return '<div style="margin-top:14px;padding:14px;border:1px solid #fde68a;border-radius:14px;background:#fffbeb">'
     +'<b>Rate your order</b><div class="small" style="margin:5px 0 8px">Give separate ratings for delivery and product / food.</div>'
     +'<label class="small"><b>Delivery</b><select id="delivery-rating-'+o.id+'" style="width:100%;margin-top:5px;padding:10px;border:1px solid #d1d5db;border-radius:10px"><option value="">Select stars</option><option value="5">★★★★★ 5</option><option value="4">★★★★ 4</option><option value="3">★★★ 3</option><option value="2">★★ 2</option><option value="1">★ 1</option></select></label>'
@@ -2387,10 +2414,36 @@ async function submitOrderRating(orderId){
   try{
     const result=await sb.rpc("submit_order_ratings",{p_order_id:orderId,p_delivery_rating:delivery,p_product_rating:product,p_delivery_comment:null,p_product_comment:null});
     if(result.error)throw result.error;
+    const panel=document.getElementById("delivery-rating-"+orderId)?.closest("div[style*='border:1px solid #fde68a']");
+    if(panel)panel.outerHTML=savedRatingPanel({delivery_rating:delivery,product_rating:product});
     alert((result.data&&result.data.message)||"Thank you for your rating.");
   }catch(e){alert(e.message||"Could not save your rating.");}
 }
 window.submitOrderRating=submitOrderRating;
+function communityRatingHtml(summary){
+  if(!summary||!Number(summary.total_ratings))return '';
+  const delivery=Number(summary.delivery_average||0);
+  const product=Number(summary.product_average||0);
+  const reviews=Array.isArray(summary.recent_ratings)?summary.recent_ratings:[];
+  return '<div class="account-card" style="margin-bottom:14px;border:1px solid #fde68a;background:#fffbeb">'
+    +'<b style="font-size:17px">★ Community Ratings</b>'
+    +'<div class="small" style="margin:5px 0 10px">Verified ratings from HUNKART customers.</div>'
+    +'<div class="sum-row"><span>Delivery</span><b style="color:#b45309">'+delivery.toFixed(1)+' ★</b></div>'
+    +'<div class="sum-row"><span>Product / Food</span><b style="color:#b45309">'+product.toFixed(1)+' ★</b></div>'
+    +'<div class="small" style="margin-top:8px">Based on '+Number(summary.total_ratings)+' verified rating'+(Number(summary.total_ratings)===1?'':'s')+'.</div>'
+    +(reviews.length?'<div style="margin-top:10px;border-top:1px solid #fde68a;padding-top:8px">'+reviews.map(function(r){return '<div class="small" style="margin-top:5px">Verified customer · Delivery '+ratingStars(r.delivery_rating)+' · Product '+ratingStars(r.product_rating)+'</div>';}).join('')+'</div>':'')
+    +'</div>';
+}
+async function loadCommunityRatingSummary(){
+  try{
+    const {data,error}=await sb.rpc('get_hunkart_rating_summary');
+    if(error)throw error;
+    return data||null;
+  }catch(e){
+    console.error('Community ratings load failed',e);
+    return null;
+  }
+}
 async function loadMyOrders(){
   const box=$("myOrders");
   if(!currentSession?.user){box.innerHTML='<div class="small">Please login first.</div>';return}
@@ -2398,8 +2451,10 @@ async function loadMyOrders(){
   const {data,error}=await sb.from("orders").select("id,order_number,created_at,customer_name,phone,address,landmark,area,delivery_note,subtotal,delivery_charge,platform_fee,total,payment_status,payment_id,status,distance_km,customer_cancel_until,order_items(product_name,variant_label,qty,unit_price,line_total)").order("created_at",{ascending:false}).limit(50);
   if(error){box.innerHTML=`<div class="notice">Could not load orders: ${error.message}</div>`;return}
   const orders=data||[];
-  if(!orders.length){box.innerHTML='<div class="account-card"><b>No orders yet</b><div class="small" style="margin-top:4px">Orders placed after you login will appear here.</div></div>';return}
-  box.innerHTML=orders.map((o,idx)=>`<div class="order-card-mini" data-order-idx="${idx}" role="button" tabindex="0" aria-label="Open details for ${o.order_number}"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><div><b>${o.order_number}</b><div class="small">${fmtOrderDate(o.created_at)}</div></div><div><span class="order-status">${statusLabel(o.status)}</span> <span class="order-status ${o.payment_status==="paid"?"paid":"pending"}">${statusLabel(o.payment_status)}</span></div></div><div class="small" style="margin-top:7px">${(o.order_items||[]).map(i=>`${i.product_name} (${i.variant_label||""}) × ${i.qty}`).join(" · ")||"Order items"}</div><div class="sum-row"><span>${o.distance_km!=null?`Distance ${o.distance_km} km`:""}</span><b>₹${o.total}</b></div>${o.customer_cancel_until?`<div class="small" data-cancel-until="${o.customer_cancel_until}" style="margin-top:7px;color:#92400e;font-weight:800"></div>`:""}<div class="small" style="margin-top:6px;color:#2563eb;font-weight:800">Tap to view details ›</div></div>`).join("");
+  const communityRatings=await loadCommunityRatingSummary();
+  const communityHtml=communityRatingHtml(communityRatings);
+  if(!orders.length){box.innerHTML=communityHtml+'<div class="account-card"><b>No orders yet</b><div class="small" style="margin-top:4px">Orders placed after you login will appear here.</div></div>';return}
+  box.innerHTML=communityHtml+orders.map((o,idx)=>`<div class="order-card-mini" data-order-idx="${idx}" role="button" tabindex="0" aria-label="Open details for ${o.order_number}"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><div><b>${o.order_number}</b><div class="small">${fmtOrderDate(o.created_at)}</div></div><div><span class="order-status">${statusLabel(o.status)}</span> <span class="order-status ${o.payment_status==="paid"?"paid":"pending"}">${statusLabel(o.payment_status)}</span></div></div><div class="small" style="margin-top:7px">${(o.order_items||[]).map(i=>`${i.product_name} (${i.variant_label||""}) × ${i.qty}`).join(" · ")||"Order items"}</div><div class="sum-row"><span>${o.distance_km!=null?`Distance ${o.distance_km} km`:""}</span><b>₹${o.total}</b></div>${o.customer_cancel_until?`<div class="small" data-cancel-until="${o.customer_cancel_until}" style="margin-top:7px;color:#92400e;font-weight:800"></div>`:""}<div class="small" style="margin-top:6px;color:#2563eb;font-weight:800">Tap to view details ›</div></div>`).join("");
   box.onclick=(e)=>{
   const card=e.target.closest(".order-card-mini");
   if(!card) return;
