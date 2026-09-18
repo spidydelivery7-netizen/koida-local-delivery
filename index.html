@@ -561,6 +561,9 @@ header{
 .past-order-card{border:1px solid #e5e7eb;border-radius:20px;background:#fff;padding:13px;margin-top:13px;box-shadow:0 7px 18px rgba(15,23,42,.055)}
 .past-order-top{display:flex;gap:11px;align-items:flex-start}.past-order-thumb{width:60px;height:60px;border-radius:14px;object-fit:cover;background:#f1f5f9;flex:0 0 60px}.past-order-info{min-width:0;flex:1}.past-order-shop{font-size:16px;font-weight:900;color:#111827;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.past-order-number{font-size:12px;color:#64748b;margin-top:3px}.past-order-status{font-size:13px;font-weight:900;white-space:nowrap;color:#059669}.past-order-status:not(.delivered){color:#2563eb}.past-order-items{margin:12px 0 11px;padding:10px 0;border-top:1px solid #edf0f3;border-bottom:1px solid #edf0f3;font-size:13px;line-height:1.65;color:#334155}.past-order-qty{display:inline-flex;align-items:center;justify-content:center;min-width:28px;padding:1px 6px;margin-right:6px;border-radius:7px;background:#f1f5f9;font-size:11px;font-weight:900;color:#475569}.past-order-ratings{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:11px 0}.past-rating{min-width:0}.past-rating+.past-rating{border-left:1px solid #e5e7eb;padding-left:10px}.past-rating-label{font-size:11px;font-weight:800;color:#64748b}.past-rating-stars{display:block;margin-top:4px;font-size:18px;letter-spacing:1px;color:#f59e0b;white-space:nowrap}.past-rating-empty{color:#cbd5e1}.past-order-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:11px}.past-order-actions button{min-height:42px;border:0;border-radius:12px;font-size:13px;font-weight:900}.past-view-btn{background:#fff1e9;color:#e85d04}.past-reorder-btn{background:#0b1220;color:#fff}.past-order-footer{margin-top:10px;font-size:12px;color:#64748b}.past-order-footer b{color:#0b1220}@media(max-width:390px){.past-order-actions{grid-template-columns:1fr}.past-order-status{font-size:12px}}
 
+/* Account shortcuts and customer favourites */
+#homeAddressCard{display:none!important}.account-shortcuts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.account-shortcut{min-height:104px;padding:14px;border:1px solid #e2e8f0;border-radius:17px;background:#fff;text-align:left;color:#0b1220}.account-shortcut .a-icon{display:block;font-size:25px;margin-bottom:8px}.account-shortcut b{display:block;font-size:14px}.account-shortcut small{display:block;margin-top:4px;font-size:11px;line-height:1.3;color:#64748b}.account-favourites{margin-top:15px;padding:14px;border:1px solid #e2e8f0;border-radius:17px;background:#f8fafc}.account-favourites-head{display:flex;justify-content:space-between;align-items:center;gap:10px}.account-favourites-head b{font-size:16px}.account-favourites-list{display:grid;gap:8px;margin-top:11px}.favourite-row{display:flex;align-items:center;gap:10px;padding:8px;background:#fff;border:1px solid #e5e7eb;border-radius:12px}.favourite-row img{width:45px;height:45px;object-fit:cover;border-radius:10px}.favourite-row .fav-info{min-width:0;flex:1}.favourite-row .fav-info b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}.favourite-row .fav-info small{color:#64748b}.favourite-row button{border:0;border-radius:9px;padding:8px 10px;background:#fff1f2;color:#e11d48;font-weight:900}.card{position:relative}.product-favourite-btn{position:absolute;z-index:3;top:10px;right:10px;width:36px;height:36px;border:0;border-radius:50%;background:#ffffffed;color:#64748b;font-size:21px;line-height:1;box-shadow:0 3px 10px #0002}.product-favourite-btn.is-favourite{color:#e11d48;background:#fff1f2}.product-favourite-btn:active{transform:scale(.92)}
+
 @media(max-width:500px){
   #accountModal #accountProfileCard .account-head{
     align-items:flex-start;
@@ -1334,6 +1337,14 @@ header.hk-header .menu-btn:active{
     <div id="accountProfileCard" class="account-card">
       <div class="account-head"><div><b id="accountName">Customer</b><div id="accountPhone" class="small"></div><div id="accountEmail" class="small"></div></div><button id="logoutCustomer" class="btn gray">Logout</button></div>
     </div>
+    <div class="account-shortcuts">
+      <button type="button" id="accountSavedAddressBtn" class="account-shortcut"><span class="a-icon">📍</span><b>Saved Address</b><small id="accountSavedAddressText">Add your delivery address</small></button>
+      <button type="button" id="accountFavouritesBtn" class="account-shortcut"><span class="a-icon">♡</span><b>Favourites</b><small id="accountFavouritesText">Your saved items</small></button>
+    </div>
+    <div id="accountFavouritesSection" class="account-favourites" style="display:none">
+      <div class="account-favourites-head"><b>♡ Your Favourites</b><button type="button" id="closeFavouritesBtn" class="btn gray">Close</button></div>
+      <div id="accountFavouritesList" class="account-favourites-list"></div>
+    </div>
     <div id="accountOrdersSection" style="display:none">
       <div class="account-past-title"><div>Past Orders</div><div style="display:flex;align-items:center;gap:8px"><span>Tap a card for tracking, OTP or refund</span><button id="refreshMyOrders" class="btn gray">Refresh</button></div></div>
       <div id="myOrders" style="margin-top:8px"><div class="small">Loading orders...</div></div>
@@ -1560,6 +1571,23 @@ async function ensurePushSubscription(){
 }
 
 const ADDRESS_KEY="koida_delivery_address_v2";
+function favouritesKey(){return "hunkart_favourites_"+(currentSession?.user?.id||"guest")}
+function favouriteIds(){try{const ids=JSON.parse(localStorage.getItem(favouritesKey())||"[]");return Array.isArray(ids)?ids:[]}catch(_){return []}}
+function saveFavouriteIds(ids){localStorage.setItem(favouritesKey(),JSON.stringify(Array.from(new Set(ids))))}
+function isFavourite(productId){return favouriteIds().includes(productId)}
+function renderFavourites(){
+  const list=$("accountFavouritesList"); if(!list)return;
+  const ids=favouriteIds(); const favouriteProducts=ids.map(id=>products.find(p=>p.id===id)).filter(Boolean);
+  $("accountFavouritesText").textContent=favouriteProducts.length?favouriteProducts.length+" saved item"+(favouriteProducts.length===1?"":"s"):"Your saved items";
+  if(!favouriteProducts.length){list.innerHTML='<div class="small" style="padding:6px 0">Tap the ♡ on any product to save it here.</div>';return}
+  list.innerHTML=favouriteProducts.map(p=>'<div class="favourite-row"><img src="'+esc(p.image_url||ph(p.name))+'" alt=""><div class="fav-info"><b>'+esc(p.name)+'</b><small>'+esc(priceText(p))+'</small></div><button type="button" data-favourite-remove="'+esc(p.id)+'">Remove</button></div>').join('');
+  list.querySelectorAll("[data-favourite-remove]").forEach(btn=>btn.onclick=()=>toggleFavourite(btn.dataset.favouriteRemove));
+}
+function toggleFavourite(productId){
+  const ids=favouriteIds(); const at=ids.indexOf(productId);
+  if(at===-1)ids.push(productId);else ids.splice(at,1);
+  saveFavouriteIds(ids); renderProducts(); renderFavourites();
+}
 
 /* HUNKART Delivery Partner Reached notification state */
 const REACHED_SEEN_KEY="hunkart_reached_seen_v1";
@@ -1636,6 +1664,8 @@ function refreshSavedAddress(){
   const card=$("homeAddressCard"),txt=$("homeAddressText");
   if(validAddress(a)){txt.textContent=[a.address,a.landmark,a.area].filter(Boolean).join(" · ");card.classList.add("show")}
   else{txt.textContent="";card.classList.remove("show")}
+  const accountText=$("accountSavedAddressText");
+  if(accountText)accountText.textContent=validAddress(a)?[a.address,a.area].filter(Boolean).join(" · "):"Add your delivery address";
 }
 function fillAddress(){const a=loadAddress()||{};$("custName").value=a.name||currentCustomer?.full_name||"";$("custPhone").value=a.phone||currentCustomer?.phone||"";$("custAddress").value=a.address||"";$("custLandmark").value=a.landmark||"";$("custArea").value=a.area||"";$("custNote").value=a.note||""}
 function readAddress(){return {name:$("custName").value.trim(),phone:$("custPhone").value.trim(),address:$("custAddress").value.trim(),landmark:$("custLandmark").value.trim(),area:$("custArea").value.trim(),note:$("custNote").value.trim()}}
@@ -2927,7 +2957,7 @@ function renderCats(){const arr=["All",...new Set(products.filter(p=>!activeShop
     box.appendChild(b);
   });
   }
-function renderProducts(){const q=$("search").value.trim().toLowerCase();const arr=products.filter(p=>(!activeShopId||p.shop_id===activeShopId)&&(activeCat==="All"||p.category===activeCat)&&(!q||p.name.toLowerCase().includes(q)||(p.description||"").toLowerCase().includes(q)));$("grid").innerHTML="";if(!arr.length){$("grid").innerHTML='<div class="empty" style="grid-column:1/-1">No items found.</div>';return}arr.forEach(p=>{const v=variants(p),selector=v.length>1?`<select class="variant">${v.map(x=>`<option value="${x.key}">${x.label} — ₹${x.price}</option>`).join("")}</select>`:"";const rating=productRatingSummaryById[p.id];const ratingBadge=rating?`<div class="small" style="display:inline-flex;align-items:center;gap:4px;margin-top:6px;padding:4px 7px;border-radius:7px;background:#dcfce7;color:#166534;font-weight:800">${Number(rating.average_rating).toFixed(1)} ★ <span style="color:#64748b;font-weight:600">| ${Number(rating.rating_count)} rating${Number(rating.rating_count)===1?"":"s"}</span></div>`:"";const c=document.createElement("article");c.className="card";c.innerHTML=`<img class="img" src="${p.image_url||ph(p.name)}" alt="${p.name}"><div class="body"><div class="cat">${p.category||"Food"}</div><div class="name">${p.name}</div>${ratingBadge}<div class="desc">${p.description||""}</div><div class="price">${priceText(p)}</div>${selector}<div class="stock ${p.available===false?"out":""}">${p.available===false?"Out of Stock":"Available"}</div><div class="card-actions"><button class="btn dark buy" ${p.available===false?"disabled":""}>Add to Cart</button><button class="btn yellow add" ${p.available===false?"disabled":""}>＋</button></div></div>`;c.querySelector(".img").onerror=e=>e.currentTarget.src=ph(p.name);if(p.available!==false){c.querySelector(".buy").onclick=()=>addCart(p,selectedVariant(c,p));c.querySelector(".add").onclick=()=>addCart(p,selectedVariant(c,p))}$("grid").appendChild(c)})}
+function renderProducts(){const q=$("search").value.trim().toLowerCase();const arr=products.filter(p=>(!activeShopId||p.shop_id===activeShopId)&&(activeCat==="All"||p.category===activeCat)&&(!q||p.name.toLowerCase().includes(q)||(p.description||"").toLowerCase().includes(q)));$("grid").innerHTML="";if(!arr.length){$("grid").innerHTML='<div class="empty" style="grid-column:1/-1">No items found.</div>';return}arr.forEach(p=>{const v=variants(p),selector=v.length>1?`<select class="variant">${v.map(x=>`<option value="${x.key}">${x.label} — ₹${x.price}</option>`).join("")}</select>`:"";const rating=productRatingSummaryById[p.id];const ratingBadge=rating?`<div class="small" style="display:inline-flex;align-items:center;gap:4px;margin-top:6px;padding:4px 7px;border-radius:7px;background:#dcfce7;color:#166534;font-weight:800">${Number(rating.average_rating).toFixed(1)} ★ <span style="color:#64748b;font-weight:600">| ${Number(rating.rating_count)} rating${Number(rating.rating_count)===1?"":"s"}</span></div>`:"";const c=document.createElement("article");c.className="card";c.innerHTML=`<button type="button" class="product-favourite-btn ${isFavourite(p.id)?"is-favourite":""}" aria-label="${isFavourite(p.id)?"Remove from favourites":"Add to favourites"}">${isFavourite(p.id)?"♥":"♡"}</button><img class="img" src="${p.image_url||ph(p.name)}" alt="${p.name}"><div class="body"><div class="cat">${p.category||"Food"}</div><div class="name">${p.name}</div>${ratingBadge}<div class="desc">${p.description||""}</div><div class="price">${priceText(p)}</div>${selector}<div class="stock ${p.available===false?"out":""}">${p.available===false?"Out of Stock":"Available"}</div><div class="card-actions"><button class="btn dark buy" ${p.available===false?"disabled":""}>Add to Cart</button><button class="btn yellow add" ${p.available===false?"disabled":""}>＋</button></div></div>`;c.querySelector(".img").onerror=e=>e.currentTarget.src=ph(p.name);c.querySelector(".product-favourite-btn").onclick=()=>toggleFavourite(p.id);if(p.available!==false){c.querySelector(".buy").onclick=()=>addCart(p,selectedVariant(c,p));c.querySelector(".add").onclick=()=>addCart(p,selectedVariant(c,p))}$("grid").appendChild(c)})}
   /* ===== Product Image Full Screen Viewer ===== */
 function openProductImageViewer(src, alt="Product image"){
   if(!src) return;
@@ -3083,6 +3113,7 @@ if($("productSectionTitle")){
 renderShops();
 renderCats();
 renderProducts();
+renderFavourites();
 }
 async function loadSettings(){const {data,error}=await sb.from("delivery_settings").select("*").eq("id",1).single();if(!error)deliverySettings=data}
 function haversineKm(lat1,lng1,lat2,lng2){const R=6371,toRad=x=>x*Math.PI/180,dLat=toRad(lat2-lat1),dLng=toRad(lng2-lng1),a=Math.sin(dLat/2)**2+Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;return 2*R*Math.asin(Math.sqrt(a))}
@@ -3386,6 +3417,8 @@ $("drawerAccount").onclick=async()=>{
     $("accountModalTitle").textContent="My Account";
     $("accountProfileCard").style.display="block";
     $("accountOrdersSection").style.display="none";
+    $("accountFavouritesSection").style.display="none";
+    refreshSavedAddress();renderFavourites();
   }
   openModal($("accountModal"));
 };
@@ -3406,6 +3439,9 @@ $("drawerOrders").onclick=async()=>{
   openModal($("accountModal"));
 };
 $("drawerAddress").onclick=()=>{closeMenuDrawer();fillAddress();renderCheckoutSummary();openModal($("checkoutModal"))};
+$("accountSavedAddressBtn").onclick=()=>{closeModal($("accountModal"));fillAddress();renderCheckoutSummary();openModal($("checkoutModal"))};
+$("accountFavouritesBtn").onclick=()=>{const panel=$("accountFavouritesSection");panel.style.display=panel.style.display==="none"?"block":"none";renderFavourites()};
+$("closeFavouritesBtn").onclick=()=>{$("accountFavouritesSection").style.display="none"};
 $("homeAddressEdit").onclick=()=>{fillAddress();renderCheckoutSummary();openModal($("checkoutModal"))};
 $("drawerLogout").onclick=async()=>{
   closeMenuDrawer();
@@ -3422,6 +3458,8 @@ $("authAccount").style.display = isLoggedIn ? "block" : "none";
   $("accountModalTitle").textContent="My Account";
   $("accountProfileCard").style.display=currentSession?.user?"block":"none";
   $("accountOrdersSection").style.display="none";
+  $("accountFavouritesSection").style.display="none";
+  refreshSavedAddress();renderFavourites();
   openModal($("accountModal"));
 };$("accountCloseTop").onclick=()=>closeModal($("accountModal"));/* ===== HUNKART Bottom Navigation ===== */
 
@@ -3496,11 +3534,7 @@ $("topAccountBtn").onclick = () => {
 };
   $("topLocationBtn").onclick = () => {
   closeBottomNavOverlays();
-
-  $("homeAddressCard")?.scrollIntoView({
-    behavior:"smooth",
-    block:"center"
-  });
+  $("accountBtn")?.click();
 };
 /* Keep bottom cart badge synced with existing cart count */
 function syncBottomCartBadge(){
