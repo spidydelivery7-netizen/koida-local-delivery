@@ -1249,7 +1249,7 @@ header.hk-header .menu-btn:active{
 </div>
 <div class="section-head"><h2>Restaurants</h2><span>Choose a restaurant</span></div>
 <div id="shopTabs" class="cats"></div>
-  <div class="section-head"><h2>Browse categories</h2><span>Swipe to explore</span></div>
+  <div class="section-head"><h2 id="categorySectionTitle">Browse categories</h2><span id="categorySectionHint">Swipe to explore</span></div>
 <div id="cats" class="cats"></div>
 <div class="section-head"><h2 id="productSectionTitle">Popular near you</h2><span>Freshly available</span></div>
 <div id="grid" class="grid"></div>
@@ -2941,7 +2941,25 @@ function renderCheckoutSummary(){
   const dc=calculatedDelivery(),pf=calculatedPlatformFee(),count=cartItemCount();
   $("checkoutSummary").innerHTML=`<div class="sum-row"><span>Items</span><b>${count}</b></div><div class="sum-row"><span>Subtotal</span><b>₹${cartSubtotal()}</b></div>${pf>0?`<div class="sum-row"><span>Platform fee (${count} item${count===1?"":"s"})</span><b>₹${pf}</b></div>`:""}<div class="sum-row"><span>Delivery charge</span><b>${dc==null?"Detect location":(dc===0?"FREE":"₹"+dc)}</b></div><div class="sum-row total"><span>Payable</span><span>${dc==null?"—":"₹"+cartTotal()}</span></div>`
 }
-function renderCats(){const arr=["All",...new Set(products.filter(p=>!activeShopId||p.shop_id===activeShopId).map(p=>p.category).filter(Boolean))];$("cats").innerHTML="";arr.forEach(c=>{const b=document.createElement("button");b.className="chip"+(c===activeCat?" active":"");b.textContent=c;b.onclick=()=>{activeCat=c;renderCats();renderProducts()};$("cats").appendChild(b)})}
+function shopCategories(shopId){
+  const unique=new Map();
+  products.filter(p=>p.shop_id===shopId).forEach(p=>{
+    const category=String(p.category||"").trim();
+    if(category) unique.set(category.toLowerCase(),category);
+  });
+  return [...unique.values()];
+}
+function renderCats(){
+  const shop=shops.find(s=>s.id===activeShopId);
+  const categories=activeShopId?shopCategories(activeShopId):[];
+  const arr=["All",...categories];
+  if(!arr.includes(activeCat)) activeCat="All";
+  const title=$("categorySectionTitle"),hint=$("categorySectionHint");
+  if(title) title.textContent=shop?shop.name+" categories":"Browse categories";
+  if(hint) hint.textContent=categories.length?"Choose a category":"No categories yet";
+  $("cats").innerHTML="";
+  arr.forEach(c=>{const b=document.createElement("button");b.className="chip"+(c===activeCat?" active":"");b.textContent=c;b.onclick=()=>{activeCat=c;renderCats();renderProducts()};$("cats").appendChild(b)})
+}
   function renderShops(){
   const box=$("shopTabs");
   if(!box)return;
