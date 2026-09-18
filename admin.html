@@ -1197,69 +1197,12 @@ style="font-size:18px"
 
 <div class="actions">
 
-<label style="min-width:180px">
+${o.status==="new"
+?`<button class="green confirmOrder">Confirm Order</button>
+  <div class="small" style="align-self:center">After confirmation, Packing / Ready / Packed is controlled by the assigned shopkeeper.</div>`
+:`<div class="small" style="align-self:center">Admin status action is complete. Shopkeeper manages Packing / Ready / Packed; delivery partner manages Out for Delivery.</div>`}
 
-Order Status
-
-<select class="statusSel">
-
-<option value="new">
-New
-</option>
-
-<option value="confirmed">
-Confirmed
-</option>
-
-<option value="preparing">
-Preparing
-</option>
-
-<option value="out_for_delivery">
-Out for Delivery
-</option>
-
-<option value="delivered">
-Delivered
-</option>
-
-<option value="cancelled">
-Cancelled
-</option>
-
-</select>
-
-</label>
-
-<label style="min-width:160px">
-
-Payment
-
-<select class="paySel">
-
-<option value="pending">
-Pending
-</option>
-
-<option value="paid">
-Paid
-</option>
-
-<option value="failed">
-Failed
-</option>
-
-<option value="refunded">
-Refunded
-</option>
-
-</select>
-
-</label>
-
-<button class="green saveOrder">
-Save Status
-</button>
+<div class="small" style="align-self:center">Payment: ${orderStatusLabel(o.payment_status)}</div>
 
 </div>
 
@@ -1344,14 +1287,6 @@ ${fmtDate(assigned.location_updated_at)}
 
 `;
 
-card.querySelector(
-".statusSel"
-).value=o.status;
-
-card.querySelector(
-".paySel"
-).value=o.payment_status;
-
 if(assigned){
 
 card.querySelector(
@@ -1361,75 +1296,24 @@ assigned.delivery_boy_id||"";
 
 }
 
-card.querySelector(
-".saveOrder"
-).onclick=
-async()=>{
+const confirmButton=card.querySelector(".confirmOrder");
 
-const payload={
-
-status:
-card.querySelector(
-".statusSel"
-).value,
-
-payment_status:
-card.querySelector(
-".paySel"
-).value,
-
-updated_at:
-new Date().toISOString()
-
+if(confirmButton){
+confirmButton.onclick=async()=>{
+  confirmButton.disabled=true;
+  const payload={status:"confirmed",updated_at:new Date().toISOString()};
+  const {error}=await sb.from("orders").update(payload).eq("id",o.id).eq("status","new");
+  if(error){
+    confirmButton.disabled=false;
+    setStatus("Order confirmation error: "+error.message);
+    return;
+  }
+  setStatus("Order confirmed. Sending customer notification...");
+  const pushResult=await sendCustomerPush(o.customer_id,"HUNKART Order Confirmed",`Order ${o.order_number}: Confirmed`,"/");
+  setStatus(pushResult.ok?"Order confirmed and customer notification sent.":"Order confirmed, but push notification failed: "+(pushResult?.data?.error||pushResult?.data?.message||pushResult?.error||("HTTP "+(pushResult?.status||"error"))));
+  loadOrders();
 };
-
-const {error}=await sb
-.from("orders")
-.update(payload)
-.eq("id",o.id);
-
-if(error){
-
-setStatus(
-"Order update error: "+
-error.message
-);
-
-}else{
-
-const newStatus=payload.status;
-const statusLabel=orderStatusLabel(newStatus);
-
-setStatus(
-"Order updated. Sending customer notification..."
-);
-
-const pushResult=await sendCustomerPush(
-  o.customer_id,
-  "HUNKART Order Update",
-  `Order ${o.order_number}: ${statusLabel}`,
-  "/"
-);
-
-if(pushResult.ok){
-  setStatus("Order updated and customer notification sent.");
-}else{
-  setStatus(
-    "Order updated, but push notification failed: "+
-    (
-      pushResult?.data?.error ||
-      pushResult?.data?.message ||
-      pushResult?.error ||
-      ("HTTP "+(pushResult?.status||"error"))
-    )
-  );
 }
-
-loadOrders();
-
-}
-
-};
 
 card.querySelector(
 ".assignBtn"
