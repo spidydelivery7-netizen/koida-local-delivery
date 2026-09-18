@@ -1337,13 +1337,15 @@ header.hk-header .menu-btn:active{
     <div id="accountProfileCard" class="account-card">
       <div class="account-head"><div><b id="accountName">Customer</b><div id="accountPhone" class="small"></div><div id="accountEmail" class="small"></div></div><button id="logoutCustomer" class="btn gray">Logout</button></div>
     </div>
-    <div class="account-shortcuts">
-      <button type="button" id="accountSavedAddressBtn" class="account-shortcut"><span class="a-icon">📍</span><b>Saved Address</b><small id="accountSavedAddressText">Add your delivery address</small></button>
-      <button type="button" id="accountFavouritesBtn" class="account-shortcut"><span class="a-icon">♡</span><b>Favourites</b><small id="accountFavouritesText">Your saved items</small></button>
-    </div>
-    <div id="accountFavouritesSection" class="account-favourites" style="display:none">
-      <div class="account-favourites-head"><b>♡ Your Favourites</b><button type="button" id="closeFavouritesBtn" class="btn gray">Close</button></div>
-      <div id="accountFavouritesList" class="account-favourites-list"></div>
+    <div id="accountExtras">
+      <div class="account-shortcuts">
+        <button type="button" id="accountSavedAddressBtn" class="account-shortcut"><span class="a-icon">📍</span><b>Saved Address</b><small id="accountSavedAddressText">Add your delivery address</small></button>
+        <button type="button" id="accountFavouritesBtn" class="account-shortcut"><span class="a-icon">♡</span><b>Favourites</b><small id="accountFavouritesText">Your saved items</small></button>
+      </div>
+      <div id="accountFavouritesSection" class="account-favourites" style="display:none">
+        <div class="account-favourites-head"><b>♡ Your Favourites</b><button type="button" id="closeFavouritesBtn" class="btn gray">Close</button></div>
+        <div id="accountFavouritesList" class="account-favourites-list"></div>
+      </div>
     </div>
     <div id="accountOrdersSection" style="display:none">
       <div class="account-past-title"><div>Past Orders</div><div style="display:flex;align-items:center;gap:8px"><span>Tap a card for tracking, OTP or refund</span><button id="refreshMyOrders" class="btn gray">Refresh</button></div></div>
@@ -3424,10 +3426,12 @@ $("drawerAccount").onclick=async()=>{
     switchAuthTab("login");
     $("accountModalTitle").textContent="My Account";
     $("accountProfileCard").style.display="none";
+    $("accountExtras").style.display="none";
     $("accountOrdersSection").style.display="none";
   }else{
     $("accountModalTitle").textContent="My Account";
     $("accountProfileCard").style.display="block";
+    $("accountExtras").style.display="block";
     $("accountOrdersSection").style.display="none";
     $("accountFavouritesSection").style.display="none";
     refreshSavedAddress();renderFavourites();
@@ -3441,10 +3445,12 @@ $("drawerOrders").onclick=async()=>{
     switchAuthTab("login");
     $("accountModalTitle").textContent="Login to view orders";
     $("accountProfileCard").style.display="none";
+    $("accountExtras").style.display="none";
     $("accountOrdersSection").style.display="none";
   }else{
     $("accountModalTitle").textContent="My Orders";
     $("accountProfileCard").style.display="none";
+    $("accountExtras").style.display="none";
     $("accountOrdersSection").style.display="block";
     await loadMyOrders();
   }
@@ -3469,6 +3475,7 @@ $("authGuest").style.display = isLoggedIn ? "none" : "block";
 $("authAccount").style.display = isLoggedIn ? "block" : "none";
   $("accountModalTitle").textContent="My Account";
   $("accountProfileCard").style.display=currentSession?.user?"block":"none";
+  $("accountExtras").style.display=currentSession?.user?"block":"none";
   $("accountOrdersSection").style.display="none";
   $("accountFavouritesSection").style.display="none";
   refreshSavedAddress();renderFavourites();
