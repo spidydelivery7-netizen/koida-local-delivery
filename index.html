@@ -2368,10 +2368,12 @@ const hasLocation=
     ${o.delivery_note?`<div class="sum-row"><span>Delivery Note</span><span style="text-align:right;max-width:65%">${esc(o.delivery_note)}</span></div>`:""}
     ${o.distance_km!=null?`<div class="sum-row"><span>Distance</span><b>${Number(o.distance_km)} km</b></div>`:""}
 
+    ${cancellationTimerPanel(o)}
     ${cancelPanel(o)}
     ${ratingPanel(o,savedOrderRating)}
 ${trackingHtml}
 `;
+  refreshCancellationTimers();
   openModal($("orderDetailsModal"));
 }
 async function openCustomerLiveLocation(orderId){
@@ -2419,7 +2421,7 @@ async function openCustomerLiveLocation(orderId){
 
 function refreshCancellationTimers(){
   document.querySelectorAll("[data-cancel-until]").forEach(function(el){
-    const status=el.closest(".order-card-mini")?.querySelector(".order-status")?.textContent.trim().toLowerCase();
+    const status=String(el.dataset.orderStatus||el.closest(".order-card-mini")?.querySelector(".order-status")?.textContent||"").trim().toLowerCase();
     if(!["new","confirmed"].includes(status)){
       el.remove();
       return;
@@ -2434,6 +2436,14 @@ function refreshCancellationTimers(){
   });
 }
 setInterval(refreshCancellationTimers,1000);
+
+function cancellationTimerPanel(o){
+  const end=o.customer_cancel_until?new Date(o.customer_cancel_until).getTime():0;
+  const status=String(o.status||"").toLowerCase();
+  if(!(end>Date.now()) || !["new","confirmed"].includes(status) || String(o.payment_status||"").toLowerCase()!=="paid")return "";
+  const seconds=Math.max(0,Math.ceil((end-Date.now())/1000));
+  return '<div data-cancel-until="'+esc(o.customer_cancel_until)+'" data-order-status="'+esc(status)+'" style="margin:14px 0 0;padding:12px 14px;border:1px solid #fbbf24;border-radius:12px;background:#fffbeb;color:#92400e;font-weight:800;text-align:center">Cancel available for '+Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,"0")+'</div>';
+}
 
 
 function cancelPanel(o){
