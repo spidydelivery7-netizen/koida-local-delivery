@@ -405,6 +405,10 @@ header{
   font-weight:900;
   color:#0B1220;
 }
+#accountModal .account-top-close{
+  position:absolute;top:17px;right:18px;width:42px;height:42px;border:0;border-radius:50%;background:#eef2f7;color:#0b1220;font-size:29px;line-height:1;font-weight:400;z-index:2;
+}
+#accountModal .account-top-close:active{transform:scale(.96)}
 
 #accountModal #authGuest .tabs{
   display:grid;
@@ -1303,7 +1307,8 @@ header.hk-header .menu-btn:active{
   </aside>
 </div>
 
-<div id="accountModal" class="modal-bg" aria-hidden="true"><div class="modal">
+<div id="accountModal" class="modal-bg" aria-hidden="true"><div class="modal" style="position:relative">
+  <button id="accountCloseTop" class="account-top-close" type="button" aria-label="Close">×</button>
   <h2 id="accountModalTitle">My Account</h2>
   <div id="authGuest">
     <div class="tabs">
@@ -1335,7 +1340,6 @@ header.hk-header .menu-btn:active{
       <div class="small" style="margin-top:12px">Only orders placed while logged in to this account are shown here.</div>
     </div>
   </div>
-  <div style="display:flex;justify-content:flex-end;margin-top:14px"><button id="closeAccount" class="btn gray">Close</button></div>
 </div></div>
 
 <div id="orderDetailsModal" class="modal-bg" aria-hidden="true"><div class="modal">
@@ -3381,8 +3385,7 @@ $("drawerAccount").onclick=async()=>{
   }else{
     $("accountModalTitle").textContent="My Account";
     $("accountProfileCard").style.display="block";
-    $("accountOrdersSection").style.display="block";
-    await loadMyOrders();
+    $("accountOrdersSection").style.display="none";
   }
   openModal($("accountModal"));
 };
@@ -3418,10 +3421,9 @@ $("authGuest").style.display = isLoggedIn ? "none" : "block";
 $("authAccount").style.display = isLoggedIn ? "block" : "none";
   $("accountModalTitle").textContent="My Account";
   $("accountProfileCard").style.display=currentSession?.user?"block":"none";
-  $("accountOrdersSection").style.display=currentSession?.user?"block":"none";
-  if(currentSession?.user)await loadMyOrders();
+  $("accountOrdersSection").style.display="none";
   openModal($("accountModal"));
-};$("closeAccount").onclick=()=>closeModal($("accountModal"));/* ===== HUNKART Bottom Navigation ===== */
+};$("accountCloseTop").onclick=()=>closeModal($("accountModal"));/* ===== HUNKART Bottom Navigation ===== */
 
 function setBottomNavActive(activeBtn){
   document
