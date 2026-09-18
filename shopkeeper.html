@@ -39,12 +39,13 @@ button{border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:poin
 .orderNo{font-weight:900;font-size:16px}
 .orderTime{font-size:12px;color:var(--muted);margin-top:3px}
 .badge{display:inline-block;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:900}
-.badge.new{background:#fef3c7;color:#92400e}.badge.packed{background:#dcfce7;color:#166534}
+.badge.new{background:#fef3c7;color:#92400e}.badge.preparing{background:#dbeafe;color:#1d4ed8}.badge.ready{background:#ede9fe;color:#6d28d9}.badge.packed{background:#dcfce7;color:#166534}
 .orderItems{margin:12px 0;padding:10px 12px;background:#f9fafb;border-radius:12px}
 .orderItem{padding:5px 0;border-bottom:1px solid #e5e7eb;font-size:14px}.orderItem:last-child{border-bottom:0}
 .customerMeta{font-size:13px;line-height:1.5;color:#374151;margin:10px 0}
 .packBtn{width:100%;background:var(--green);color:#fff;margin-top:8px}
 .packBtn.done{background:#dcfce7;color:#166534;cursor:default}
+.packBtn.readyBtn{background:#7c3aed}.packBtn.startBtn{background:#2563eb}.stageNote{font-size:12px;color:var(--muted);margin-top:8px;text-align:center}
 .orderEmpty{text-align:center;color:var(--muted);padding:18px 8px}
 .newCount{background:#dc2626;color:white;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:900}
 .sectionLabel{font-size:20px;font-weight:900;margin:22px 2px 10px}
@@ -76,7 +77,7 @@ button{border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:poin
   <section id="app" class="hidden">
     <div class="card">
       <div class="topbar">
-        <div><div id="shopName" class="shopname">My Shop</div><div class="small">You can only change Available / Sold Out.</div></div>
+        <div><div id="shopName" class="shopname">My Shop</div><div class="small">Manage availability and your shop's order preparation.</div></div>
         <span id="itemCount" class="count">0 items</span>
       </div>
     </div>
@@ -230,7 +231,16 @@ function renderOrders(){
   }
 
   active.forEach(o=>{
-    const packed=o.shop_status==="packed";
+    const shopStatus=String(o.shop_status||"new").toLowerCase();
+    const packed=shopStatus==="packed";
+    const confirmed=String(o.order_status||"").toLowerCase()==="confirmed" || String(o.order_status||"").toLowerCase()==="preparing";
+    const stage={
+      new:{badge:"NEW ORDER",badgeClass:"new",button:"Start Packing",buttonClass:"startBtn",next:"preparing",note:confirmed?"Admin confirmed. Start preparing this order.":"Waiting for Admin confirmation."},
+      confirmed:{badge:"CONFIRMED",badgeClass:"new",button:"Start Packing",buttonClass:"startBtn",next:"preparing",note:"Start preparing this order."},
+      preparing:{badge:"PACKING",badgeClass:"preparing",button:"Mark Ready",buttonClass:"readyBtn",next:"ready",note:"Preparation is in progress."},
+      ready:{badge:"READY",badgeClass:"ready",button:"Mark Packed",buttonClass:"",next:"packed",note:"Pack the order before delivery pickup."},
+      packed:{badge:"PACKED",badgeClass:"packed",button:"✓ Order Packed",buttonClass:"done",next:"",note:"Waiting for delivery partner pickup."}
+    }[shopStatus] || {badge:"CONFIRMED",badgeClass:"new",button:"Start Packing",buttonClass:"startBtn",next:"preparing",note:"Start preparing this order."};
     const items=Array.isArray(o.items)?o.items:[];
     const itemHtml=items.map(i=>`<div class="orderItem"><b>${esc(i.product_name)}</b> • ${esc(i.variant_label||"Regular")} • Qty ${Number(i.qty||1)}</div>`).join("");
     const dt=o.created_at?new Date(o.created_at):null;
@@ -244,7 +254,7 @@ function renderOrders(){
           <div class="orderNo">${esc(o.order_number||"Order")}</div>
           <div class="orderTime">${esc(when)}</div>
         </div>
-        <span class="badge ${packed?"packed":"new"}">${packed?"PACKED":"NEW ORDER"}</span>
+        <span class="badge ${stage.badgeClass}">${stage.badge}</span>
       </div>
       <div class="orderItems">${itemHtml||'<div class="orderItem">Items unavailable</div>'}</div>
       <div class="customerMeta">
@@ -253,11 +263,15 @@ function renderOrders(){
         <b>Address:</b> ${esc(addr||"-")}
         ${o.delivery_note?`<br><b>Note:</b> ${esc(o.delivery_note)}`:""}
       </div>
-      <button class="packBtn ${packed?"done":""}" ${packed?"disabled":""}>
-        ${packed?"✓ Order Packed":"Mark as Packed"}
-      </button>`;
+      <button class="packBtn ${stage.buttonClass}" ${packed || (!confirmed && stage.next==="preparing") ?"disabled":""}>
+        ${stage.button}
+      </button>
+      <div class="stageNote">${stage.note}</div>`;
     const btn=card.querySelector(".packBtn");
-    if(!packed)btn.onclick=()=>markOrderPacked(o,btn);
+    if(!packed){
+      if(stage.next==="packed")btn.onclick=()=>markOrderPacked(o,btn);
+      else if(stage.next)btn.onclick=()=>updateShopOrderStatus(o,stage.next,btn);
+    }
     box.appendChild(card);
   });
 }
@@ -298,6 +312,28 @@ async function markOrderPacked(order,btn){
   order.shop_status="packed";
   if(data?.all_shops_packed)order.order_status="packed";
   setStatus(`${order.order_number||"Order"} marked as Packed.`);
+  renderOrders();
+  await loadShopOrders({alertNew:false});
+}
+
+async function updateShopOrderStatus(order,nextStatus,btn){
+  const label=nextStatus==="preparing"?"start packing":"mark this order ready";
+  if(!confirm(`Do you want to ${label} for ${order.order_number||"this order"}?`))return;
+  btn.disabled=true;
+  btn.textContent="Saving...";
+  const {data,error}=await sb.rpc("set_my_shop_order_status",{
+    p_order_id:order.order_id,
+    p_status:nextStatus
+  });
+  if(error){
+    setStatus("Order update failed: "+error.message);
+    btn.disabled=false;
+    btn.textContent=nextStatus==="preparing"?"Start Packing":"Mark Ready";
+    return;
+  }
+  order.shop_status=data?.shop_status||nextStatus;
+  if(nextStatus==="preparing")order.order_status="preparing";
+  setStatus(`${order.order_number||"Order"} is now ${nextStatus==="preparing"?"Packing":"Ready"}.`);
   renderOrders();
   await loadShopOrders({alertNew:false});
 }
