@@ -550,6 +550,13 @@ header{
   font-weight:900;
 }
 
+/* Swiggy-style past order cards: all controls still open the existing secure order details flow. */
+#accountModal #accountOrdersSection{margin-top:18px}
+.account-past-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:4px 0 10px;font-size:16px;font-weight:900;color:#0b1220}
+.account-past-title span{font-size:12px;font-weight:700;color:#64748b}
+.past-order-card{border:1px solid #e5e7eb;border-radius:20px;background:#fff;padding:13px;margin-top:13px;box-shadow:0 7px 18px rgba(15,23,42,.055)}
+.past-order-top{display:flex;gap:11px;align-items:flex-start}.past-order-thumb{width:60px;height:60px;border-radius:14px;object-fit:cover;background:#f1f5f9;flex:0 0 60px}.past-order-info{min-width:0;flex:1}.past-order-shop{font-size:16px;font-weight:900;color:#111827;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.past-order-number{font-size:12px;color:#64748b;margin-top:3px}.past-order-status{font-size:13px;font-weight:900;white-space:nowrap;color:#059669}.past-order-status:not(.delivered){color:#2563eb}.past-order-items{margin:12px 0 11px;padding:10px 0;border-top:1px solid #edf0f3;border-bottom:1px solid #edf0f3;font-size:13px;line-height:1.65;color:#334155}.past-order-qty{display:inline-flex;align-items:center;justify-content:center;min-width:28px;padding:1px 6px;margin-right:6px;border-radius:7px;background:#f1f5f9;font-size:11px;font-weight:900;color:#475569}.past-order-ratings{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:11px 0}.past-rating{min-width:0}.past-rating+.past-rating{border-left:1px solid #e5e7eb;padding-left:10px}.past-rating-label{font-size:11px;font-weight:800;color:#64748b}.past-rating-stars{display:block;margin-top:4px;font-size:18px;letter-spacing:1px;color:#f59e0b;white-space:nowrap}.past-rating-empty{color:#cbd5e1}.past-order-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:11px}.past-order-actions button{min-height:42px;border:0;border-radius:12px;font-size:13px;font-weight:900}.past-view-btn{background:#fff1e9;color:#e85d04}.past-reorder-btn{background:#0b1220;color:#fff}.past-order-footer{margin-top:10px;font-size:12px;color:#64748b}.past-order-footer b{color:#0b1220}@media(max-width:390px){.past-order-actions{grid-template-columns:1fr}.past-order-status{font-size:12px}}
+
 @media(max-width:500px){
   #accountModal #accountProfileCard .account-head{
     align-items:flex-start;
@@ -1323,7 +1330,7 @@ header.hk-header .menu-btn:active{
       <div class="account-head"><div><b id="accountName">Customer</b><div id="accountPhone" class="small"></div><div id="accountEmail" class="small"></div></div><button id="logoutCustomer" class="btn gray">Logout</button></div>
     </div>
     <div id="accountOrdersSection" style="display:none">
-      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:16px"><button id="refreshMyOrders" class="btn gray">Refresh</button></div>
+      <div class="account-past-title"><div>Past Orders</div><div style="display:flex;align-items:center;gap:8px"><span>Tap a card for tracking, OTP or refund</span><button id="refreshMyOrders" class="btn gray">Refresh</button></div></div>
       <div id="myOrders" style="margin-top:8px"><div class="small">Loading orders...</div></div>
       <div class="small" style="margin-top:12px">Only orders placed while logged in to this account are shown here.</div>
     </div>
@@ -2513,8 +2520,26 @@ async function loadMyOrders(){
   if(error){box.innerHTML=`<div class="notice">Could not load orders: ${error.message}</div>`;return}
   const orders=data||[];
   if(!orders.length){box.innerHTML='<div class="account-card"><b>No orders yet</b><div class="small" style="margin-top:4px">Orders placed after you login will appear here.</div></div>';return}
-  box.innerHTML=orders.map((o,idx)=>`<div class="order-card-mini" data-order-idx="${idx}" role="button" tabindex="0" aria-label="Open details for ${o.order_number}"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><div><b>${o.order_number}</b><div class="small">${fmtOrderDate(o.created_at)}</div></div><div><span class="order-status">${statusLabel(o.status)}</span> <span class="order-status ${o.payment_status==="paid"?"paid":"pending"}">${statusLabel(o.payment_status)}</span></div></div><div class="small" style="margin-top:7px">${(o.order_items||[]).map(i=>`${i.product_name} (${i.variant_label||""}) × ${i.qty}`).join(" · ")||"Order items"}</div><div class="sum-row"><span>${o.distance_km!=null?`Distance ${o.distance_km} km`:""}</span><b>₹${o.total}</b></div>${o.customer_cancel_until?`<div class="small" data-cancel-until="${o.customer_cancel_until}" style="margin-top:7px;color:#92400e;font-weight:800"></div>`:""}<div class="small" style="margin-top:6px;color:#2563eb;font-weight:800">Tap to view details ›</div></div>`).join("");
+  const delivered=orders.filter(o=>String(o.status||"").toLowerCase()==="delivered");
+  const ratingResults=await Promise.all(delivered.map(async o=>{
+    try{const {data,error}=await sb.rpc("get_my_order_rating",{p_order_id:o.id});return [o.id,!error&&Array.isArray(data)&&data.length?data[0]:null]}catch(_){return [o.id,null]}
+  }));
+  const ratingsByOrder=Object.fromEntries(ratingResults);
+  box.innerHTML=orders.map((o,idx)=>{
+    const items=o.order_items||[];
+    const first=items[0]||{};
+    const product=products.find(p=>p.id===first.product_id);
+    const image=product?.image_url||ph(first.product_name||"HUNKART order");
+    const isDelivered=String(o.status||"").toLowerCase()==="delivered";
+    const rating=ratingsByOrder[o.id];
+    const stars=value=>rating?ratingStars(value):'<span class="past-rating-empty">☆☆☆☆☆</span>';
+    const ratingHtml=isDelivered?'<div class="past-order-ratings"><div class="past-rating"><div class="past-rating-label">Food Rating</div><span class="past-rating-stars">'+stars(rating?.product_rating)+'</span></div><div class="past-rating"><div class="past-rating-label">Delivery Rating</div><span class="past-rating-stars">'+stars(rating?.delivery_rating)+'</span></div></div>':'';
+    const itemHtml=items.slice(0,3).map(i=>'<div><span class="past-order-qty">'+Number(i.qty||1)+'×</span>'+esc(i.product_name||"Item")+(i.variant_label?' · '+esc(i.variant_label):'')+'</div>').join('')+(items.length>3?'<div class="small">+'+(items.length-3)+' more item'+(items.length-3===1?'':'s')+'</div>':'');
+    return '<article class="past-order-card order-card-mini" data-order-idx="'+idx+'" role="button" tabindex="0" aria-label="Open details for '+esc(o.order_number)+'"><div class="past-order-top"><img class="past-order-thumb" src="'+esc(image)+'" alt="" onerror="this.src=ph(\''+esc(first.product_name||"HUNKART order")+'\')"><div class="past-order-info"><div class="past-order-shop">'+esc(first.product_name||"HUNKART Order")+'</div><div class="past-order-number">'+esc(o.order_number)+'</div></div><div class="past-order-status '+(isDelivered?'delivered':'')+'">'+(isDelivered?'Delivered ✓':esc(statusLabel(o.status)))+'</div></div><div class="past-order-items">'+itemHtml+'</div>'+ratingHtml+'<div class="past-order-actions"><button type="button" class="past-view-btn" data-view-order="'+idx+'">View Details</button>'+(isDelivered?'<button type="button" class="past-reorder-btn" data-reorder-order="'+idx+'">Order Again</button>':'<button type="button" class="past-reorder-btn" data-reorder-order="'+idx+'">Add Again</button>')+'</div><div class="past-order-footer">Ordered: '+esc(fmtOrderDate(o.created_at))+' · Bill Total: <b>₹'+esc(o.total)+'</b></div></article>';
+  }).join("");
   box.onclick=(e)=>{
+  const reorder=e.target.closest("[data-reorder-order]");
+  if(reorder){e.stopPropagation();reorderFromPastOrder(orders[Number(reorder.dataset.reorderOrder)]);return}
   const card=e.target.closest(".order-card-mini");
   if(!card) return;
 
@@ -2538,6 +2563,22 @@ box.onkeydown=(e)=>{
     openOrderDetails(orders[idx]);
   }
 };
+}
+function reorderFromPastOrder(order){
+  if(!order)return;
+  let added=0,skipped=0;
+  (order.order_items||[]).forEach(item=>{
+    const product=products.find(p=>p.id===item.product_id && p.available!==false);
+    const variant=product&&variants(product).find(v=>String(v.label).toLowerCase()===String(item.variant_label||"").toLowerCase())||product&&variants(product)[0];
+    if(!product||!variant){skipped++;return}
+    for(let q=0;q<Math.max(1,Number(item.qty)||1);q++){addCart(product,variant);added++}
+  });
+  if(!added){alert("These items are currently unavailable. Please choose fresh items from the menu.");return}
+  updateCart();
+  closeModal($("accountModal"));
+  setBottomNavActive($("bottomCartBtn"));
+  renderCart();openModal($("cartModal"));
+  alert(added+' item'+(added===1?'':'s')+' added to cart.'+(skipped?' Some unavailable items were skipped.':''));
 }
 async function refreshAccountState(){
 
@@ -3340,7 +3381,8 @@ $("drawerAccount").onclick=async()=>{
   }else{
     $("accountModalTitle").textContent="My Account";
     $("accountProfileCard").style.display="block";
-    $("accountOrdersSection").style.display="none";
+    $("accountOrdersSection").style.display="block";
+    await loadMyOrders();
   }
   openModal($("accountModal"));
 };
@@ -3376,7 +3418,8 @@ $("authGuest").style.display = isLoggedIn ? "none" : "block";
 $("authAccount").style.display = isLoggedIn ? "block" : "none";
   $("accountModalTitle").textContent="My Account";
   $("accountProfileCard").style.display=currentSession?.user?"block":"none";
-  $("accountOrdersSection").style.display="none";
+  $("accountOrdersSection").style.display=currentSession?.user?"block":"none";
+  if(currentSession?.user)await loadMyOrders();
   openModal($("accountModal"));
 };$("closeAccount").onclick=()=>closeModal($("accountModal"));/* ===== HUNKART Bottom Navigation ===== */
 
