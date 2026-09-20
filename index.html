@@ -421,6 +421,10 @@ header{
 .product-more-card{border:1px solid #e8ecf2;border-radius:15px;overflow:hidden;background:#fff;text-align:left;box-shadow:0 4px 12px #0000000a}
 .product-more-card img{width:100%;height:112px;object-fit:cover;background:#f1f5f9;display:block}
 .product-more-card-body{padding:10px}.product-more-card b{display:block;font-size:14px;line-height:1.25;color:#0b1220}.product-more-card .small{display:block;margin-top:4px}.product-more-card button{width:100%;min-height:38px;margin-top:9px;border:1px solid #22c55e;border-radius:10px;background:#fff;color:#15803d;font-weight:900}
+#productFocusCartBar{display:none;position:sticky;bottom:0;z-index:4;padding:10px 14px 14px;background:linear-gradient(transparent,#fff 26%)}
+#productFocusCartBar.show{display:block}
+.product-focus-cart-in{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 11px 10px 14px;border-radius:15px;background:#111827;color:#fff;box-shadow:0 9px 25px rgba(15,23,42,.25)}
+.product-focus-cart-in .small{color:#cbd5e1}.product-focus-cart-in button{min-height:42px;border:0;border-radius:11px;padding:9px 12px;background:#ffb703;color:#081220;font-weight:900;white-space:nowrap}
 @media(max-width:700px){.product-sheet-image{height:220px}.product-sheet-title{font-size:23px}}
 
 @media(max-width:700px){
@@ -1404,6 +1408,7 @@ header.hk-header .menu-btn:active{
 <div id="productSheetModal" class="modal-bg" aria-hidden="true"><div class="modal">
   <button type="button" id="closeProductSheet" class="product-sheet-close" aria-label="Close product details">×</button>
   <div id="productSheetBody"></div>
+  <div id="productFocusCartBar"></div>
 </div></div>
 
 <div id="cartModal" class="modal-bg" aria-hidden="true"><div class="modal">
@@ -1738,6 +1743,21 @@ function openProductSheet(p){
   });
   openModal($("productSheetModal"));
   $("productSheetModal").querySelector(".modal").scrollTop=0;
+  renderProductFocusCartBar();
+}
+function renderProductFocusCartBar(){
+  const bar=$("productFocusCartBar");
+  if(!bar)return;
+  const count=cartItemCount();
+  if(!count){bar.classList.remove("show");bar.innerHTML="";return}
+  const total=cartTotal();
+  bar.innerHTML=`<div class="product-focus-cart-in"><div><b>${count} item${count===1?"":"s"} added</b><div class="small">${deliveryInfo?"₹"+total+" total":"Delivery charge at checkout"}</div></div><button type="button" id="productFocusViewCart">View Cart & Continue</button></div>`;
+  bar.classList.add("show");
+  $("productFocusViewCart").onclick=()=>{
+    closeModal($("productSheetModal"));
+    renderCart();
+    openModal($("cartModal"));
+  };
 }
 function cartSubtotal(){return cart.reduce((s,x)=>s+x.qty*x.unit_price,0)}
 function cartItemCount(){return cart.reduce((s,x)=>s+x.qty,0)}
@@ -3024,7 +3044,8 @@ function updateCart(){
     if(pf>0)parts.push("₹"+pf+" platform fee");
     $("cartTotal").textContent=parts.join(" · ");
   }
-  $("cartbar").classList.toggle("show",count>0)
+  $("cartbar").classList.toggle("show",count>0);
+  renderProductFocusCartBar();
 }
 function changeQty(key,delta){const x=cart.find(i=>i.key===key);if(!x)return;x.qty+=delta;if(x.qty<=0)cart=cart.filter(i=>i.key!==key);updateCart();renderCart()}
 function renderCart(){
