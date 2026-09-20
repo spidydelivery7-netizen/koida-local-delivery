@@ -1247,7 +1247,9 @@ header.hk-header .menu-btn:active{
   <div class="addr-main"><div class="addr-title">📍 Saved Address</div><div id="homeAddressText" class="addr-text"></div></div>
   <button id="homeAddressEdit">Edit ›</button>
 </div>
-<div class="section-head"><h2>Restaurants</h2><span>Choose a restaurant</span></div>
+<div class="section-head"><h2>Shop sections</h2><span>Choose Food, Grocery or more</span></div>
+<div id="serviceSections" class="cats"></div>
+<div class="section-head"><h2 id="shopSectionTitle">Food shops</h2><span id="shopSectionHint">Choose a shop</span></div>
 <div id="shopTabs" class="cats"></div>
   <div class="section-head"><h2 id="categorySectionTitle">Browse categories</h2><span id="categorySectionHint">Swipe to explore</span></div>
 <div id="cats" class="cats"></div>
@@ -1419,7 +1421,7 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 const cfg=window.SPIDY_CONFIG||{};
 const sb=createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{storageKey:"kld-customer-auth",persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
 const $=id=>document.getElementById(id);
-let products=[],shops=[],activeShopId=null,activeCat="All",cart=[],deliverySettings=null,deliveryInfo=null,productRatingSummaryById={};
+let products=[],shops=[],activeShopId=null,activeCat="All",activeServiceSection="food",cart=[],deliverySettings=null,deliveryInfo=null,productRatingSummaryById={};
 let currentSession=null,currentCustomer=null;
   const VAPID_PUBLIC_KEY = "BEyKFl_KeSmIboBWWUhfItErCRw9AlwjoVRq55NBedCSX_iLskyLH2Bm4ZmCc4e3ZAWBMjn07NAEU5TeIcSqObg";
 function urlBase64ToUint8Array(base64String){
@@ -2980,46 +2982,72 @@ function openSelectedShopCategories(){
   $("shopCategoryPickerList").querySelectorAll("[data-shop-category]").forEach(button=>button.onclick=()=>{activeCat=button.dataset.shopCategory;renderCats();renderProducts();closeModal(modal);$("grid")?.scrollIntoView({behavior:"smooth",block:"start"})});
   openModal(modal);
 }
+function normalizeShopSection(value){
+  const key=String(value||"").trim().toLowerCase().replace(/[\s_-]+/g,"_");
+  if(["food","restaurant","restaurants","food_delivery"].includes(key))return "food";
+  if(["grocery","groceries","essentials","general_store"].includes(key))return "grocery";
+  return key||"food";
+}
+function shopServiceSection(shop){
+  return normalizeShopSection(shop?.shop_section||shop?.section||shop?.shop_type||shop?.category);
+}
+function sectionName(key){return ({food:"Food",grocery:"Grocery"}[key])||(key.replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase()))}
+function serviceLabel(key){return ({food:"🍽️ Food",grocery:"🛒 Grocery"}[key])||("📦 "+sectionName(key))}
+function shopsForActiveSection(){return shops.filter(s=>shopServiceSection(s)===activeServiceSection)}
+function syncActiveShop(){
+  const sectionShops=shopsForActiveSection();
+  if(!sectionShops.some(s=>s.id===activeShopId)){
+    activeShopId=sectionShops[0]?.id||null;
+    activeCat="All";
+  }
+}
+function renderServiceSections(){
+  const box=$("serviceSections");
+  if(!box)return;
+  const found=new Set(shops.map(shopServiceSection));
+  const sections=["food","grocery",...Array.from(found).filter(s=>!['food','grocery'].includes(s))];
+  box.innerHTML="";
+  sections.forEach(section=>{
+    const b=document.createElement("button");
+    b.className="chip"+(section===activeServiceSection?" active":"");
+    b.textContent=serviceLabel(section);
+    b.onclick=()=>{activeServiceSection=section;syncActiveShop();renderServiceSections();renderShops();renderCats();renderProducts()};
+    box.appendChild(b);
+  });
+}
 function renderCats(){
-  const shop=shops.find(s=>s.id===activeShopId);
   const categories=activeShopId?shopCategories(activeShopId):[];
   const arr=["All",...categories];
   if(!arr.includes(activeCat)) activeCat="All";
   const title=$("categorySectionTitle"),hint=$("categorySectionHint");
-  if(title) title.textContent="Browse categories";
-  if(hint) hint.textContent=categories.length?"Swipe to explore":"No categories yet";
+  if(title) title.textContent=activeShopId?"Browse categories":"Choose a shop first";
+  if(hint) hint.textContent=activeShopId?(categories.length?"Swipe to explore":"No categories yet"):"";
   $("cats").innerHTML="";
+  if(!activeShopId)return;
   arr.forEach(c=>{const b=document.createElement("button");b.className="chip"+(c===activeCat?" active":"");b.textContent=c;b.onclick=()=>{activeCat=c;renderCats();renderProducts()};$("cats").appendChild(b)})
 }
-  function renderShops(){
+function renderShops(){
   const box=$("shopTabs");
   if(!box)return;
-
+  const sectionShops=shopsForActiveSection();
+  const title=$("shopSectionTitle"),hint=$("shopSectionHint");
+  if(title)title.textContent=sectionName(activeServiceSection)+" shops";
+  if(hint)hint.textContent=sectionShops.length?"Choose a shop":"Coming soon";
   box.innerHTML="";
-
-  shops.forEach(s=>{
+  if(!sectionShops.length){box.innerHTML='<div class="small">No shops in this section yet.</div>';return}
+  sectionShops.forEach(s=>{
     const b=document.createElement("button");
-
-    b.className=
-      "chip"+(s.id===activeShopId?" active":"");
-
+    b.className="chip"+(s.id===activeShopId?" active":"");
     b.textContent=s.name;
-
     b.onclick=()=>{
-      activeShopId=s.id;
-      activeCat="All";
-
+      activeShopId=s.id;activeCat="All";
       const title=$("productSectionTitle");
       if(title) title.textContent=s.name;
-
-      renderShops();
-      renderCats();
-      renderProducts();
+      renderShops();renderCats();renderProducts();
     };
-
     box.appendChild(b);
   });
-  }
+}
 function renderProducts(){const q=$("search").value.trim().toLowerCase();const arr=products.filter(p=>(!activeShopId||p.shop_id===activeShopId)&&(activeCat==="All"||p.category===activeCat)&&(!q||p.name.toLowerCase().includes(q)||(p.description||"").toLowerCase().includes(q)));$("grid").innerHTML="";if(!arr.length){$("grid").innerHTML='<div class="empty" style="grid-column:1/-1">No items found.</div>';return}arr.forEach(p=>{const v=variants(p),selector=v.length>1?`<select class="variant">${v.map(x=>`<option value="${x.key}">${x.label} — ₹${x.price}</option>`).join("")}</select>`:"";const rating=productRatingSummaryById[p.id];const ratingBadge=rating?`<div class="small" style="display:inline-flex;align-items:center;gap:4px;margin-top:6px;padding:4px 7px;border-radius:7px;background:#dcfce7;color:#166534;font-weight:800">${Number(rating.average_rating).toFixed(1)} ★ <span style="color:#64748b;font-weight:600">| ${Number(rating.rating_count)} rating${Number(rating.rating_count)===1?"":"s"}</span></div>`:"";const c=document.createElement("article");c.className="card";c.dataset.productId=p.id;c.innerHTML=`<button type="button" class="product-favourite-btn ${isFavourite(p.id)?"is-favourite":""}" aria-label="${isFavourite(p.id)?"Remove from favourites":"Add to favourites"}">${isFavourite(p.id)?"♥":"♡"}</button><img class="img" src="${p.image_url||ph(p.name)}" alt="${p.name}"><div class="body"><div class="cat">${p.category||"Food"}</div><div class="name">${p.name}</div>${ratingBadge}<div class="desc">${p.description||""}</div><div class="price">${priceText(p)}</div>${selector}<div class="stock ${p.available===false?"out":""}">${p.available===false?"Out of Stock":"Available"}</div><div class="card-actions"><button class="btn dark buy" ${p.available===false?"disabled":""}>Add to Cart</button><button class="btn yellow add" ${p.available===false?"disabled":""}>＋</button></div></div>`;c.querySelector(".img").onerror=e=>e.currentTarget.src=ph(p.name);c.querySelector(".product-favourite-btn").onclick=()=>toggleFavourite(p.id);if(p.available!==false){c.querySelector(".buy").onclick=()=>addCart(p,selectedVariant(c,p));c.querySelector(".add").onclick=()=>addCart(p,selectedVariant(c,p))}$("grid").appendChild(c)})}
   /* ===== Product Image Full Screen Viewer ===== */
 function openProductImageViewer(src, alt="Product image"){
@@ -3131,7 +3159,7 @@ async function loadProducts(){
       .order("sort_order",{ascending:true}),
 
     sb.from("shops")
-      .select("id,name,active,approval_status")
+      .select("*")
       .eq("active",true)
       .order("name",{ascending:true})
   ]);
@@ -3162,9 +3190,11 @@ products = (productData || []).filter(
   p => approvedShopIds.has(p.shop_id)
 );
 
-if(!shops.some(s=>s.id===activeShopId)){
-  activeShopId=shops[0]?.id||null;
+if(!shops.some(s=>s.id===activeShopId)) activeShopId=shops[0]?.id||null;
+if(!shops.some(s=>shopServiceSection(s)===activeServiceSection)){
+  activeServiceSection=shopServiceSection(shops.find(s=>s.id===activeShopId)||shops[0])||"food";
 }
+syncActiveShop();
 
 const activeShop=shops.find(s=>s.id===activeShopId);
 
@@ -3173,6 +3203,7 @@ if($("productSectionTitle")){
     activeShop?.name||"Popular near you";
 }
 
+renderServiceSections();
 renderShops();
 renderCats();
 renderProducts();
