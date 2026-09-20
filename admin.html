@@ -403,6 +403,20 @@ Create Shop
 
 </div>
 
+<div class="panel">
+
+<div class="shopkeeper-head">
+<div>
+<h2 style="margin-bottom:4px">Manage Shops</h2>
+<div class="small">Delete removes the shop, its products and any shopkeeper access. Past orders are kept safe.</div>
+</div>
+<button id="refreshShops" class="gray">Refresh Shops</button>
+</div>
+
+<div id="shopsList"></div>
+
+</div>
+
 <div id="shopkeepersList"></div>
 
 </section>
@@ -642,6 +656,8 @@ return false;
 shops=data||[];
 
 fillShopSelects();
+
+renderShopsManager();
 
 return true;
 
@@ -1428,6 +1444,57 @@ renderOrders();
    SHOPKEEPERS
 ========================= */
 
+function renderShopsManager(){
+  const box=$("shopsList");
+  if(!box)return;
+  box.innerHTML="";
+
+  if(!shops.length){
+    box.innerHTML='<div class="small" style="margin-top:12px">No shops found.</div>';
+    return;
+  }
+
+  shops.forEach(shop=>{
+    const row=document.createElement("div");
+    row.className="row";
+    const productCount=items.filter(p=>p.shop_id===shop.id).length;
+    const assignedCount=shopkeepers.filter(sk=>sk.shop_id===shop.id).length;
+
+    row.innerHTML=`
+      <div style="width:82px;height:68px;border-radius:10px;background:#eef2ff;display:grid;place-items:center;font-size:30px">🏪</div>
+      <div>
+        <b>${shop.name}</b>
+        <div class="meta">${shop.active===false?"Inactive":"Active"} · ${productCount} product${productCount===1?"":"s"} · ${assignedCount} shopkeeper${assignedCount===1?"":"s"}</div>
+      </div>
+      <div class="actions">
+        <button class="red deleteShopBtn">Delete Shop</button>
+      </div>
+    `;
+
+    row.querySelector(".deleteShopBtn").onclick=async()=>{
+      if(!confirm(`Delete ${shop.name}? Its products and shopkeeper access will be removed. Past orders will stay safe.`))return;
+
+      const button=row.querySelector(".deleteShopBtn");
+      button.disabled=true;
+      setStatus("Deleting shop...");
+
+      const {error}=await sb.rpc("delete_shop_for_admin",{p_shop_id:shop.id});
+      if(error){
+        button.disabled=false;
+        setStatus("Shop delete error: "+error.message);
+        return;
+      }
+
+      setStatus(`${shop.name} deleted.`);
+      await loadShops();
+      await loadProducts();
+      await loadShopkeepers();
+    };
+
+    box.appendChild(row);
+  });
+}
+
 function renderShopkeepers(){
   const box=$("shopkeepersList");
   box.innerHTML="";
@@ -2158,6 +2225,13 @@ async()=>{
 
   await loadShops();
 
+  await loadShopkeepers();
+};
+
+$("refreshShops").onclick=
+async()=>{
+  await loadShops();
+  await loadProducts();
   await loadShopkeepers();
 };
 
