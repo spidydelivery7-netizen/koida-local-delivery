@@ -387,18 +387,19 @@ header{
   box-shadow:0 6px 16px rgba(255,183,3,.25);
 }
 
-/* Product details bottom sheet */
-#productSheetModal{z-index:160}
+/* Product focus screen: selected item first, other shop items below */
+#productSheetModal{z-index:160;align-items:stretch;padding:0}
 #productSheetModal .modal{
   position:relative;
   width:min(680px,100%);
-  max-height:90vh;
-  margin:auto 0 0;
+  min-height:100dvh;
+  max-height:100dvh;
+  margin:0 auto;
   padding:0 0 18px;
   overflow:auto;
-  border-radius:26px 26px 0 0;
+  border-radius:0;
   background:#fff;
-  box-shadow:0 -14px 38px rgba(15,23,42,.22);
+  box-shadow:none;
 }
 .product-sheet-close{
   position:absolute;top:12px;right:12px;z-index:2;
@@ -415,6 +416,11 @@ header{
 .product-sheet-select{width:100%;min-height:48px;margin-top:7px;border:1px solid #e2e8f0;border-radius:13px;padding:10px 12px;background:#fff;font-size:15px;font-weight:700;color:#0b1220}
 .product-sheet-add{width:100%;min-height:51px;margin-top:17px;border:0;border-radius:14px;background:#ffb703;color:#081220;font-size:16px;font-weight:900;box-shadow:0 7px 18px rgba(255,183,3,.28)}
 .product-sheet-add:disabled{background:#e5e7eb;color:#94a3b8;box-shadow:none}
+.product-more-title{margin:24px 0 12px;font-size:19px;color:#0b1220}
+.product-more-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.product-more-card{border:1px solid #e8ecf2;border-radius:15px;overflow:hidden;background:#fff;text-align:left;box-shadow:0 4px 12px #0000000a}
+.product-more-card img{width:100%;height:112px;object-fit:cover;background:#f1f5f9;display:block}
+.product-more-card-body{padding:10px}.product-more-card b{display:block;font-size:14px;line-height:1.25;color:#0b1220}.product-more-card .small{display:block;margin-top:4px}.product-more-card button{width:100%;min-height:38px;margin-top:9px;border:1px solid #22c55e;border-radius:10px;background:#fff;color:#15803d;font-weight:900}
 @media(max-width:700px){.product-sheet-image{height:220px}.product-sheet-title{font-size:23px}}
 
 @media(max-width:700px){
@@ -1687,6 +1693,9 @@ function openProductSheet(p){
   const rating=productRatingSummaryById[p.id];
   const ratingText=rating?`${Number(rating.average_rating).toFixed(1)} ★ · ${Number(rating.rating_count)} rating${Number(rating.rating_count)===1?"":"s"}`:"";
   const selector=list.length>1?`<label class="small" style="display:block;margin-top:14px;font-weight:900;color:#475569">Choose option<select id="productSheetVariant" class="product-sheet-select">${list.map(v=>`<option value="${esc(v.key)}">${esc(v.label)} — ₹${v.price}</option>`).join("")}</select></label>`:"";
+  const more=products.filter(item=>item.shop_id===p.shop_id&&item.id!==p.id&&item.available!==false);
+  const shopName=shops.find(shop=>shop.id===p.shop_id)?.name||"this shop";
+  const moreHtml=more.length?`<h3 class="product-more-title">More from ${esc(shopName)}</h3><div class="product-more-grid">${more.map(item=>{const itemVariants=variants(item),first=itemVariants[0];return `<article class="product-more-card" data-product-id="${esc(item.id)}"><img src="${esc(item.image_url||ph(item.name))}" alt="${esc(item.name)}"><div class="product-more-card-body"><b>${esc(item.name)}</b><span class="small">${first?"From ₹"+first.price:"Price coming soon"}</span><button type="button" class="product-more-add" ${first?"":"disabled"}>${first?"Add":"Unavailable"}</button></div></article>`}).join("")}</div>`:"";
   $("productSheetBody").innerHTML=`
     <img class="product-sheet-image" src="${esc(p.image_url||ph(p.name))}" alt="${esc(p.name)}">
     <div class="product-sheet-body">
@@ -1697,6 +1706,7 @@ function openProductSheet(p){
       ${selector}
       <div class="product-sheet-row"><div class="product-sheet-price" id="productSheetPrice">${list.length?"₹"+list[0].price:"Price coming soon"}</div><div class="stock ${p.available===false?"out":""}">${p.available===false?"Out of Stock":"Available"}</div></div>
       <button type="button" id="productSheetAdd" class="product-sheet-add" ${p.available===false||!list.length?"disabled":""}>${p.available===false?"Out of Stock":"Add to Cart"}</button>
+      ${moreHtml}
     </div>`;
   const image=$("productSheetBody").querySelector(".product-sheet-image");
   image.onerror=e=>e.currentTarget.src=ph(p.name);
@@ -1708,9 +1718,26 @@ function openProductSheet(p){
   $("productSheetAdd").onclick=()=>{
     const chosen=list.find(v=>v.key===(select?select.value:list[0]?.key))||list[0]||null;
     addCart(p,chosen);
-    closeModal($("productSheetModal"));
+    if(chosen){
+      $("productSheetAdd").textContent="Added ✓";
+      setTimeout(()=>{const b=$("productSheetAdd");if(b)b.textContent="Add to Cart"},900);
+    }
   };
+  $("productSheetBody").querySelectorAll(".product-more-card").forEach(card=>{
+    const item=products.find(x=>x.id===card.dataset.productId);
+    const first=variants(item)[0]||null;
+    card.querySelector("img").onerror=e=>e.currentTarget.src=ph(item.name);
+    card.onclick=e=>{if(e.target.closest(".product-more-add"))return;openProductSheet(item)};
+    card.querySelector(".product-more-add").onclick=()=>{
+      addCart(item,first);
+      if(first){
+        const b=card.querySelector(".product-more-add");b.textContent="Added ✓";
+        setTimeout(()=>{if(b)b.textContent="Add"},900);
+      }
+    };
+  });
   openModal($("productSheetModal"));
+  $("productSheetModal").querySelector(".modal").scrollTop=0;
 }
 function cartSubtotal(){return cart.reduce((s,x)=>s+x.qty*x.unit_price,0)}
 function cartItemCount(){return cart.reduce((s,x)=>s+x.qty,0)}
