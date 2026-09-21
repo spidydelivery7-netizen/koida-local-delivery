@@ -134,6 +134,7 @@ Forgot Password?
 Orders <span id="newCount"></span>
 </button>
 <button id="deliveryTab">Delivery</button>
+<button id="servicesTab">Services</button>
 <button id="shopkeepersTab">
 Shopkeepers <span id="pendingShopkeeperCount"></span>
 </button>
@@ -348,6 +349,24 @@ Save Delivery Settings
 
 </section>
 
+<section id="servicesView" class="hidden">
+<div class="panel">
+<h2>Customer Service Visibility</h2>
+<div class="small">Use this for Food, Grocery, Ride and all future services. Unpublic services show Coming Soon to customers. Publishing a service creates the customer announcement.</div>
+<div id="servicesList" style="margin-top:14px"></div>
+</div>
+<div class="panel">
+<h2>Add Future Service</h2>
+<div class="grid">
+<label>Service name<input id="newServiceLabel" placeholder="e.g. Fresh Chicken & Fish"></label>
+<label>Service key<input id="newServiceSlug" placeholder="e.g. fresh_chicken"></label>
+<label class="full">Coming Soon message<textarea id="newServiceComingSoon">Coming soon</textarea></label>
+<label class="full">Publish notification<textarea id="newServiceAnnouncement" placeholder="e.g. Fresh Chicken & Fish is now live on HUNKART!"></textarea></label>
+</div>
+<div class="actions"><button id="addServiceBtn" class="green">Add as Coming Soon</button><button id="refreshServices" class="gray">Refresh Services</button></div>
+</div>
+</section>
+
 <section id="shopkeepersView" class="hidden">
 
 <div class="panel">
@@ -440,6 +459,7 @@ editing=null,
 items=[],
 orders=[],
 shops=[],
+serviceSections=[],
 shopkeepers=[],
 deliveryBoys=[],
 activeView="products",
@@ -651,6 +671,48 @@ setStatus(
 
 return false;
 
+}
+
+async function loadServiceSections(){
+  const {data,error}=await sb.from("service_sections").select("*").order("label",{ascending:true});
+  if(error){setStatus("Service load error: "+error.message);return false;}
+  serviceSections=data||[];
+  renderServiceSectionsAdmin();
+  return true;
+}
+
+function renderServiceSectionsAdmin(){
+  const box=$("servicesList");if(!box)return;box.innerHTML="";
+  if(!serviceSections.length){box.innerHTML='<div class="small">No services found. Run the service setup SQL first.</div>';return;}
+  serviceSections.forEach(service=>{
+    const row=document.createElement("div");row.className="panel";row.style.boxShadow="none";row.style.border="1px solid #e5e7eb";
+    row.innerHTML=`<div class="shopkeeper-head"><div><b style="font-size:18px">${service.label}</b><div class="small">Key: ${service.slug}</div></div><span class="badge ${service.is_public?"paid":"pending"}">${service.is_public?"PUBLIC":"COMING SOON"}</span></div><div class="grid" style="margin-top:12px"><label>Customer label<input class="serviceLabel" value="${service.label}"></label><label>Visibility<select class="servicePublic"><option value="false">Unpublic — Coming Soon</option><option value="true">Public — Customers can use it</option></select></label><label class="full">Coming Soon message<textarea class="serviceComingSoon">${service.coming_soon_text||"Coming soon"}</textarea></label><label class="full">Publish notification<textarea class="serviceAnnouncement">${service.announcement_text||""}</textarea></label></div><div class="actions"><button class="green saveService">Save Service</button></div>`;
+    row.querySelector(".servicePublic").value=String(service.is_public===true);
+    row.querySelector(".saveService").onclick=async()=>{
+      const button=row.querySelector(".saveService");button.disabled=true;
+      try{
+        const {error}=await sb.rpc("set_service_section",{p_slug:service.slug,p_label:row.querySelector(".serviceLabel").value.trim(),p_is_public:row.querySelector(".servicePublic").value==="true",p_coming_soon_text:row.querySelector(".serviceComingSoon").value.trim(),p_announcement_text:row.querySelector(".serviceAnnouncement").value.trim()||null});
+        if(error)throw error;
+        const nowPublic=row.querySelector(".servicePublic").value==="true";
+        if(nowPublic&&!service.is_public){
+          const {error:pushError}=await sb.functions.invoke("service-publish-push",{body:{slug:service.slug}});
+          if(pushError)console.warn("Service push warning:",pushError.message);
+        }
+        setStatus(nowPublic&&!service.is_public?"Service published and customer notification sent.":"Service saved. Customers will see the new visibility after refresh.");await loadServiceSections();
+      }catch(e){setStatus("Service save error: "+e.message)}finally{button.disabled=false;}
+    };
+    box.appendChild(row);
+  });
+}
+
+async function addServiceSection(){
+  const slug=$("newServiceSlug").value.trim().toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"");
+  const label=$("newServiceLabel").value.trim();
+  if(!slug||!label){setStatus("Enter both service name and service key.");return;}
+  const {error}=await sb.rpc("set_service_section",{p_slug:slug,p_label:label,p_is_public:false,p_coming_soon_text:$("newServiceComingSoon").value.trim()||"Coming soon",p_announcement_text:$("newServiceAnnouncement").value.trim()||null});
+  if(error){setStatus("Add service error: "+error.message);return;}
+  $("newServiceLabel").value="";$("newServiceSlug").value="";$("newServiceComingSoon").value="Coming soon";$("newServiceAnnouncement").value="";
+  setStatus("Future service added as Coming Soon.");await loadServiceSections();
 }
 
 shops=data||[];
@@ -1811,6 +1873,11 @@ function switchView(v){
     v!=="delivery"
   );
 
+  $("servicesView").classList.toggle(
+    "hidden",
+    v!=="services"
+  );
+
   $("shopkeepersView").classList.toggle(
     "hidden",
     v!=="shopkeepers"
@@ -1831,6 +1898,11 @@ function switchView(v){
     v==="delivery"
   );
 
+  $("servicesTab").classList.toggle(
+    "active",
+    v==="services"
+  );
+
   $("shopkeepersTab").classList.toggle(
     "active",
     v==="shopkeepers"
@@ -1842,6 +1914,10 @@ function switchView(v){
 
   if(v==="delivery"){
     loadDeliverySettings();
+  }
+
+  if(v==="services"){
+    loadServiceSections();
   }
 
   if(v==="shopkeepers"){
@@ -2189,6 +2265,9 @@ $("ordersTab").onclick=
 $("deliveryTab").onclick=
   ()=>switchView("delivery");
 
+$("servicesTab").onclick=
+  ()=>switchView("services");
+
 $("shopkeepersTab").onclick=
   ()=>switchView("shopkeepers");
 
@@ -2238,6 +2317,12 @@ async()=>{
 
 $("createShopBtn").onclick=
   createShop;
+
+$("addServiceBtn").onclick=
+  addServiceSection;
+
+$("refreshServices").onclick=
+  loadServiceSections;
 
 
 [
