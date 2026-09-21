@@ -121,6 +121,8 @@ header{background:#fff;color:#111827;border-bottom:1px solid #edf0f3;box-shadow:
 .card-actions .add{display:none}
 .card-actions .buy{background:#fff;color:#16a34a;border:1.5px solid #22c55e;border-radius:10px;padding:9px 10px}
 .card-actions .buy:disabled{opacity:.5;border-color:#cbd5e1;color:#94a3b8}
+.bike-service-card{position:relative;overflow:hidden;margin:16px 0 20px;padding:18px;border-radius:22px;background:linear-gradient(135deg,#0b1729,#17466f);color:#fff;box-shadow:0 10px 26px rgba(15,23,42,.16)}
+.bike-service-card:after{content:"";position:absolute;width:180px;height:180px;right:-62px;top:-88px;border:28px solid rgba(251,191,36,.18);border-radius:50%;pointer-events:none}.bike-service-top{position:relative;z-index:1;display:flex;align-items:flex-start;gap:13px}.bike-service-icon{width:52px;height:52px;flex:0 0 52px;border-radius:17px;display:grid;place-items:center;background:#fbbf24;color:#111827;font-size:28px;box-shadow:0 6px 18px #0003}.bike-service-copy{min-width:0}.bike-service-eyebrow{font-size:11px;font-weight:900;letter-spacing:.8px;color:#fde68a}.bike-service-card h2{margin:3px 0 5px;font-size:21px;line-height:1.15;color:#fff}.bike-service-card p{margin:0;color:#dce8f5;font-size:13px;line-height:1.45}.bike-service-tags{position:relative;z-index:1;display:flex;flex-wrap:wrap;gap:7px;margin:14px 0}.bike-service-tags span{border:1px solid #ffffff29;background:#ffffff12;border-radius:999px;padding:6px 9px;font-size:11px;font-weight:800}.bike-service-actions{position:relative;z-index:1;display:grid;grid-template-columns:1fr 1fr;gap:9px}.bike-service-actions a{min-height:43px;border-radius:12px;text-decoration:none;font-size:13px;font-weight:900;display:flex;align-items:center;justify-content:center}.bike-service-book{background:#fbbf24;color:#111827}.bike-service-call{background:#fff;color:#0b1729}
 .cartbar{position:fixed;left:0;right:0;bottom:0;padding:10px 12px;background:transparent;border:0;box-shadow:none;z-index:45}
 .cartbar.show{display:block}
 .cartin{background:#111827;color:#fff;border-radius:16px;padding:11px 12px;box-shadow:0 10px 28px #0003}
@@ -1287,6 +1289,21 @@ header.hk-header .menu-btn:active{
   <div class="addr-main"><div class="addr-title">📍 Saved Address</div><div id="homeAddressText" class="addr-text"></div></div>
   <button id="homeAddressEdit">Edit ›</button>
 </div>
+<section class="bike-service-card" aria-label="Bike Delivery Service">
+  <div class="bike-service-top">
+    <div class="bike-service-icon" aria-hidden="true">🏍️</div>
+    <div class="bike-service-copy">
+      <div class="bike-service-eyebrow">HUNKART LOCAL SERVICE</div>
+      <h2>Bike Delivery Service</h2>
+      <p>Local Ride, Documents, Parcels &amp; Other Essentials.</p>
+    </div>
+  </div>
+  <div class="bike-service-tags"><span>Quick</span><span>Safe</span><span>Reliable</span></div>
+  <div class="bike-service-actions">
+    <a class="bike-service-book" href="https://wa.me/918638794932?text=Hello%20HUNKART%2C%20I%20need%20Bike%20Delivery%20Service.">Book on WhatsApp</a>
+    <a class="bike-service-call" href="tel:+918638794932">Call Now</a>
+  </div>
+</section>
 <div class="section-head"><h2>Shop sections</h2><span>Choose Food, Grocery or more</span></div>
 <div id="serviceSections" class="cats"></div>
 <div class="section-head"><h2 id="shopSectionTitle">Food shops</h2><span id="shopSectionHint">Choose a shop</span></div>
