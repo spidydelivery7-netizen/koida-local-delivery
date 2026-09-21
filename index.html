@@ -123,6 +123,7 @@ header{background:#fff;color:#111827;border-bottom:1px solid #edf0f3;box-shadow:
 .card-actions .buy:disabled{opacity:.5;border-color:#cbd5e1;color:#94a3b8}
 .bike-service-card{position:relative;overflow:hidden;margin:16px 0 20px;padding:18px;border-radius:22px;background:linear-gradient(135deg,#0b1729,#17466f);color:#fff;box-shadow:0 10px 26px rgba(15,23,42,.16)}
 .bike-service-card:after{content:"";position:absolute;width:180px;height:180px;right:-62px;top:-88px;border:28px solid rgba(251,191,36,.18);border-radius:50%;pointer-events:none}.bike-service-top{position:relative;z-index:1;display:flex;align-items:flex-start;gap:13px}.bike-service-icon{width:52px;height:52px;flex:0 0 52px;border-radius:17px;display:grid;place-items:center;background:#fbbf24;color:#111827;font-size:28px;box-shadow:0 6px 18px #0003}.bike-service-copy{min-width:0}.bike-service-eyebrow{font-size:11px;font-weight:900;letter-spacing:.8px;color:#fde68a}.bike-service-card h2{margin:3px 0 5px;font-size:21px;line-height:1.15;color:#fff}.bike-service-card p{margin:0;color:#dce8f5;font-size:13px;line-height:1.45}.bike-service-tags{position:relative;z-index:1;display:flex;flex-wrap:wrap;gap:7px;margin:14px 0}.bike-service-tags span{border:1px solid #ffffff29;background:#ffffff12;border-radius:999px;padding:6px 9px;font-size:11px;font-weight:800}.bike-service-actions{position:relative;z-index:1;display:grid;grid-template-columns:1fr 1fr;gap:9px}.bike-service-actions a{min-height:43px;border-radius:12px;text-decoration:none;font-size:13px;font-weight:900;display:flex;align-items:center;justify-content:center}.bike-service-book{background:#fbbf24;color:#111827}.bike-service-call{background:#fff;color:#0b1729}
+.ride-request-form{position:relative;z-index:1;margin-top:16px;padding:13px;border-radius:16px;background:#fff;color:#0b1220}.ride-pickup-now{border:0;border-radius:999px;padding:9px 12px;background:#eef2f7;color:#0b1220;font-weight:900;font-size:13px}.ride-location-row{display:grid;grid-template-columns:28px 1fr;gap:10px;padding:13px 3px;border-bottom:1px solid #e5e7eb}.ride-location-row:last-of-type{border-bottom:0}.ride-location-icon{font-size:20px;text-align:center;padding-top:8px}.ride-location-row label{display:block;font-size:11px;color:#64748b;font-weight:800;margin:0 0 4px}.ride-location-row input{width:100%;border:0;outline:0;background:transparent;color:#0b1220;font-size:15px;padding:3px 0}.ride-location-row input::placeholder{color:#94a3b8}.ride-suggestions{display:grid;gap:5px;margin:7px 0 0}.ride-suggestion{border:1px solid #e5e7eb;border-radius:10px;background:#fff;padding:9px 10px;text-align:left;font-size:12px;line-height:1.35;color:#334155;cursor:pointer}.ride-suggestion b{display:block;color:#0b1220;font-size:13px;margin-bottom:2px}.ride-fare-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:13px;padding:11px 12px;border-radius:12px;background:#f1f5f9;font-size:12px;color:#475569}.ride-fare-row b{color:#0b1220;font-size:15px}.ride-fare-row .ride-estimate{display:block;font-size:11px;margin-top:2px}.ride-see-fare{margin-top:11px;width:100%;min-height:46px;border:0;border-radius:12px;background:#0b1220;color:#fff;font-size:14px;font-weight:900;cursor:pointer}.ride-see-fare:disabled{opacity:.55}.ride-book-link{display:none;margin-top:10px;min-height:45px;border-radius:12px;background:#fbbf24;color:#0b1220;text-decoration:none;font-weight:900;align-items:center;justify-content:center;font-size:14px}.ride-book-link.show{display:flex}.ride-note{position:relative;z-index:1;margin:11px 2px 0;color:#dce8f5;font-size:11px;line-height:1.4}
 .cartbar{position:fixed;left:0;right:0;bottom:0;padding:10px 12px;background:transparent;border:0;box-shadow:none;z-index:45}
 .cartbar.show{display:block}
 .cartin{background:#111827;color:#fff;border-radius:16px;padding:11px 12px;box-shadow:0 10px 28px #0003}
@@ -1473,6 +1474,7 @@ const cfg=window.SPIDY_CONFIG||{};
 const sb=createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{storageKey:"kld-customer-auth",persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
 const $=id=>document.getElementById(id);
 let products=[],shops=[],activeShopId=null,activeCat="All",activeServiceSection="food",cart=[],deliverySettings=null,deliveryInfo=null,productRatingSummaryById={};
+const BIKE_RIDE_RATE_PER_KM=10,BIKE_RIDE_MIN_FARE=20;
 let currentSession=null,currentCustomer=null;
   const VAPID_PUBLIC_KEY = "BEyKFl_KeSmIboBWWUhfItErCRw9AlwjoVRq55NBedCSX_iLskyLH2Bm4ZmCc4e3ZAWBMjn07NAEU5TeIcSqObg";
 function urlBase64ToUint8Array(base64String){
@@ -3168,13 +3170,37 @@ function renderServiceSections(){
     box.appendChild(b);
   });
 }
+let ridePickup=null,rideDestination=null,rideSuggestionTimer=null;
+function rideDisplayName(place){return String(place?.display_name||"").split(",").slice(0,3).join(",").trim()}
 function renderRideService(){
   const isRide=activeServiceSection==="ride";
   const panel=$("rideServicePanel"),shopping=$("shopBrowsingContent");
   if(panel)panel.hidden=!isRide;
   if(shopping)shopping.hidden=isRide;
   if(!isRide||!panel)return;
-  panel.innerHTML='<div class="bike-service-top"><div class="bike-service-icon" aria-hidden="true">🏍️</div><div class="bike-service-copy"><div class="bike-service-eyebrow">HUNKART LOCAL SERVICE</div><h2>Bike Delivery Service</h2><p>Local Ride, Documents, Parcels &amp; Other Essentials.</p></div></div><div class="bike-service-tags"><span>Quick</span><span>Safe</span><span>Reliable</span></div><div class="bike-service-actions"><a class="bike-service-book" href="https://wa.me/918638794932?text=Hello%20HUNKART%2C%20I%20need%20Bike%20Delivery%20Service.">Book on WhatsApp</a><a class="bike-service-call" href="tel:+918638794932">Call Now</a></div>';
+  panel.innerHTML='<div class="bike-service-top"><div class="bike-service-icon" aria-hidden="true">🏍️</div><div class="bike-service-copy"><div class="bike-service-eyebrow">HUNKART LOCAL SERVICE</div><h2>Pickup &amp; Drop</h2><p>Local Ride, Documents, Parcels &amp; Other Essentials.</p></div></div><div class="bike-service-tags"><span>Quick</span><span>Safe</span><span>Reliable</span></div><div class="ride-request-form"><button type="button" id="rideUseLocation" class="ride-pickup-now">◉ Use my current location</button><div class="ride-location-row"><span class="ride-location-icon">●</span><div><label for="ridePickupInput">PICKUP LOCATION</label><input id="ridePickupInput" placeholder="Detect pickup location" autocomplete="street-address"></div></div><div class="ride-location-row"><span class="ride-location-icon">■</span><div><label for="rideDestinationInput">DROP LOCATION</label><input id="rideDestinationInput" placeholder="Search destination" autocomplete="off"><div id="rideSuggestions" class="ride-suggestions"></div></div></div><div class="ride-fare-row"><div><b id="rideFareTitle">₹'+BIKE_RIDE_RATE_PER_KM+' per km</b><span id="rideFareInfo" class="ride-estimate">Minimum fare ₹'+BIKE_RIDE_MIN_FARE+'</span></div><span>🏍️</span></div><button type="button" id="rideSeeFare" class="ride-see-fare">See estimated fare</button><a id="rideBookLink" class="ride-book-link" target="_blank" rel="noopener">Book this ride on WhatsApp</a></div><div class="ride-note">Final fare can change only if the actual route or pickup/drop point changes.</div>';
+  const pickupInput=$("ridePickupInput"),destinationInput=$("rideDestinationInput"),suggestions=$("rideSuggestions"),fareBtn=$("rideSeeFare"),fareTitle=$("rideFareTitle"),fareInfo=$("rideFareInfo"),bookLink=$("rideBookLink");
+  if(ridePickup)pickupInput.value=ridePickup.label;
+  if(rideDestination)destinationInput.value=rideDestination.label;
+  $("rideUseLocation").onclick=()=>{
+    if(!navigator.geolocation){alert("Location is not supported on this phone/browser.");return}
+    const b=$("rideUseLocation");b.disabled=true;b.textContent="Detecting location...";
+    navigator.geolocation.getCurrentPosition(pos=>{
+      ridePickup={lat:pos.coords.latitude,lng:pos.coords.longitude,label:"Current location"};pickupInput.value=ridePickup.label;b.textContent="✓ Current location selected";fareInfo.textContent="Now search and select your drop location.";
+    },()=>{b.disabled=false;b.textContent="◉ Use my current location";alert("Please allow location permission or enter pickup manually.")},{enableHighAccuracy:true,timeout:15000,maximumAge:60000});
+  };
+  pickupInput.oninput=()=>{ridePickup=null;fareInfo.textContent="Use current location for a distance estimate."};
+  destinationInput.oninput=()=>{
+    rideDestination=null;bookLink.classList.remove("show");const q=destinationInput.value.trim();clearTimeout(rideSuggestionTimer);suggestions.innerHTML="";
+    if(q.length<3)return;
+    rideSuggestionTimer=setTimeout(async()=>{try{const r=await fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&countrycodes=in&q="+encodeURIComponent(q));const places=await r.json();suggestions.innerHTML=(places||[]).map((p,i)=>'<button type="button" class="ride-suggestion" data-ride-place="'+i+'"><b>'+esc(rideDisplayName(p))+'</b>'+esc(p.display_name||"")+'</button>').join("");suggestions.querySelectorAll("[data-ride-place]").forEach(b=>b.onclick=()=>{const p=places[Number(b.dataset.ridePlace)];rideDestination={lat:Number(p.lat),lng:Number(p.lon),label:rideDisplayName(p)};destinationInput.value=rideDestination.label;suggestions.innerHTML="";fareInfo.textContent="Drop location selected. Tap See estimated fare."})}catch(e){suggestions.innerHTML='<div class="small">Location search is unavailable. Please try again.</div>'}},350);
+  };
+  fareBtn.onclick=async()=>{
+    if(!ridePickup){alert("Please use your current pickup location first.");return}
+    if(!rideDestination){alert("Please search and select your drop location.");return}
+    fareBtn.disabled=true;fareBtn.textContent="Calculating route...";
+    try{const route=await routeDistanceKm(ridePickup.lat,ridePickup.lng,rideDestination.lat,rideDestination.lng);const km=Math.max(.1,Number(route.km.toFixed(1))),fare=Math.max(BIKE_RIDE_MIN_FARE,Math.ceil(km*BIKE_RIDE_RATE_PER_KM));fareTitle.textContent="Estimated fare ₹"+fare;fareInfo.textContent=km+" km × ₹"+BIKE_RIDE_RATE_PER_KM+" per km"+(fare===BIKE_RIDE_MIN_FARE?" · minimum fare applied":"");bookLink.href="https://wa.me/918638794932?text="+encodeURIComponent("Hello HUNKART, I need a Bike Delivery Service.\nPickup: "+ridePickup.label+"\nDrop: "+rideDestination.label+"\nDistance: "+km+" km\nEstimated fare: ₹"+fare);bookLink.classList.add("show")}catch(e){alert("Unable to calculate route right now. Please try again.")}finally{fareBtn.disabled=false;fareBtn.textContent="See estimated fare"}
+  };
 }
 function renderCats(){
   if(activeServiceSection==="ride"){renderRideService();return}
