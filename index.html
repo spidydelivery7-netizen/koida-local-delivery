@@ -1289,29 +1289,17 @@ header.hk-header .menu-btn:active{
   <div class="addr-main"><div class="addr-title">📍 Saved Address</div><div id="homeAddressText" class="addr-text"></div></div>
   <button id="homeAddressEdit">Edit ›</button>
 </div>
-<section class="bike-service-card" aria-label="Bike Delivery Service">
-  <div class="bike-service-top">
-    <div class="bike-service-icon" aria-hidden="true">🏍️</div>
-    <div class="bike-service-copy">
-      <div class="bike-service-eyebrow">HUNKART LOCAL SERVICE</div>
-      <h2>Bike Delivery Service</h2>
-      <p>Local Ride, Documents, Parcels &amp; Other Essentials.</p>
-    </div>
-  </div>
-  <div class="bike-service-tags"><span>Quick</span><span>Safe</span><span>Reliable</span></div>
-  <div class="bike-service-actions">
-    <a class="bike-service-book" href="https://wa.me/918638794932?text=Hello%20HUNKART%2C%20I%20need%20Bike%20Delivery%20Service.">Book on WhatsApp</a>
-    <a class="bike-service-call" href="tel:+918638794932">Call Now</a>
-  </div>
-</section>
-<div class="section-head"><h2>Shop sections</h2><span>Choose Food, Grocery or more</span></div>
+<div class="section-head"><h2>Shop sections</h2><span>Food, Grocery or Ride</span></div>
 <div id="serviceSections" class="cats"></div>
+<section id="rideServicePanel" class="bike-service-card" aria-label="Bike Delivery Service" hidden></section>
+<div id="shopBrowsingContent">
 <div class="section-head"><h2 id="shopSectionTitle">Food shops</h2><span id="shopSectionHint">Choose a shop</span></div>
 <div id="shopTabs" class="cats"></div>
   <div class="section-head"><h2 id="categorySectionTitle">Browse categories</h2><span id="categorySectionHint">Swipe to explore</span></div>
 <div id="cats" class="cats"></div>
 <div class="section-head"><h2 id="productSectionTitle">Popular near you</h2><span>Freshly available</span></div>
 <div id="grid" class="grid"></div>
+</div>
 </main>
 
 <div id="cartbar" class="cartbar"><div class="cartin">
@@ -3148,10 +3136,11 @@ function normalizeShopSection(value){
 function shopServiceSection(shop){
   return normalizeShopSection(shop?.shop_section||shop?.section||shop?.shop_type||shop?.category);
 }
-function sectionName(key){return ({food:"Food",grocery:"Grocery"}[key])||(key.replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase()))}
-function serviceLabel(key){return ({food:"🍽️ Food",grocery:"🛒 Grocery"}[key])||("📦 "+sectionName(key))}
+function sectionName(key){return ({food:"Food",grocery:"Grocery",ride:"Ride"}[key])||(key.replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase()))}
+function serviceLabel(key){return ({food:"🍽️ Food",grocery:"🛒 Grocery",ride:"🏍️ Ride"}[key])||("📦 "+sectionName(key))}
 function shopsForActiveSection(){return shops.filter(s=>shopServiceSection(s)===activeServiceSection)}
 function syncActiveShop(){
+  if(activeServiceSection==="ride"){activeShopId=null;activeCat="All";return}
   const sectionShops=shopsForActiveSection();
   if(!sectionShops.some(s=>s.id===activeShopId)){
     activeShopId=sectionShops[0]?.id||null;
@@ -3162,7 +3151,7 @@ function renderServiceSections(){
   const box=$("serviceSections");
   if(!box)return;
   const found=new Set(shops.map(shopServiceSection));
-  const sections=["food","grocery",...Array.from(found).filter(s=>!['food','grocery'].includes(s))];
+  const sections=["food","grocery","ride",...Array.from(found).filter(s=>!['food','grocery','ride'].includes(s))];
   box.innerHTML="";
   sections.forEach(section=>{
     const b=document.createElement("button");
@@ -3179,7 +3168,16 @@ function renderServiceSections(){
     box.appendChild(b);
   });
 }
+function renderRideService(){
+  const isRide=activeServiceSection==="ride";
+  const panel=$("rideServicePanel"),shopping=$("shopBrowsingContent");
+  if(panel)panel.hidden=!isRide;
+  if(shopping)shopping.hidden=isRide;
+  if(!isRide||!panel)return;
+  panel.innerHTML='<div class="bike-service-top"><div class="bike-service-icon" aria-hidden="true">🏍️</div><div class="bike-service-copy"><div class="bike-service-eyebrow">HUNKART LOCAL SERVICE</div><h2>Bike Delivery Service</h2><p>Local Ride, Documents, Parcels &amp; Other Essentials.</p></div></div><div class="bike-service-tags"><span>Quick</span><span>Safe</span><span>Reliable</span></div><div class="bike-service-actions"><a class="bike-service-book" href="https://wa.me/918638794932?text=Hello%20HUNKART%2C%20I%20need%20Bike%20Delivery%20Service.">Book on WhatsApp</a><a class="bike-service-call" href="tel:+918638794932">Call Now</a></div>';
+}
 function renderCats(){
+  if(activeServiceSection==="ride"){renderRideService();return}
   const categories=activeShopId?shopCategories(activeShopId):[];
   const arr=["All",...categories];
   if(!arr.includes(activeCat)) activeCat="All";
@@ -3191,6 +3189,8 @@ function renderCats(){
   arr.forEach(c=>{const b=document.createElement("button");b.className="chip"+(c===activeCat?" active":"");b.textContent=c;b.onclick=()=>{activeCat=c;renderCats();renderProducts()};$("cats").appendChild(b)})
 }
 function renderShops(){
+  renderRideService();
+  if(activeServiceSection==="ride")return;
   const box=$("shopTabs");
   if(!box)return;
   const sectionShops=shopsForActiveSection();
@@ -3216,6 +3216,7 @@ function renderShops(){
   });
 }
 function renderProducts(){
+  if(activeServiceSection==="ride"){renderRideService();return}
   const q=$("search").value.trim().toLowerCase();
   const grid=$("grid");
   grid.innerHTML="";
@@ -3360,7 +3361,7 @@ products = (productData || []).filter(
 );
 
 if(!shops.some(s=>s.id===activeShopId)) activeShopId=shops[0]?.id||null;
-if(!shops.some(s=>shopServiceSection(s)===activeServiceSection)){
+if(activeServiceSection!=="ride"&&!shops.some(s=>shopServiceSection(s)===activeServiceSection)){
   activeServiceSection=shopServiceSection(shops.find(s=>s.id===activeShopId)||shops[0])||"food";
 }
 syncActiveShop();
