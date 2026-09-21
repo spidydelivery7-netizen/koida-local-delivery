@@ -3178,7 +3178,35 @@ function renderServiceSections(){
   });
 }
 let ridePickup=null,rideDestination=null,rideSuggestionTimer=null,rideVehicle="bike",rideQuote=null;
+const KOIDA_RIDE_PLACES=[
+  "Koida Bus Stand","Koida Market","Koida Colony","Koida Block Office","Koida Railway Siding",
+  "JSW Narayanposhi Mines","JSW Narayanpohi Mines","JSW Nuagaon Mines","JSW Nuwagaon Mines","JSW Jajang Mines","JSW Tensa Mines",
+  "Kalta Iron Ore Mines","Barsuan Iron Ore Mines","Bolani Mines","Tensa","Kalta","Barsuan","Bolani",
+  "Yana, Koida","Rengra","Dengula Ashram","Patmunda Ashram","Bileipada","Bhadrasahi",
+  "Barbil","Joda","Joda Bus Stand","Barbil Bus Stand","Gua","Noamundi","Khandadhar Waterfall"
+];
 function rideDisplayName(place){return String(place?.display_name||"").split(",").slice(0,3).join(",").trim()}
+async function searchRidePlaces(query){
+  const local=KOIDA_RIDE_PLACES.filter(name=>name.toLowerCase().includes(query.toLowerCase())).slice(0,7).map(name=>({kind:"local",name}));
+  let remote=[];
+  try{
+    const scoped=query+", Koida, Sundargarh, Odisha, India";
+    const r=await fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&countrycodes=in&q="+encodeURIComponent(scoped));
+    if(r.ok)remote=(await r.json()).map(place=>({kind:"map",place}));
+  }catch(_){}
+  return [...local,...remote];
+}
+async function resolveLocalRidePlace(name){
+  const searches=[name+", Koida, Sundargarh, Odisha, India",name+", Sundargarh, Odisha, India",name+", Odisha, India"];
+  for(const query of searches){
+    try{
+      const r=await fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=in&q="+encodeURIComponent(query));
+      const results=await r.json();
+      if(results?.[0])return results[0];
+    }catch(_){}
+  }
+  return null;
+}
 function renderRideService(){
   const isRide=activeServiceSection==="ride";
   const panel=$("rideServicePanel"),shopping=$("shopBrowsingContent");
@@ -3201,7 +3229,7 @@ function renderRideService(){
   destinationInput.oninput=()=>{
     rideDestination=null;rideQuote=null;bookLink.classList.remove("show");const q=destinationInput.value.trim();clearTimeout(rideSuggestionTimer);suggestions.innerHTML="";
     if(q.length<3)return;
-    rideSuggestionTimer=setTimeout(async()=>{try{const r=await fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&countrycodes=in&q="+encodeURIComponent(q));const places=await r.json();suggestions.innerHTML=(places||[]).map((p,i)=>'<button type="button" class="ride-suggestion" data-ride-place="'+i+'"><b>'+esc(rideDisplayName(p))+'</b>'+esc(p.display_name||"")+'</button>').join("");suggestions.querySelectorAll("[data-ride-place]").forEach(b=>b.onclick=()=>{const p=places[Number(b.dataset.ridePlace)];rideDestination={lat:Number(p.lat),lng:Number(p.lon),label:rideDisplayName(p)};destinationInput.value=rideDestination.label;suggestions.innerHTML="";fareInfo.textContent="Drop location selected. Tap See estimated fare."})}catch(e){suggestions.innerHTML='<div class="small">Location search is unavailable. Please try again.</div>'}},350);
+    rideSuggestionTimer=setTimeout(async()=>{const results=await searchRidePlaces(q);if(!results.length){suggestions.innerHTML='<div class="small">No place found. Try nearby town, mine, colony or landmark name.</div>';return}suggestions.innerHTML=results.map((item,i)=>item.kind==="local"?'<button type="button" class="ride-suggestion" data-ride-place="'+i+'"><b>📍 '+esc(item.name)+'</b>Koida mining belt location</button>':'<button type="button" class="ride-suggestion" data-ride-place="'+i+'"><b>'+esc(rideDisplayName(item.place))+'</b>'+esc(item.place.display_name||"")+'</button>').join("");suggestions.querySelectorAll("[data-ride-place]").forEach(b=>b.onclick=async()=>{const item=results[Number(b.dataset.ridePlace)];let p=item.kind==="local"?await resolveLocalRidePlace(item.name):item.place;if(!p){fareInfo.textContent="This place needs a more exact search. Try adding nearby town or road.";return}rideDestination={lat:Number(p.lat),lng:Number(p.lon),label:item.kind==="local"?item.name:rideDisplayName(p)};destinationInput.value=rideDestination.label;suggestions.innerHTML="";fareInfo.textContent="Drop location selected. Tap See estimated fare."})},350);
   };
   fareBtn.onclick=async()=>{
     if(!ridePickup){alert("Please use your current pickup location first.");return}
