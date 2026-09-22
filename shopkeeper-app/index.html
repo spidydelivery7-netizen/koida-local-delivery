@@ -22,6 +22,9 @@ button{border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:poin
 .primary{background:var(--dark);color:#fff}.gray{background:#e5e7eb}.green{background:var(--green);color:#fff}.red{background:var(--red);color:#fff}.linkbtn{background:transparent;color:var(--blue);padding:8px 4px}
 .topbar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .shopname{font-size:20px;font-weight:900}.small{font-size:12px;color:var(--muted)}
+.shopSwitch{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;padding:13px;border:1px solid var(--line);border-radius:13px;background:#f9fafb}
+.shopSwitchTitle{font-weight:900}.shopSwitchNote{font-size:12px;color:var(--muted);margin-top:3px}
+.switch{position:relative;width:58px;height:32px;display:inline-block;flex:0 0 auto}.switch input{opacity:0;width:0;height:0}.slider{position:absolute;inset:0;border-radius:999px;background:#9ca3af;transition:.2s;cursor:pointer}.slider:before{content:"";position:absolute;height:24px;width:24px;left:4px;bottom:4px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px #0004}.switch input:checked+.slider{background:var(--green)}.switch input:checked+.slider:before{transform:translateX(26px)}.switch input:disabled+.slider{opacity:.55;cursor:wait}
 .search{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;font-size:16px;background:#fff}
 .cat{font-weight:900;font-size:16px;margin:20px 2px 8px}
 .row{background:#fff;border:1px solid var(--line);border-radius:14px;padding:13px 14px;margin-bottom:9px;display:flex;align-items:center;justify-content:space-between;gap:12px}
@@ -232,6 +235,16 @@ button{border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:poin
         <div><div id="shopName" class="shopname">My Shop</div><div class="small">Manage availability and your shop's order preparation.</div></div>
         <span id="itemCount" class="count">0 items</span>
       </div>
+      <div class="shopSwitch">
+        <div>
+          <div id="shopOpenLabel" class="shopSwitchTitle">Shop is Open</div>
+          <div id="shopOpenNote" class="shopSwitchNote">Customers can see your products and place orders.</div>
+        </div>
+        <label class="switch" aria-label="Open or close shop">
+          <input id="shopOpenSwitch" type="checkbox" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
     </div>
 
     <div class="card">
@@ -258,7 +271,7 @@ import { ensureStaffPushSubscription } from "/staff-push.js";
 
 const cfg=window.SPIDY_CONFIG||{};
 const $=id=>document.getElementById(id);
-let sb=null, sessionUser=null, shopId=null, shopName="", products=[], shopOrders=[], orderPollTimer=null, audioCtx=null;
+let sb=null, sessionUser=null, shopId=null, shopName="", shopIsOpen=true, products=[], shopOrders=[], orderPollTimer=null, audioCtx=null;
 
 function configured(){return cfg.supabaseUrl&&cfg.supabaseAnonKey&&!String(cfg.supabaseUrl).includes("YOUR_")}
 function setStatus(msg){$("status").textContent=msg}
@@ -292,6 +305,16 @@ function showLoggedIn(){
 function effectiveAvailable(p){
   if(typeof p.available==="boolean") return p.available;
   return p.is_available!==false;
+}
+
+function renderShopOpenState(){
+  const toggle=$("shopOpenSwitch"),label=$("shopOpenLabel"),note=$("shopOpenNote");
+  if(!toggle||!label||!note)return;
+  toggle.checked=shopIsOpen;
+  label.textContent=shopIsOpen?"Shop is Open":"Shop is Closed";
+  note.textContent=shopIsOpen
+    ?"Customers can see your products and place orders."
+    :"Customers cannot see this shop or place new orders until you open it.";
 }
 
 function render(){
@@ -528,9 +551,9 @@ async function loadShopAndProducts(){
     return;
   }
   shopId=map.shop_id;
-  const {data:shop,error:shopErr}=await sb.from("shops").select("id,name,active").eq("id",shopId).maybeSingle();
+  const {data:shop,error:shopErr}=await sb.from("shops").select("id,name,active,is_open").eq("id",shopId).maybeSingle();
   if(shopErr||!shop){setStatus("Shop details could not be loaded.");return}
-  shopName=shop.name||"My Shop";$("shopName").textContent=shopName;
+  shopName=shop.name||"My Shop";shopIsOpen=shop.is_open!==false;$("shopName").textContent=shopName;renderShopOpenState();
   const {data,error}=await sb.from("products").select("id,shop_id,name,category,available,is_available").eq("shop_id",shopId).order("category",{ascending:true}).order("name",{ascending:true});
   if(error){setStatus("Products load error: "+error.message);return}
   products=data||[];
@@ -549,6 +572,24 @@ async function changeAvailability(product,newValue,btn){
   product.available=newValue;product.is_available=newValue;
   setStatus(`${product.name} is now ${newValue?"Available":"Sold Out"}.`);
   render();
+}
+
+async function changeShopOpenStatus(){
+  if(!sb||!shopId)return;
+  const toggle=$("shopOpenSwitch");
+  const wanted=!!toggle.checked;
+  toggle.disabled=true;
+  const {error}=await sb.rpc("set_my_shop_open_status",{p_is_open:wanted});
+  if(error){
+    setStatus("Shop status update failed: "+error.message);
+    toggle.disabled=false;
+    renderShopOpenState();
+    return;
+  }
+  shopIsOpen=wanted;
+  toggle.disabled=false;
+  renderShopOpenState();
+  setStatus(wanted?"Shop is now Open. Customers can place orders.":"Shop is now Closed. New customer orders are paused.");
 }
 
 async function checkSession(){
@@ -704,6 +745,7 @@ $("forgotPasswordBtn").onclick=async()=>{
 $("enableAlertsBtn").onclick=enableOrderAlerts;
 $("logoutBtn").onclick=()=>sb?.auth.signOut();
 $("search").oninput=render;
+$("shopOpenSwitch").onchange=changeShopOpenStatus;
 $("password").addEventListener("keydown",e=>{if(e.key==="Enter")$("loginBtn").click()});
 </script>
 
