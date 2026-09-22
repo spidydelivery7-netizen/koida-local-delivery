@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HUNKART Ride Partner</title>
+<script src="../config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--navy:#09182e;--blue:#1267e8;--green:#00a844;--red:#bd2433;--muted:#677386}*{box-sizing:border-box}body{margin:0;background:#f3f6fb;color:#101828;font-family:Arial,sans-serif}.head{padding:26px 22px;background:var(--navy);color:#fff}.head h1{margin:0;font-size:28px}.head p{margin:6px 0 0;color:#c8d1df}.wrap{max-width:720px;margin:auto;padding:18px}.card{background:#fff;border-radius:22px;padding:20px;margin:15px 0;box-shadow:0 8px 25px #182b4b12}.hidden{display:none!important}input,button{font:inherit;border-radius:12px}input{width:100%;padding:14px;border:1px solid #d8dfe9;margin:6px 0 12px}button{border:0;padding:13px 16px;font-weight:700;cursor:pointer;background:var(--blue);color:#fff;margin:3px}.secondary{background:#e8edf5;color:#172033}.ok{background:var(--green)}.row{display:flex;gap:10px;align-items:center;justify-content:space-between}.notice{padding:14px 16px;border-radius:14px;background:#e8f0ff;margin:15px 0}.status{padding:7px 10px;border-radius:999px;background:#fff1c7;color:#835200;font-weight:700;font-size:13px}.ride{border-left:6px solid var(--blue)}.ride h3{margin:0 0 8px}.ride p{margin:6px 0;color:#42526a}.photo{width:74px;height:74px;object-fit:cover;border-radius:50%;background:#e8edf5}.switch{width:56px;height:32px;accent-color:#00a844}.small{font-size:14px;color:var(--muted)}.otp{letter-spacing:7px;font-size:22px;text-align:center}.map{display:inline-block;margin:8px 0;color:#075dcc;font-weight:700}
+</style>
+</head>
+<body>
+<header class="head"><div class="row"><div><h1>HUNKART</h1><p>Ride Partner App</p></div><button id="logoutBtn" class="secondary hidden">Logout</button></div></header>
+<main class="wrap">
+<div id="notice" class="notice">Sign in to manage ride requests.</div>
+
+<section id="authBox" class="card">
+<h2>Ride Partner Login</h2>
+<input id="email" type="email" placeholder="Email address">
+<input id="password" type="password" placeholder="Password">
+<button id="loginBtn">Login</button>
+<button id="signupBtn" class="secondary">Create Ride Partner Account</button>
+<p class="small">New partners must upload a photo and wait for HUNKART admin approval.</p>
+</section>
+
+<section id="profileBox" class="card hidden">
+<h2>Complete Ride Partner Registration</h2>
+<p class="small">A clear profile photo is mandatory for customer safety.</p>
+<input id="fullName" placeholder="Full name">
+<input id="phone" inputmode="tel" placeholder="Phone number">
+<label>Profile photo</label>
+<input id="photo" type="file" accept="image/*">
+<button id="saveProfileBtn">Submit for approval</button>
+</section>
+
+<section id="pendingBox" class="card hidden">
+<h2>Registration under review</h2>
+<p>Your profile has been submitted. You can go online after an admin approves your Ride Partner account.</p>
+</section>
+
+<section id="dashboard" class="hidden">
+<div class="card">
+<div class="row"><div><h2 id="partnerName">Ride Partner</h2><p class="small">Turn online on to receive nearby ride requests.</p></div><img id="partnerPhoto" class="photo"></div>
+<div class="row"><strong id="onlineLabel">Offline</strong><input id="onlineToggle" class="switch" type="checkbox"></div>
+</div>
+<div class="card"><h2>Nearby ride requests</h2><div id="offers"><p class="small">Go online to receive requests.</p></div></div>
+<div class="card"><h2>My active rides</h2><div id="activeRides"><p class="small">No active ride.</p></div></div>
+</section>
+</main>
+
+<script>
+const cfg=window.SPIDY_CONFIG||{};
+const sb=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey);
+let me=null,partner=null,watchId=null,offersTimer=null;
+const $=id=>document.getElementById(id);
+const say=m=>$("notice").textContent=m;
+const esc=s=>String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function show(id,on){$(id).classList.toggle("hidden",!on)}
+
+async function init(){
+ const {data:{session}}=await sb.auth.getSession();me=session?.user||null;
+ show("logoutBtn",!!me);show("authBox",!me);if(!me)return;await loadPartner();
+}
+async function loadPartner(){
+ const {data,error}=await sb.from("ride_partners").select("*").eq("user_id",me.id).maybeSingle();
+ if(error){say("Could not load account: "+error.message);return}
+ partner=data;show("profileBox",!partner);show("pendingBox",!!partner&&!partner.approved);show("dashboard",!!partner&&partner.approved);
+ if(!partner){say("Complete your profile with a photo.");return}
+ if(!partner.approved){say("Registration submitted. Waiting for admin approval.");return}
+ $("partnerName").textContent=partner.full_name;$("partnerPhoto").src=partner.photo_url||"";
+ $("onlineToggle").checked=partner.is_online;$("onlineLabel").textContent=partner.is_online?"Online – receiving nearby rides":"Offline";
+ say(partner.is_online?"You are online. Nearby paid rides appear here.":"You are offline. Turn on Online when ready.");
+ if(partner.is_online)startTracking();await loadRides();
+ clearInterval(offersTimer);offersTimer=setInterval(loadRides,8000);
+}
+async function signup(){
+ const email=$("email").value.trim(),password=$("password").value;
+ if(!email||password.length<6)return say("Enter email and a password of at least 6 characters.");
+ const {data,error}=await sb.auth.signUp({email,password});
+ if(error)return say(error.message);
+ say(data.session?"Account created. Complete your profile now.":"Account created. Verify email, then log in and complete profile.");await init();
+}
+async function login(){
+ const {error}=await sb.auth.signInWithPassword({email:$("email").value.trim(),password:$("password").value});
+ if(error)return say(error.message);await init();
+}
+async function saveProfile(){
+ const name=$("fullName").value.trim(),phone=$("phone").value.trim(),file=$("photo").files[0];
+ if(!name||!phone||!file)return say("Name, phone and profile photo are required.");
+ if(file.size>5*1024*1024)return say("Photo must be below 5 MB.");
+ say("Uploading photo…");
+ const ext=(file.name.split(".").pop()||"jpg").replace(/[^a-z0-9]/gi,"");
+ const path=me.id+"/"+Date.now()+"."+ext;
+ const {error:up}=await sb.storage.from("ride-partner-photos").upload(path,file,{contentType:file.type});
+ if(up)return say("Photo upload failed: "+up.message);
+ const {data:url}=sb.storage.from("ride-partner-photos").getPublicUrl(path);
+ const {error}=await sb.rpc("register_my_ride_partner",{p_full_name:name,p_phone:phone,p_photo_url:url.publicUrl});
+ if(error)return say(error.message);say("Registration submitted for admin approval.");await loadPartner();
+}
+async function setOnline(){
+ const on=$("onlineToggle").checked;
+ if(on&&!navigator.geolocation){$("onlineToggle").checked=false;return say("Location permission is required.");}
+ const {error}=await sb.rpc("set_my_ride_partner_online",{p_online:on});
+ if(error){$("onlineToggle").checked=!on;return say(error.message)}
+ partner.is_online=on;$("onlineLabel").textContent=on?"Online – receiving nearby rides":"Offline";
+ if(on)startTracking();else stopTracking();await loadRides();
+}
+function startTracking(){
+ if(watchId!==null||!navigator.geolocation)return;
+ watchId=navigator.geolocation.watchPosition(async p=>{
+  await sb.rpc("update_my_ride_partner_location",{p_lat:p.coords.latitude,p_lng:p.coords.longitude});
+  const active=document.querySelector("[data-active='1']");
+  if(active)await sb.rpc("ride_partner_update_booking_location",{p_booking_id:active.dataset.id,p_lat:p.coords.latitude,p_lng:p.coords.longitude});
+ },()=>say("Please allow location permission."),{enableHighAccuracy:true,maximumAge:10000,timeout:15000});
+}
+function stopTracking(){if(watchId!==null)navigator.geolocation.clearWatch(watchId);watchId=null}
+async function loadRides(){
+ if(!partner?.approved)return;
+ const {data,error}=await sb.rpc("get_my_ride_offers");if(error)return say(error.message);
+ const list=data||[];
+ $("offers").innerHTML=list.filter(x=>x.status==="new"||x.status==="assigned").map(card).join("")||"<p class='small'>No nearby requests right now.</p>";
+ $("activeRides").innerHTML=list.filter(x=>["accepted","arrived","started"].includes(x.status)).map(card).join("")||"<p class='small'>No active ride.</p>";
+}
+function card(r){
+ const id=r.booking_id,map="https://www.google.com/maps/dir/?api=1&destination="+encodeURIComponent(r.pickup_lat+","+r.pickup_lng);
+ let a=r.status==="new"||r.status==="assigned"?`<button onclick="acceptRide('${id}')">Accept Ride</button>`:r.status==="accepted"?`<button onclick="arrive('${id}')">I have arrived</button>`:r.status==="arrived"?`<input id="otp-${id}" class="otp" maxlength="4" inputmode="numeric" placeholder="OTP"><button onclick="startRide('${id}')">Verify OTP & Start Ride</button>`:`<button class="ok" onclick="finishRide('${id}')">Complete Ride</button>`;
+ return `<article class="card ride" data-id="${id}" data-active="${["accepted","arrived","started"].includes(r.status)?1:0}"><div class="row"><h3>${esc(r.booking_number)}</h3><span class="status">${esc(r.status)}</span></div><p><b>Customer:</b> ${esc(r.customer_name)} · ${esc(r.customer_phone)}</p><p><b>Pickup:</b> ${esc(r.pickup_label)}</p><p><b>Drop:</b> ${esc(r.destination_label)}</p><a class="map" target="_blank" href="${map}">Open pickup navigation</a><p><b>Fare:</b> ₹${esc(r.fare)} · ${esc(r.vehicle)}</p>${a}</article>`;
+}
+async function acceptRide(id){const {error}=await sb.rpc("accept_ride_booking",{p_booking_id:id});say(error?error.message:"Ride accepted. Navigate to pickup.");await loadRides()}
+async function arrive(id){const {error}=await sb.rpc("ride_partner_mark_arrived",{p_booking_id:id});say(error?error.message:"Ask customer for the 4-digit OTP.");await loadRides()}
+async function startRide(id){const {error}=await sb.rpc("ride_partner_start_with_otp",{p_booking_id:id,p_otp:$("otp-"+id).value});say(error?error.message:"Ride started. Live location sharing is active.");await loadRides()}
+async function finishRide(id){const {error}=await sb.rpc("ride_partner_complete_ride",{p_booking_id:id});say(error?error.message:"Ride marked completed.");await loadRides()}
+
+$("loginBtn").onclick=login;$("signupBtn").onclick=signup;$("saveProfileBtn").onclick=saveProfile;
+$("onlineToggle").onchange=setOnline;
+$("logoutBtn").onclick=async()=>{stopTracking();clearInterval(offersTimer);await sb.auth.signOut();location.reload()};
+init();
+</script>
+</body>
+</html>
