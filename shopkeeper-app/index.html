@@ -568,7 +568,8 @@ async function loadShopAndProducts(){
     return;
   }
   shopId=map.shop_id;
-  await sb.rpc("refresh_scheduled_shop_opens").catch(()=>{});
+  // Do not let the scheduled-open check delay the shopkeeper dashboard.
+  sb.rpc("refresh_scheduled_shop_opens").catch(()=>{});
   const {data:shop,error:shopErr}=await sb.from("shops").select("id,name,active,is_open,reopens_at").eq("id",shopId).maybeSingle();
   if(shopErr||!shop){setStatus("Shop details could not be loaded.");return}
   shopName=shop.name||"My Shop";shopIsOpen=shop.is_open!==false;shopReopensAt=shop.reopens_at||null;$("shopName").textContent=shopName;renderShopOpenState();
