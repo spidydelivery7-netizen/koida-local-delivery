@@ -3150,7 +3150,14 @@ function serviceLabel(key){return ({food:"🍽️ Food",grocery:"🛒 Grocery",r
 function serviceConfig(key){return serviceSections.find(s=>s.slug===key)||{slug:key,label:sectionName(key),is_public:true,coming_soon_text:"Coming soon"}}
 function isServicePublic(key){return serviceConfig(key).is_public===true}
 function shopsForActiveSection(){return shops.filter(s=>shopServiceSection(s)===activeServiceSection)}
-function isShopOpen(shop){return shop?.is_open!==false}
+function isShopOpen(shop){
+  if(shop?.is_open!==false)return true;
+  if(!shop?.reopens_at)return false;
+  // Customer can order again automatically after the shopkeeper's chosen
+  // reopening time, without making a database call that can block loading.
+  const now=new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Kolkata",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date());
+  return String(shop.reopens_at).slice(0,5)<=now;
+}
 function formatShopOpeningTime(value){
   if(!value)return "soon";
   const [hours,minutes]=String(value).slice(0,5).split(":").map(Number);
@@ -3424,8 +3431,6 @@ async function loadProductRatingSummaries(){
   }
 }
 async function loadProducts(){
-  // Run in background so a slow scheduled-open check never blocks customer loading.
-  sb.rpc("refresh_scheduled_shop_opens").catch(()=>{});
   const [
     {data:productData,error:productError},
     {data:shopData,error:shopError},
