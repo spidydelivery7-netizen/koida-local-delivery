@@ -3429,7 +3429,9 @@ async function loadProducts(){
   if(sectionError){console.warn("Service section load error:",sectionError.message)}
 
   await loadProductRatingSummaries();
-  shops = shopData || [];
+  // A shopkeeper can temporarily close only their own shop. Closed shops are
+  // hidden from customers, while `active` continues to mean admin-approved.
+  shops = (shopData || []).filter(s => s.is_open !== false);
   serviceSections=sectionData||[];
 
 const approvedShopIds = new Set(
