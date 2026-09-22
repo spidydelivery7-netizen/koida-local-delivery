@@ -3424,7 +3424,8 @@ async function loadProductRatingSummaries(){
   }
 }
 async function loadProducts(){
-  await sb.rpc("refresh_scheduled_shop_opens").catch(()=>{});
+  // Run in background so a slow scheduled-open check never blocks customer loading.
+  sb.rpc("refresh_scheduled_shop_opens").catch(()=>{});
   const [
     {data:productData,error:productError},
     {data:shopData,error:shopError},
