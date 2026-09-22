@@ -3150,11 +3150,18 @@ function serviceLabel(key){return ({food:"🍽️ Food",grocery:"🛒 Grocery",r
 function serviceConfig(key){return serviceSections.find(s=>s.slug===key)||{slug:key,label:sectionName(key),is_public:true,coming_soon_text:"Coming soon"}}
 function isServicePublic(key){return serviceConfig(key).is_public===true}
 function shopsForActiveSection(){return shops.filter(s=>shopServiceSection(s)===activeServiceSection)}
+function isShopOpen(shop){return shop?.is_open!==false}
+function formatShopOpeningTime(value){
+  if(!value)return "soon";
+  const [hours,minutes]=String(value).slice(0,5).split(":").map(Number);
+  if(!Number.isFinite(hours)||!Number.isFinite(minutes))return "soon";
+  return new Intl.DateTimeFormat("en-IN",{hour:"numeric",minute:"2-digit",hour12:true,timeZone:"Asia/Kolkata"}).format(new Date(Date.UTC(2000,0,1,hours,minutes)));
+}
 function syncActiveShop(){
   if(activeServiceSection==="ride"){activeShopId=null;activeCat="All";return}
   const sectionShops=shopsForActiveSection();
   if(!sectionShops.some(s=>s.id===activeShopId)){
-    activeShopId=sectionShops[0]?.id||null;
+    activeShopId=sectionShops.find(isShopOpen)?.id||sectionShops[0]?.id||null;
     activeCat="All";
   }
 }
@@ -3249,6 +3256,14 @@ function renderRideService(){
 function renderCats(){
   if(activeServiceSection==="ride"){renderRideService();return}
   const categories=activeShopId?shopCategories(activeShopId):[];
+  const selectedShop=shops.find(s=>s.id===activeShopId);
+  if(selectedShop&&!isShopOpen(selectedShop)){
+    $("cats").innerHTML="";
+    const title=$('categorySectionTitle'),hint=$('categorySectionHint');
+    if(title)title.textContent="Shop is currently closed";
+    if(hint)hint.textContent=`Opens at ${formatShopOpeningTime(selectedShop.reopens_at)}`;
+    return;
+  }
   const arr=["All",...categories];
   if(!arr.includes(activeCat)) activeCat="All";
   const title=$("categorySectionTitle"),hint=$("categorySectionHint");
@@ -3285,8 +3300,10 @@ function renderShops(){
   if(!sectionShops.length){box.innerHTML='<div class="small">No shops in this section yet.</div>';return}
   sectionShops.forEach(s=>{
     const b=document.createElement("button");
-    b.className="chip"+(s.id===activeShopId?" active":"");
-    b.textContent=s.name;
+    const open=isShopOpen(s);
+    b.className="chip"+(s.id===activeShopId?" active":"")+(open?"":" muted");
+    b.textContent=open?s.name:`${s.name} · Closed`;
+    b.title=open?"Open now":`Closed now · Opens at ${formatShopOpeningTime(s.reopens_at)}`;
     b.onclick=()=>{
       activeShopId=s.id;activeCat="All";
       const title=$("productSectionTitle");
@@ -3303,6 +3320,12 @@ function renderProducts(){
   grid.innerHTML="";
   if(!activeShopId){
     grid.innerHTML='<div class="empty" style="grid-column:1/-1">No '+esc(sectionName(activeServiceSection))+' shops available yet.</div>';
+    return;
+  }
+  const selectedShop=shops.find(s=>s.id===activeShopId);
+  if(selectedShop&&!isShopOpen(selectedShop)){
+    const opensAt=formatShopOpeningTime(selectedShop.reopens_at);
+    grid.innerHTML='<div class="empty" style="grid-column:1/-1;padding:34px 18px"><div style="font-size:34px">🕒</div><b style="display:block;margin:10px 0 6px">'+esc(selectedShop.name)+' is currently closed.</b><div class="small">Opens at '+esc(opensAt)+'. You can order after it opens.</div></div>';
     return;
   }
   const arr=products.filter(p=>p.shop_id===activeShopId&&(activeCat==="All"||p.category===activeCat)&&(!q||p.name.toLowerCase().includes(q)||(p.description||"").toLowerCase().includes(q)));
@@ -3401,6 +3424,7 @@ async function loadProductRatingSummaries(){
   }
 }
 async function loadProducts(){
+  await sb.rpc("refresh_scheduled_shop_opens").catch(()=>{});
   const [
     {data:productData,error:productError},
     {data:shopData,error:shopError},
@@ -3429,9 +3453,8 @@ async function loadProducts(){
   if(sectionError){console.warn("Service section load error:",sectionError.message)}
 
   await loadProductRatingSummaries();
-  // A shopkeeper can temporarily close only their own shop. Closed shops are
-  // hidden from customers, while `active` continues to mean admin-approved.
-  shops = (shopData || []).filter(s => s.is_open !== false);
+  // Closed shops remain visible so their reopening time is clear to customers.
+  shops = shopData || [];
   serviceSections=sectionData||[];
 
 const approvedShopIds = new Set(
