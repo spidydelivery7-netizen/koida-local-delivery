@@ -140,5 +140,6 @@ $("onlineToggle").onchange=setOnline;
 $("logoutBtn").onclick=async()=>{stopTracking();clearInterval(offersTimer);await sb.auth.signOut();location.reload()};
 init();
 </script>
+ <script>if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js");</script>
 </body>
 </html>
