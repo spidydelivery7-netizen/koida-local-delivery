@@ -604,6 +604,9 @@ header{
 .past-order-card{border:1px solid #e5e7eb;border-radius:20px;background:#fff;padding:13px;margin-top:13px;box-shadow:0 7px 18px rgba(15,23,42,.055)}
 .past-order-top{display:flex;gap:11px;align-items:flex-start}.past-order-thumb{width:60px;height:60px;border-radius:14px;object-fit:cover;background:#f1f5f9;flex:0 0 60px}.past-order-info{min-width:0;flex:1}.past-order-shop{font-size:16px;font-weight:900;color:#111827;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.past-order-number{font-size:12px;color:#64748b;margin-top:3px}.past-order-status{font-size:13px;font-weight:900;white-space:nowrap;color:#059669}.past-order-status:not(.delivered){color:#2563eb}.past-order-items{margin:12px 0 11px;padding:10px 0;border-top:1px solid #edf0f3;border-bottom:1px solid #edf0f3;font-size:13px;line-height:1.65;color:#334155}.past-order-qty{display:inline-flex;align-items:center;justify-content:center;min-width:28px;padding:1px 6px;margin-right:6px;border-radius:7px;background:#f1f5f9;font-size:11px;font-weight:900;color:#475569}.past-order-ratings{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:11px 0}.past-rating{min-width:0}.past-rating+.past-rating{border-left:1px solid #e5e7eb;padding-left:10px}.past-rating-label{font-size:11px;font-weight:800;color:#64748b}.past-rating-stars{display:block;margin-top:4px;font-size:18px;letter-spacing:1px;color:#f59e0b;white-space:nowrap}.past-rating-empty{color:#cbd5e1}.past-order-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:11px}.past-order-actions button{min-height:42px;border:0;border-radius:12px;font-size:13px;font-weight:900}.past-view-btn{background:#fff1e9;color:#e85d04}.past-reorder-btn{background:#0b1220;color:#fff}.past-order-footer{margin-top:10px;font-size:12px;color:#64748b}.past-order-footer b{color:#0b1220}@media(max-width:390px){.past-order-actions{grid-template-columns:1fr}.past-order-status{font-size:12px}}
 
+/* Customer delivery ETA: starts only after the 3-minute cancellation window closes. */
+.delivery-eta-card{position:relative;overflow:hidden;margin:14px 0 0;padding:16px;border-radius:19px;color:#fff;background:linear-gradient(135deg,#092c3d 0%,#0b5f61 58%,#0f766e 100%);box-shadow:0 12px 25px rgba(13,95,97,.22)}.delivery-eta-card:after{content:"";position:absolute;right:-42px;top:-60px;width:170px;height:170px;border:28px solid rgba(255,255,255,.08);border-radius:50%;pointer-events:none}.delivery-eta-head{position:relative;z-index:1;display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.delivery-eta-title{display:flex;gap:10px;align-items:center;min-width:0}.delivery-eta-icon{display:grid;place-items:center;flex:0 0 38px;width:38px;height:38px;border-radius:13px;background:rgba(255,255,255,.16);font-size:21px}.delivery-eta-kicker{font-size:10px;font-weight:900;letter-spacing:.08em;opacity:.72}.delivery-eta-state{margin-top:3px;font-size:15px;font-weight:900;line-height:1.2}.delivery-eta-clock{text-align:right;white-space:nowrap}.delivery-eta-clock b{display:block;font-size:25px;letter-spacing:.035em;line-height:1}.delivery-eta-clock span{display:block;margin-top:4px;font-size:10px;font-weight:800;opacity:.75}.delivery-eta-track{position:relative;z-index:1;height:7px;margin:15px 0 9px;overflow:hidden;border-radius:99px;background:rgba(255,255,255,.22)}.delivery-eta-track i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#fde68a,#fff);box-shadow:0 0 12px rgba(255,255,255,.65);transition:width 1s linear}.delivery-eta-note{position:relative;z-index:1;font-size:12px;line-height:1.35;color:rgba(255,255,255,.86)}.delivery-eta-card.delivery-eta-complete{background:linear-gradient(135deg,#7c2d12,#c2410c 58%,#ea580c)}.delivery-eta-mini{margin:11px 0 2px;padding:11px 12px;border:1px solid #99f6e4;border-radius:14px;background:linear-gradient(135deg,#ecfdf5,#f0fdfa);color:#134e4a}.delivery-eta-mini-top{display:flex;align-items:center;justify-content:space-between;gap:10px}.delivery-eta-mini-title{font-size:12px;font-weight:900}.delivery-eta-mini-time{font-size:16px;font-weight:900;letter-spacing:.035em;color:#0f766e}.delivery-eta-mini-track{height:5px;margin-top:8px;overflow:hidden;border-radius:99px;background:#ccfbf1}.delivery-eta-mini-track i{display:block;height:100%;border-radius:inherit;background:#14b8a6;transition:width 1s linear}.delivery-eta-mini-note{margin-top:5px;font-size:11px;font-weight:700;color:#0f766e}.delivery-eta-mini.delivery-eta-complete{border-color:#fed7aa;background:#fff7ed;color:#9a3412}.delivery-eta-mini.delivery-eta-complete .delivery-eta-mini-time,.delivery-eta-mini.delivery-eta-complete .delivery-eta-mini-note{color:#c2410c}.delivery-eta-mini.delivery-eta-complete .delivery-eta-mini-track{background:#ffedd5}.delivery-eta-mini.delivery-eta-complete .delivery-eta-mini-track i{background:#f97316}
+
 /* Account shortcuts and customer favourites */
 #homeAddressCard{display:none!important}.account-shortcuts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.account-shortcut{min-height:104px;padding:14px;border:1px solid #e2e8f0;border-radius:17px;background:#fff;text-align:left;color:#0b1220}.account-shortcut .a-icon{display:block;font-size:25px;margin-bottom:8px}.account-shortcut b{display:block;font-size:14px}.account-shortcut small{display:block;margin-top:4px;font-size:11px;line-height:1.3;color:#64748b}.account-favourites{margin-top:15px;padding:14px;border:1px solid #e2e8f0;border-radius:17px;background:#f8fafc}.account-favourites-head{display:flex;justify-content:space-between;align-items:center;gap:10px}.account-favourites-head b{font-size:16px}.account-favourites-list{display:grid;gap:8px;margin-top:11px}.favourite-row{display:flex;align-items:center;gap:10px;padding:8px;background:#fff;border:1px solid #e5e7eb;border-radius:12px}.favourite-row img{width:45px;height:45px;object-fit:cover;border-radius:10px}.favourite-row .fav-info{min-width:0;flex:1}.favourite-row .fav-info b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}.favourite-row .fav-info small{color:#64748b}.favourite-row button{border:0;border-radius:9px;padding:8px 10px;background:#fff1f2;color:#e11d48;font-weight:900}.card{position:relative}.product-favourite-btn{position:absolute;z-index:3;top:10px;right:10px;width:36px;height:36px;border:0;border-radius:50%;background:#ffffffed;color:#64748b;font-size:21px;line-height:1;box-shadow:0 3px 10px #0002}.product-favourite-btn.is-favourite{color:#e11d48;background:#fff1f2}.product-favourite-btn:active{transform:scale(.92)}
 
@@ -1593,19 +1596,21 @@ async function ensurePushSubscription(){
       );
     }
 
-    const {error} =
-      await sb
-        .from("customer_push_subscriptions")
-        .upsert({
-          customer_id: currentSession.user.id,
-          endpoint: json.endpoint,
-          p256dh: json.keys.p256dh,
-          auth_key: json.keys.auth,
-          user_agent: navigator.userAgent,
-          updated_at: new Date().toISOString()
-        },{
-          onConflict: "endpoint"
-        });
+    /*
+      A browser Push endpoint belongs to the device, not permanently to
+      one account. The secure RPC transfers only this current endpoint to
+      the signed-in customer, avoiding an RLS failure when the device was
+      used by a different HUNKART account earlier.
+    */
+    const {error} = await sb.rpc(
+      "save_customer_push_subscription",
+      {
+        p_endpoint: json.endpoint,
+        p_p256dh: json.keys.p256dh,
+        p_auth_key: json.keys.auth,
+        p_user_agent: navigator.userAgent
+      }
+    );
 
     if(error){
       throw error;
@@ -2525,11 +2530,13 @@ const hasLocation=
     ${o.distance_km!=null?`<div class="sum-row"><span>Distance</span><b>${Number(o.distance_km)} km</b></div>`:""}
 
     ${cancellationTimerPanel(o)}
+    ${deliveryCountdownPanel(o,"full")}
     ${cancelPanel(o)}
     ${ratingPanel(o,savedOrderRating)}
 ${trackingHtml}
 `;
   refreshCancellationTimers();
+  refreshDeliveryCountdowns();
   openModal($("orderDetailsModal"));
 }
 async function openCustomerLiveLocation(orderId){
@@ -2608,6 +2615,64 @@ function cancelPanel(o){
   if(!allowed)return "";
   return '<button id="cancel-order-'+o.id+'" data-cancel-button="'+end+'" class="btn danger" style="width:100%;margin-top:12px" onclick="requestOrderCancellation(\''+o.id+'\')">Cancel Order</button>';
 }
+
+const DELIVERY_COUNTDOWN_MS=60*60*1000;
+function deliveryCountdownInfo(o){
+  const status=String(o.status||"").toLowerCase();
+  const payment=String(o.payment_status||"").toLowerCase();
+  const terminal=["cancelled","canceled","delivered","refunded","payment_failed","failed"].includes(status);
+  const explicitStart=o.customer_cancel_until?new Date(o.customer_cancel_until).getTime():0;
+  const fallbackStart=o.created_at?new Date(o.created_at).getTime()+3*60*1000:0;
+  const start=Number.isFinite(explicitStart)&&explicitStart>0?explicitStart:fallbackStart;
+  if(!start || payment!=="paid" || terminal || Date.now()<start)return null;
+  const copy=status==="out_for_delivery"
+    ? {icon:"🛵",state:"Delivery partner is on the way",note:"Your rider is heading to your delivery address."}
+    : ["confirmed","accepted","preparing","preparation"].includes(status)
+      ? {icon:"🍳",state:"Your order is being prepared",note:"The shop is preparing your order with care."}
+      : {icon:"🛍️",state:"Order sent to the shop",note:"The shop will confirm and prepare your order shortly."};
+  return {start,deadline:start+DELIVERY_COUNTDOWN_MS,status,...copy};
+}
+function deliveryCountdownPanel(o,variant){
+  const info=deliveryCountdownInfo(o);
+  if(!info)return "";
+  const seconds=Math.max(0,Math.ceil((info.deadline-Date.now())/1000));
+  const mins=Math.floor(seconds/60);
+  const time=String(mins).padStart(2,"0")+":"+String(seconds%60).padStart(2,"0");
+  const progress=Math.min(100,Math.max(0,((Date.now()-info.start)/DELIVERY_COUNTDOWN_MS)*100));
+  const complete=seconds===0;
+  const title=complete?"Delivery time reached":info.state;
+  const note=complete?"Your delivery is being completed. Please check the latest order status.":info.note;
+  const data=' data-delivery-countdown="'+info.deadline+'" data-delivery-start="'+info.start+'" data-delivery-status="'+esc(info.status)+'"';
+  if(variant==="mini"){
+    return '<div class="delivery-eta-mini'+(complete?' delivery-eta-complete':'')+'"'+data+'><div class="delivery-eta-mini-top"><span class="delivery-eta-mini-title" data-delivery-title>'+esc(complete?"Delivery time reached":info.icon+" "+title)+'</span><span class="delivery-eta-mini-time" data-delivery-time>'+time+'</span></div><div class="delivery-eta-mini-track"><i data-delivery-progress style="width:'+progress+'%"></i></div><div class="delivery-eta-mini-note" data-delivery-note>'+esc(complete?note:"Estimated delivery · 60 min after cancellation closes")+'</div></div>';
+  }
+  return '<section class="delivery-eta-card'+(complete?' delivery-eta-complete':'')+'"'+data+' aria-live="polite"><div class="delivery-eta-head"><div class="delivery-eta-title"><span class="delivery-eta-icon" data-delivery-icon>'+info.icon+'</span><div><div class="delivery-eta-kicker">HUNKART DELIVERY ETA</div><div class="delivery-eta-state" data-delivery-title>'+esc(title)+'</div></div></div><div class="delivery-eta-clock"><b data-delivery-time>'+time+'</b><span>MIN : SEC LEFT</span></div></div><div class="delivery-eta-track"><i data-delivery-progress style="width:'+progress+'%"></i></div><div class="delivery-eta-note" data-delivery-note>'+esc(note)+'</div></section>';
+}
+function refreshDeliveryCountdowns(){
+  document.querySelectorAll("[data-delivery-countdown]").forEach(function(el){
+    const deadline=Number(el.dataset.deliveryCountdown||0);
+    const start=Number(el.dataset.deliveryStart||0);
+    if(!deadline || !start)return;
+    const seconds=Math.max(0,Math.ceil((deadline-Date.now())/1000));
+    const complete=seconds===0;
+    const mins=Math.floor(seconds/60);
+    const time=String(mins).padStart(2,"0")+":"+String(seconds%60).padStart(2,"0");
+    const progress=Math.min(100,Math.max(0,((Date.now()-start)/DELIVERY_COUNTDOWN_MS)*100));
+    const status=String(el.dataset.deliveryStatus||"").toLowerCase();
+    const state=status==="out_for_delivery"?"Delivery partner is on the way":["confirmed","accepted","preparing","preparation"].includes(status)?"Your order is being prepared":"Order sent to the shop";
+    const note=status==="out_for_delivery"?"Your rider is heading to your delivery address.":["confirmed","accepted","preparing","preparation"].includes(status)?"The shop is preparing your order with care.":"The shop will confirm and prepare your order shortly.";
+    const title=el.querySelector("[data-delivery-title]");
+    const timer=el.querySelector("[data-delivery-time]");
+    const bar=el.querySelector("[data-delivery-progress]");
+    const message=el.querySelector("[data-delivery-note]");
+    if(timer)timer.textContent=time;
+    if(bar)bar.style.width=progress+"%";
+    el.classList.toggle("delivery-eta-complete",complete);
+    if(title)title.textContent=complete?"Delivery time reached":(el.classList.contains("delivery-eta-mini")?(status==="out_for_delivery"?"🛵 ":status==="confirmed"||status==="accepted"||status==="preparing"||status==="preparation"?"🍳 ":"🛍️ ")+state:state);
+    if(message)message.textContent=complete?"Your delivery is being completed. Please check the latest order status.":(el.classList.contains("delivery-eta-mini")?"Estimated delivery · 60 min after cancellation closes":note);
+  });
+}
+setInterval(refreshDeliveryCountdowns,1000);
 function refreshCancelButtons(){
   document.querySelectorAll("[data-cancel-button]").forEach(function(button){
     if(Date.now()>=Number(button.dataset.cancelButton)){
@@ -2749,8 +2814,9 @@ async function loadMyOrders(){
     const stars=value=>rating?ratingStars(value):'<span class="past-rating-empty">☆☆☆☆☆</span>';
     const ratingHtml=isDelivered?'<div class="past-order-ratings"><div class="past-rating"><div class="past-rating-label">Food Rating</div><span class="past-rating-stars">'+stars(rating?.product_rating)+'</span></div><div class="past-rating"><div class="past-rating-label">Delivery Rating</div><span class="past-rating-stars">'+stars(rating?.delivery_rating)+'</span></div></div>':'';
     const itemHtml=items.slice(0,3).map(i=>'<div><span class="past-order-qty">'+Number(i.qty||1)+'×</span>'+esc(i.product_name||"Item")+(i.variant_label?' · '+esc(i.variant_label):'')+'</div>').join('')+(items.length>3?'<div class="small">+'+(items.length-3)+' more item'+(items.length-3===1?'':'s')+'</div>':'');
-    return '<article class="past-order-card order-card-mini" data-order-idx="'+idx+'" role="button" tabindex="0" aria-label="Open details for '+esc(o.order_number)+'"><div class="past-order-top"><img class="past-order-thumb" src="'+esc(image)+'" alt="" onerror="this.src=ph(\''+esc(first.product_name||"HUNKART order")+'\')"><div class="past-order-info"><div class="past-order-shop">'+esc(first.product_name||"HUNKART Order")+'</div><div class="past-order-number">'+esc(o.order_number)+'</div></div><div class="past-order-status '+(isDelivered?'delivered':'')+'">'+(isDelivered?'Delivered ✓':esc(statusLabel(o.status)))+'</div></div><div class="past-order-items">'+itemHtml+'</div>'+ratingHtml+'<div class="past-order-actions"><button type="button" class="past-view-btn" data-view-order="'+idx+'">View Details</button>'+(isDelivered?'<button type="button" class="past-reorder-btn" data-reorder-order="'+idx+'">Order Again</button>':'<button type="button" class="past-reorder-btn" data-reorder-order="'+idx+'">Add Again</button>')+'</div><div class="past-order-footer">Ordered: '+esc(fmtOrderDate(o.created_at))+' · Bill Total: <b>₹'+esc(o.total)+'</b></div></article>';
+    return '<article class="past-order-card order-card-mini" data-order-idx="'+idx+'" role="button" tabindex="0" aria-label="Open details for '+esc(o.order_number)+'"><div class="past-order-top"><img class="past-order-thumb" src="'+esc(image)+'" alt="" onerror="this.src=ph(\''+esc(first.product_name||"HUNKART order")+'\')"><div class="past-order-info"><div class="past-order-shop">'+esc(first.product_name||"HUNKART Order")+'</div><div class="past-order-number">'+esc(o.order_number)+'</div></div><div class="past-order-status '+(isDelivered?'delivered':'')+'">'+(isDelivered?'Delivered ✓':esc(statusLabel(o.status)))+'</div></div><div class="past-order-items">'+itemHtml+'</div>'+deliveryCountdownPanel(o,"mini")+ratingHtml+'<div class="past-order-actions"><button type="button" class="past-view-btn" data-view-order="'+idx+'">View Details</button>'+(isDelivered?'<button type="button" class="past-reorder-btn" data-reorder-order="'+idx+'">Order Again</button>':'<button type="button" class="past-reorder-btn" data-reorder-order="'+idx+'">Add Again</button>')+'</div><div class="past-order-footer">Ordered: '+esc(fmtOrderDate(o.created_at))+' · Bill Total: <b>₹'+esc(o.total)+'</b></div></article>';
   }).join("");
+  refreshDeliveryCountdowns();
   box.onclick=(e)=>{
   const reorder=e.target.closest("[data-reorder-order]");
   if(reorder){e.stopPropagation();reorderFromPastOrder(orders[Number(reorder.dataset.reorderOrder)]);return}
