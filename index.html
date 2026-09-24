@@ -1370,7 +1370,7 @@ header.hk-header .menu-btn:active{
     <div id="loginBox" class="form">
       <label class="full">Email Address<input id="loginEmail" type="email" autocomplete="email" placeholder="you@example.com"></label>
       <label class="full">6-digit PIN<input id="loginPin" inputmode="numeric" type="password" maxlength="6" autocomplete="current-password" placeholder="••••••"></label>
-      <div class="full" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><button id="forgotCustomer" class="btn gray" type="button">Forgot PIN?</button><button id="loginCustomer" class="btn dark">Login</button></div>
+      <div class="full" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><button id="forgotCustomer" class="btn gray" type="button">Forgot PIN?</button><button id="resendVerification" class="btn gray" type="button">Resend verification</button><button id="loginCustomer" class="btn dark">Login</button></div>
     </div>
     <div id="signupBox" class="form" style="display:none">
       <label class="full">Full Name<input id="signupName" autocomplete="name" placeholder="Your name"></label>
@@ -2931,14 +2931,46 @@ async function customerSignup(){
   if(pin!==pin2){alert("PINs do not match.");return}
   $("signupCustomer").disabled=true;$("signupCustomer").textContent="Creating...";
   try{
-    const {data,error}=await sb.auth.signUp({email,password:pin,options:{data:{phone,full_name:name}}});if(error)throw error;
-    if(data.user){await sb.from("customers").upsert({id:data.user.id,phone,full_name:name,updated_at:new Date().toISOString()},{onConflict:"id"})}
+    const {data,error}=await sb.auth.signUp({email,password:pin,options:{emailRedirectTo:"https://hunkart.com/",data:{phone,full_name:name}}});if(error)throw error;
+    // With email confirmation enabled, Supabase can return an obfuscated user for an
+    // address that is already registered. Do not overwrite that customer's profile.
+    const existingAccount=Boolean(data.user&&Array.isArray(data.user.identities)&&data.user.identities.length===0);
+    if(data.user&&!existingAccount){await sb.from("customers").upsert({id:data.user.id,phone,full_name:name,updated_at:new Date().toISOString()},{onConflict:"id"})}
     await refreshAccountState();
     if(!currentSession){
-      alert("Account created. Please check your email if confirmation is required, then login with your email and PIN.");
+      alert(existingAccount?"This email is already registered. If it is not verified yet, use Resend verification below. If you know your PIN, log in instead.":"Account created. A verification email has been sent. Open it to verify your account, then log in with your email and PIN.");
       switchAuthTab("login");$("loginEmail").value=email;
     }else alert("Account created and logged in.");
   }catch(e){const m=String(e.message||e);alert(m.toLowerCase().includes("already")?"An account already exists for this email. Please use Login or Forgot PIN.":"Could not create account: "+m)}finally{$("signupCustomer").disabled=false;$("signupCustomer").textContent="Create Account"}
+}
+function confirmationResendRemaining(){
+  const until=Number(localStorage.getItem("kld-confirmation-resend-until")||0);
+  return Math.max(0,until-Date.now());
+}
+function updateResendVerificationButton(){
+  const button=$("resendVerification");
+  if(!button)return;
+  const remaining=confirmationResendRemaining();
+  button.disabled=remaining>0;
+  button.textContent=remaining>0?`Resend in ${Math.ceil(remaining/1000)}s`:"Resend verification";
+  if(remaining>0)setTimeout(updateResendVerificationButton,Math.min(remaining,1000));
+}
+async function customerResendVerification(){
+  const email=normalizeEmail($("loginEmail").value||$("signupEmail").value);
+  if(!validEmail(email)){alert("Enter the account email address first.");return}
+  const remaining=confirmationResendRemaining();
+  if(remaining>0){updateResendVerificationButton();return}
+  const button=$("resendVerification");
+  button.disabled=true;button.textContent="Sending...";
+  try{
+    const {error}=await sb.auth.resend({type:"signup",email,options:{emailRedirectTo:"https://hunkart.com/"}});
+    if(error)throw error;
+    localStorage.setItem("kld-confirmation-resend-until",String(Date.now()+60000));
+    alert("If this email has an unverified HUNKART account, a fresh verification email has been sent. Check Inbox, Spam and Promotions, then wait one minute before trying again.");
+  }catch(e){
+    const message=String(e.message||e);
+    alert(message.toLowerCase().includes("rate limit")?"Please wait a minute before requesting another verification email.":"Could not resend verification email: "+message);
+  }finally{updateResendVerificationButton()}
 }
 async function customerLogin(){
 
@@ -3984,7 +4016,7 @@ if($("cartCount")){
       subtree:true,
       characterData:true
     });
-    }$("loginTab").onclick=()=>switchAuthTab("login");$("signupTab").onclick=()=>switchAuthTab("signup");$("loginCustomer").onclick=customerLogin;$("forgotCustomer").onclick=customerForgotPin;$("signupCustomer").onclick=customerSignup;$("logoutCustomer").onclick=customerLogout;$("refreshMyOrders").onclick=loadMyOrders;$("closeOrderDetails").onclick=()=>closeModal($("orderDetailsModal"));
+    }$("loginTab").onclick=()=>switchAuthTab("login");$("signupTab").onclick=()=>switchAuthTab("signup");$("loginCustomer").onclick=customerLogin;$("forgotCustomer").onclick=customerForgotPin;$("resendVerification").onclick=customerResendVerification;updateResendVerificationButton();$("signupCustomer").onclick=customerSignup;$("logoutCustomer").onclick=customerLogout;$("refreshMyOrders").onclick=loadMyOrders;$("closeOrderDetails").onclick=()=>closeModal($("orderDetailsModal"));
 sb.auth.onAuthStateChange(()=>{setTimeout(()=>refreshAccountState(),0)});
 $("search").oninput=renderProducts;$("addressBtn").onclick=()=>{fillAddress();renderCheckoutSummary();openModal($("checkoutModal"))};$("openCart").onclick=()=>{renderCart();openModal($("cartModal"))};$("closeCart").onclick=()=>closeModal($("cartModal"));$("closeProductSheet").onclick=()=>closeModal($("productSheetModal"));$("checkoutBtn").onclick=()=>{if(!cart.length)return;renderCart();fillAddress();renderCheckoutSummary();openModal($("checkoutModal"))};$("backToCart").onclick=()=>{renderCart();closeModal($("checkoutModal"))};$("detectLocation").onclick=detectLocation;$("placeOrder").onclick=placeOrder;$("payNow").onclick=()=>{if(lastOrderCtx)startRazorpayPayment(lastOrderCtx)};$("printBill").onclick=()=>{
   const receipt=$("receipt");
