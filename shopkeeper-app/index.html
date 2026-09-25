@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="hunkart-build" content="shop-location-v2-2026-09-25">
 <title>HUNKART - Shopkeeper</title>
 <style>
 :root{--dark:#111827;--bg:#f3f4f6;--card:#fff;--muted:#6b7280;--green:#16a34a;--red:#dc2626;--line:#e5e7eb;--blue:#2563eb}
@@ -24,6 +25,12 @@ button{border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:poin
 .shopname{font-size:20px;font-weight:900}.small{font-size:12px;color:var(--muted)}
 .shopSwitch{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;padding:13px;border:1px solid var(--line);border-radius:13px;background:#f9fafb}
 .shopSwitchTitle{font-weight:900}.shopSwitchNote{font-size:12px;color:var(--muted);margin-top:3px}
+.locationCard{border:1px solid #bfdbfe;background:linear-gradient(135deg,#eff6ff,#f8fafc)}
+.locationHead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.locationTitle{font-size:16px;font-weight:900;color:#0f172a}.locationNote{font-size:12px;line-height:1.45;color:#475569;margin-top:5px;max-width:560px}
+.locationState{margin-top:12px;padding:10px 12px;border-radius:10px;background:#fff;border:1px solid #dbeafe;color:#334155;font-size:13px;line-height:1.45}
+.locationState.ready{border-color:#86efac;background:#f0fdf4;color:#166534}.locationState.missing{border-color:#fde68a;background:#fffbeb;color:#92400e}
+.locationBtn{background:#2563eb;color:#fff;white-space:nowrap}.locationBtn:disabled{opacity:.65;cursor:wait}
 .switch{position:relative;width:58px;height:32px;display:inline-block;flex:0 0 auto}.switch input{opacity:0;width:0;height:0}.slider{position:absolute;inset:0;border-radius:999px;background:#9ca3af;transition:.2s;cursor:pointer}.slider:before{content:"";position:absolute;height:24px;width:24px;left:4px;bottom:4px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px #0004}.switch input:checked+.slider{background:var(--green)}.switch input:checked+.slider:before{transform:translateX(26px)}.switch input:disabled+.slider{opacity:.55;cursor:wait}
 .closeTimePanel{margin-top:12px;padding:14px;border-radius:13px;background:#fff7ed;border:1px solid #fed7aa}.closeTimePanel b{display:block;margin-bottom:4px}.closeTimeActions{display:flex;gap:8px;margin-top:10px}.closeTimeActions button{flex:1}
 .search{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;font-size:16px;background:#fff}
@@ -257,6 +264,17 @@ button{border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:poin
       </div>
     </div>
 
+    <div class="card locationCard">
+      <div class="locationHead">
+        <div>
+          <div class="locationTitle">📍 Shop delivery location</div>
+          <div class="locationNote">Stand at your shop and save its location. Customer distance and delivery charges will be calculated from this shop only.</div>
+        </div>
+        <button id="saveShopLocationBtn" type="button" class="locationBtn">Use my current location</button>
+      </div>
+      <div id="shopLocationState" class="locationState missing">Location not set yet. Set it before accepting customer delivery orders.</div>
+    </div>
+
     <div class="card">
       <div class="ordersHead">
         <div>
@@ -281,7 +299,7 @@ import { ensureStaffPushSubscription } from "/staff-push.js";
 
 const cfg=window.SPIDY_CONFIG||{};
 const $=id=>document.getElementById(id);
-let sb=null, sessionUser=null, shopId=null, shopName="", shopIsOpen=true, shopReopensAt=null, products=[], shopOrders=[], orderPollTimer=null, audioCtx=null;
+let sb=null, sessionUser=null, shopId=null, shopName="", shopIsOpen=true, shopReopensAt=null, shopLocation=null, products=[], shopOrders=[], orderPollTimer=null, audioCtx=null;
 
 function configured(){return cfg.supabaseUrl&&cfg.supabaseAnonKey&&!String(cfg.supabaseUrl).includes("YOUR_")}
 function setStatus(msg){$("status").textContent=msg}
@@ -332,6 +350,25 @@ function renderShopOpenState(){
   note.textContent=shopIsOpen
     ?"Customers can see your products and place orders."
     :`Customers will see: Closed now · Opens at ${formatReopenTime(shopReopensAt)||"the selected time"}.`;
+}
+
+function renderShopLocation(){
+  const box=$("shopLocationState"),btn=$("saveShopLocationBtn");
+  if(!box||!btn)return;
+  const rawLat=shopLocation?.location_lat,rawLng=shopLocation?.location_lng;
+  const lat=Number(rawLat),lng=Number(rawLng);
+  const ready=rawLat!==null&&rawLat!==undefined&&rawLng!==null&&rawLng!==undefined&&Number.isFinite(lat)&&Number.isFinite(lng);
+  box.className="locationState "+(ready?"ready":"missing");
+  if(ready){
+    const updated=shopLocation?.location_updated_at
+      ? new Date(shopLocation.location_updated_at).toLocaleString()
+      : "saved";
+    box.textContent=`Location saved for ${shopName}. Last updated: ${updated}.`;
+    btn.textContent="Update my shop location";
+  }else{
+    box.textContent="Location not set yet. Set it before accepting customer delivery orders.";
+    btn.textContent="Use my current location";
+  }
 }
 
 function render(){
@@ -568,9 +605,9 @@ async function loadShopAndProducts(){
     return;
   }
   shopId=map.shop_id;
-  const {data:shop,error:shopErr}=await sb.from("shops").select("id,name,active,is_open,reopens_at").eq("id",shopId).maybeSingle();
+  const {data:shop,error:shopErr}=await sb.from("shops").select("id,name,active,is_open,reopens_at,location_lat,location_lng,location_updated_at").eq("id",shopId).maybeSingle();
   if(shopErr||!shop){setStatus("Shop details could not be loaded.");return}
-  shopName=shop.name||"My Shop";shopIsOpen=shop.is_open!==false;shopReopensAt=shop.reopens_at||null;$("shopName").textContent=shopName;renderShopOpenState();
+  shopName=shop.name||"My Shop";shopIsOpen=shop.is_open!==false;shopReopensAt=shop.reopens_at||null;shopLocation=shop;$("shopName").textContent=shopName;renderShopOpenState();renderShopLocation();
   const {data,error}=await sb.from("products").select("id,shop_id,name,category,available,is_available").eq("shop_id",shopId).order("category",{ascending:true}).order("name",{ascending:true});
   if(error){setStatus("Products load error: "+error.message);return}
   products=data||[];
@@ -635,6 +672,32 @@ async function confirmShopClose(){
     return;
   }
   await saveShopOpenStatus(false,reopenTime);
+}
+
+async function saveMyShopLocation(){
+  if(!sb||!shopId)return;
+  if(!navigator.geolocation){setStatus("Location is not supported on this phone/browser.");return}
+  const btn=$("saveShopLocationBtn");
+  btn.disabled=true;btn.textContent="Getting location...";
+  navigator.geolocation.getCurrentPosition(async position=>{
+    try{
+      btn.textContent="Saving location...";
+      const {data,error}=await sb.rpc("save_my_shop_location",{
+        p_lat:position.coords.latitude,
+        p_lng:position.coords.longitude
+      });
+      if(error)throw error;
+      const saved=Array.isArray(data)?data[0]:data;
+      shopLocation={...shopLocation,...(saved||{}),location_lat:position.coords.latitude,location_lng:position.coords.longitude};
+      renderShopLocation();
+      setStatus("Shop location saved. Customer distance will now be calculated from your shop.");
+    }catch(error){
+      setStatus("Could not save shop location: "+(error?.message||error));
+    }finally{btn.disabled=false;renderShopLocation()}
+  },error=>{
+    setStatus("Location permission is required. Please allow location access and try again.");
+    btn.disabled=false;renderShopLocation();
+  },{enableHighAccuracy:true,timeout:20000,maximumAge:30000});
 }
 
 async function checkSession(){
@@ -788,6 +851,7 @@ $("forgotPasswordBtn").onclick=async()=>{
 };
 
 $("enableAlertsBtn").onclick=enableOrderAlerts;
+$("saveShopLocationBtn").onclick=saveMyShopLocation;
 $("logoutBtn").onclick=()=>sb?.auth.signOut();
 $("search").oninput=render;
 $("shopOpenSwitch").onchange=changeShopOpenStatus;
