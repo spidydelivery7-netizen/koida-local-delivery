@@ -56,7 +56,7 @@
 const cfg=window.SPIDY_CONFIG||{};
 // Ride Partner must not inherit a customer/admin browser session.
 const sb=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{storageKey:"kld-ride-partner-auth",persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
-let me=null,partner=null,watchId=null,offersTimer=null;
+let me=null,partner=null,watchId=null,offersTimer=null,rideRealtimeChannel=null,rideRealtimeTimer=null;
 const $=id=>document.getElementById(id);
 const say=m=>$("notice").textContent=m;
 const esc=s=>String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -75,8 +75,8 @@ async function loadPartner(){
  $("partnerName").textContent=partner.full_name;$("partnerPhoto").src=partner.photo_url||"";
  $("onlineToggle").checked=partner.is_online;$("onlineLabel").textContent=partner.is_online?"Online – receiving nearby rides":"Offline";
  say(partner.is_online?"You are online. Nearby paid rides appear here.":"You are offline. Turn on Online when ready.");
- if(partner.is_online)startTracking();await loadRides();
- clearInterval(offersTimer);offersTimer=setInterval(loadRides,8000);
+ if(partner.is_online)startTracking();await loadRides();startRideRealtime();
+ clearInterval(offersTimer);offersTimer=setInterval(loadRides,60000);
 }
 async function signup(){
  const email=$("email").value.trim(),password=$("password").value;
@@ -122,6 +122,9 @@ function startTracking(){
  },()=>say("Please allow location permission."),{enableHighAccuracy:true,maximumAge:10000,timeout:15000});
 }
 function stopTracking(){if(watchId!==null)navigator.geolocation.clearWatch(watchId);watchId=null}
+function stopRideRealtime(){if(rideRealtimeTimer){clearTimeout(rideRealtimeTimer);rideRealtimeTimer=null}if(rideRealtimeChannel){sb.removeChannel(rideRealtimeChannel);rideRealtimeChannel=null}}
+function queueRideRealtime(){if(rideRealtimeTimer)clearTimeout(rideRealtimeTimer);rideRealtimeTimer=setTimeout(()=>{rideRealtimeTimer=null;loadRides().catch(e=>console.warn("Ride realtime refresh:",e))},250)}
+function startRideRealtime(){if(!me)return;if(rideRealtimeChannel)return;rideRealtimeChannel=sb.channel("hunkart-ride-live-"+me.id).on("postgres_changes",{event:"*",schema:"public",table:"ride_bookings"},queueRideRealtime).on("postgres_changes",{event:"*",schema:"public",table:"ride_partners",filter:"user_id=eq."+me.id},async()=>{await loadPartner();queueRideRealtime()}).subscribe()}
 async function loadRides(){
  if(!partner?.approved)return;
  const {data,error}=await sb.rpc("get_my_ride_offers");if(error)return say(error.message);
@@ -141,7 +144,7 @@ async function finishRide(id){const {error}=await sb.rpc("ride_partner_complete_
 
 $("loginBtn").onclick=login;$("signupBtn").onclick=signup;$("saveProfileBtn").onclick=saveProfile;
 $("onlineToggle").onchange=setOnline;
-$("logoutBtn").onclick=async()=>{stopTracking();clearInterval(offersTimer);await sb.auth.signOut();location.reload()};
+$("logoutBtn").onclick=async()=>{stopTracking();stopRideRealtime();clearInterval(offersTimer);await sb.auth.signOut();location.reload()};
 // When a verified email redirects back here, refresh this Ride Partner PWA
 // instead of leaving the user on a stale login screen.
 sb.auth.onAuthStateChange(()=>{init().catch(e=>say("Could not refresh account: "+(e?.message||e)))});
