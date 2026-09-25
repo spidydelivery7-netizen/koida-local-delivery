@@ -55,6 +55,7 @@ button{border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:poin
 .shopAssign{min-width:220px}
 .shop-actions{align-items:flex-end}
 .shop-pill{display:inline-block;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:800;background:#e5e7eb}
+.delivery-report-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}.delivery-report-total{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}.delivery-report-total>div{padding:12px;border:1px solid #dbeafe;border-radius:12px;background:#f8fbff}.delivery-report-total b{display:block;font-size:24px;color:#1d4ed8}.delivery-report-total span{display:block;margin-top:3px;font-size:11px;font-weight:800;color:#64748b}.delivery-report-row{display:grid;grid-template-columns:minmax(160px,1.5fr) repeat(3,minmax(88px,.7fr));gap:10px;align-items:center;padding:13px 0;border-top:1px solid #e5e7eb}.delivery-report-name b{display:block}.delivery-report-name small{display:block;margin-top:4px;color:#64748b}.delivery-report-count{padding:9px;border-radius:10px;background:#f8fafc;text-align:center}.delivery-report-count b{display:block;font-size:20px;color:#0f172a}.delivery-report-count span{display:block;margin-top:2px;font-size:10px;font-weight:800;color:#64748b}
 
 /* Flexible product variants */
 .variant-box{border:1px solid var(--line);border-radius:12px;padding:13px;background:#f9fafb}
@@ -76,6 +77,7 @@ button{border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:poin
 .variant-head{align-items:flex-start}
 .variant-row{grid-template-columns:minmax(0,1fr) 105px auto}
 .variant-row input{font-size:14px;padding:10px}
+.delivery-report-total{grid-template-columns:repeat(3,1fr)}.delivery-report-row{grid-template-columns:1fr;gap:7px}.delivery-report-count{display:flex;align-items:center;justify-content:space-between;text-align:left}.delivery-report-count b{order:2}.delivery-report-count span{margin:0}
 }
 </style>
 </head>
@@ -266,6 +268,21 @@ Orders auto-refresh every 20 seconds while this page is open.
 </section>
 
 <section id="deliveryView" class="hidden">
+
+<div class="panel">
+
+<div class="delivery-report-head">
+<div>
+<h2 style="margin-bottom:4px">Delivery Partner Performance</h2>
+<div class="small">Only orders marked Delivered are counted. Week runs Monday to Sunday.</div>
+</div>
+<button id="refreshDeliveryReport" class="gray">Refresh Report</button>
+</div>
+
+<div id="deliveryReportTotals" class="delivery-report-total"></div>
+<div id="deliveryReportList" class="small">Loading delivery report...</div>
+
+</div>
 
 <div class="panel">
 
@@ -960,6 +977,60 @@ deliveryBoys=data||[];
 
 return true;
 
+}
+
+function reportNumber(value){
+  return Number(value||0).toLocaleString("en-IN");
+}
+
+function escHtml(value){
+  return String(value??"")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#39;");
+}
+
+async function loadDeliveryPartnerReport(){
+  const list=$("deliveryReportList");
+  const totals=$("deliveryReportTotals");
+  if(!list || !totals)return;
+
+  list.innerHTML='<div class="small">Loading delivery report...</div>';
+  totals.innerHTML="";
+
+  const {data,error}=await sb.rpc("get_admin_delivery_partner_report");
+
+  if(error){
+    list.innerHTML='<div class="notice"><b>Delivery report is not ready yet.</b><br><span class="small">Run the Delivery Report SQL once in Supabase, then tap Refresh Report.</span></div>';
+    console.error("Delivery report error:",error);
+    return;
+  }
+
+  const rows=data||[];
+  const today=rows.reduce((sum,row)=>sum+Number(row.today_count||0),0);
+  const week=rows.reduce((sum,row)=>sum+Number(row.week_count||0),0);
+  const month=rows.reduce((sum,row)=>sum+Number(row.month_count||0),0);
+
+  totals.innerHTML=
+    '<div><b>'+reportNumber(today)+'</b><span>DELIVERED TODAY</span></div>'+
+    '<div><b>'+reportNumber(week)+'</b><span>THIS WEEK</span></div>'+
+    '<div><b>'+reportNumber(month)+'</b><span>THIS MONTH</span></div>';
+
+  if(!rows.length){
+    list.innerHTML='<div class="small">No delivery partners found.</div>';
+    return;
+  }
+
+  list.innerHTML=rows.map(row=>
+    '<div class="delivery-report-row">'+
+      '<div class="delivery-report-name"><b>'+escHtml(row.delivery_boy_name||"Delivery Partner")+'</b><small>'+(row.is_active?'Active':'Inactive')+' · Total delivered: '+reportNumber(row.total_count)+'</small></div>'+
+      '<div class="delivery-report-count"><b>'+reportNumber(row.today_count)+'</b><span>TODAY</span></div>'+
+      '<div class="delivery-report-count"><b>'+reportNumber(row.week_count)+'</b><span>THIS WEEK</span></div>'+
+      '<div class="delivery-report-count"><b>'+reportNumber(row.month_count)+'</b><span>THIS MONTH</span></div>'+
+    '</div>'
+  ).join("");
 }
 
 /* =========================
@@ -1919,6 +1990,7 @@ function switchView(v){
 
   if(v==="delivery"){
     loadDeliverySettings();
+    loadDeliveryPartnerReport();
   }
 
   if(v==="services"){
@@ -2298,6 +2370,9 @@ $("q").oninput=
 
 $("refreshOrders").onclick=
   loadOrders;
+
+$("refreshDeliveryReport").onclick=
+  loadDeliveryPartnerReport;
 
 
 $("oq").oninput=
