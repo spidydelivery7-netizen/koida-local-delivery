@@ -1485,7 +1485,7 @@ const cfg=window.SPIDY_CONFIG||{};
 const sb=createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{storageKey:"kld-customer-auth",persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
 const $=id=>document.getElementById(id);
 let products=[],shops=[],serviceSections=[],activeShopId=null,activeCat="All",activeServiceSection="food",cart=[],deliverySettings=null,deliveryInfo=null,productRatingSummaryById={};
-const BIKE_RIDE_RATE_PER_KM=10,CAR_RIDE_RATE_PER_KM=15,BIKE_RIDE_MIN_FARE=20;
+const DEFAULT_BIKE_RIDE_RATE_PER_KM=10,DEFAULT_CAR_RIDE_RATE_PER_KM=15,BIKE_RIDE_MIN_FARE=20;
 let currentSession=null,currentCustomer=null;
   const VAPID_PUBLIC_KEY = "BEyKFl_KeSmIboBWWUhfItErCRw9AlwjoVRq55NBedCSX_iLskyLH2Bm4ZmCc4e3ZAWBMjn07NAEU5TeIcSqObg";
 function urlBase64ToUint8Array(base64String){
@@ -3294,6 +3294,11 @@ function renderServiceSections(){
   });
 }
 let ridePickup=null,rideDestination=null,rideSuggestionTimer=null,rideVehicle="bike",rideQuote=null;
+function rideRatePerKm(vehicle){
+  const fallback=vehicle==="car"?DEFAULT_CAR_RIDE_RATE_PER_KM:DEFAULT_BIKE_RIDE_RATE_PER_KM;
+  const saved=Number(vehicle==="car"?deliverySettings?.car_ride_rate_per_km:deliverySettings?.bike_ride_rate_per_km);
+  return Number.isFinite(saved)&&saved>0?saved:fallback;
+}
 const KOIDA_RIDE_PLACES=[
   "Koida Bus Stand","Koida Market","Koida Colony","Koida Block Office","Koida Railway Siding",
   "JSW Narayanposhi Mines","JSW Narayanpohi Mines","JSW Nuagaon Mines","JSW Nuwagaon Mines","JSW Jajang Mines","JSW Tensa Mines",
@@ -3356,7 +3361,7 @@ function renderRideService(){
     if(!ridePickup){alert("Please use your current pickup location first.");return}
     if(!rideDestination){alert("Please search and select your drop location.");return}
     fareBtn.disabled=true;fareBtn.textContent="Calculating route...";
-    try{const route=await routeDistanceKm(ridePickup.lat,ridePickup.lng,rideDestination.lat,rideDestination.lng);const km=Math.max(.1,Number(route.km.toFixed(1))),rate=rideVehicle==="car"?CAR_RIDE_RATE_PER_KM:BIKE_RIDE_RATE_PER_KM,fare=Math.max(BIKE_RIDE_MIN_FARE,Math.ceil(km*rate));rideQuote={km,fare,vehicle:rideVehicle};fareTitle.textContent="Estimated fare ₹"+fare;fareInfo.textContent="Route distance: "+km+" km";bookLink.classList.add("show")}catch(e){alert("Unable to calculate route right now. Please try again.")}finally{fareBtn.disabled=false;fareBtn.textContent="See estimated fare"}
+    try{const route=await routeDistanceKm(ridePickup.lat,ridePickup.lng,rideDestination.lat,rideDestination.lng);const km=Math.max(.1,Number(route.km.toFixed(1))),rate=rideRatePerKm(rideVehicle),fare=Math.max(BIKE_RIDE_MIN_FARE,Math.ceil(km*rate));rideQuote={km,fare,vehicle:rideVehicle};fareTitle.textContent="Estimated fare ₹"+fare;fareInfo.textContent="Route distance: "+km+" km";bookLink.classList.add("show")}catch(e){alert("Unable to calculate route right now. Please try again.")}finally{fareBtn.disabled=false;fareBtn.textContent="See estimated fare"}
   };
   bookLink.onclick=()=>startRidePayment();
 }

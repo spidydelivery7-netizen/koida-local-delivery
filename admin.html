@@ -360,6 +360,21 @@ Shop Longitude
 <input id="store_lng" type="number" step="0.000001" placeholder="Set automatically below">
 </label>
 
+<div class="full" style="padding:14px;border:1px solid #dbeafe;border-radius:12px;background:#f8fbff">
+<b>Ride Fare Settings</b>
+<div class="small" style="margin:4px 0 10px">Set separate road-distance rates for Bike and Car. The exact rate is used for the customer quote and ride payment.</div>
+<div class="grid">
+<label>
+Bike Rate Per km (₹)
+<input id="bike_ride_rate_per_km" type="number" min="0.01" step="0.01" placeholder="Example: 10">
+</label>
+<label>
+Car Rate Per km (₹)
+<input id="car_ride_rate_per_km" type="number" min="0.01" step="0.01" placeholder="Example: 15">
+</label>
+</div>
+</div>
+
 </div>
 
 <div class="actions">
@@ -2076,6 +2091,12 @@ async function loadDeliverySettings(){
   $("store_lng").value=
     data.store_lng??"";
 
+  $("bike_ride_rate_per_km").value=
+    data.bike_ride_rate_per_km??10;
+
+  $("car_ride_rate_per_km").value=
+    data.car_ride_rate_per_km??15;
+
   renderDeliveryPreview();
 }
 
@@ -2097,11 +2118,21 @@ function renderDeliveryPreview(){
     ? ` · Platform fee ₹${platformFee} per item`
     : " · Platform fee OFF";
 
+  const bikeRideRate=Number(
+    $("bike_ride_rate_per_km").value||10
+  );
+
+  const carRideRate=Number(
+    $("car_ride_rate_per_km").value||15
+  );
+
+  const rideText=` · Ride: Bike ₹${bikeRideRate}/km · Car ₹${carRideRate}/km`;
+
   if(free){
 
     $("deliveryPreview").innerHTML=
       "🎁 Free Delivery Offer is ON · Customer delivery charge = ₹0"+
-      platformText;
+      platformText+rideText;
 
     return;
   }
@@ -2134,7 +2165,7 @@ function renderDeliveryPreview(){
           $("rain_extra").value||0
         )
       : ""
-    }${platformText}`;
+    }${platformText}${rideText}`;
 }
 
 
@@ -2448,6 +2479,8 @@ $("refreshServices").onclick=
   "free_delivery",
   "platform_fee_enabled",
   "platform_fee_per_item",
+  "bike_ride_rate_per_km",
+  "car_ride_rate_per_km",
   "rain_mode",
   "rain_extra"
 ].forEach(
@@ -2526,6 +2559,19 @@ $("saveDelivery").onclick=async()=>{
     return;
   }
 
+  const bikeRideRate=Number(
+    $("bike_ride_rate_per_km").value||0
+  );
+
+  const carRideRate=Number(
+    $("car_ride_rate_per_km").value||0
+  );
+
+  if(!Number.isFinite(bikeRideRate)||bikeRideRate<=0||!Number.isFinite(carRideRate)||carRideRate<=0){
+    setStatus("Bike and Car ride rates must both be greater than ₹0 per km.");
+    return;
+  }
+
   const payload={
 
     base_distance_km:
@@ -2556,6 +2602,12 @@ $("saveDelivery").onclick=async()=>{
 
     platform_fee_per_item:
       platformFee,
+
+    bike_ride_rate_per_km:
+      bikeRideRate,
+
+    car_ride_rate_per_km:
+      carRideRate,
 
     rain_mode:
       $("rain_mode").value==="true",
