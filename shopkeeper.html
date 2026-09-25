@@ -32,6 +32,7 @@ button{border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:poin
 .locationState.ready{border-color:#86efac;background:#f0fdf4;color:#166534}.locationState.missing{border-color:#fde68a;background:#fffbeb;color:#92400e}
 .locationBtn{background:#2563eb;color:#fff;white-space:nowrap}.locationBtn:disabled{opacity:.65;cursor:wait}
 .switch{position:relative;width:58px;height:32px;display:inline-block;flex:0 0 auto}.switch input{opacity:0;width:0;height:0}.slider{position:absolute;inset:0;border-radius:999px;background:#9ca3af;transition:.2s;cursor:pointer}.slider:before{content:"";position:absolute;height:24px;width:24px;left:4px;bottom:4px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px #0004}.switch input:checked+.slider{background:var(--green)}.switch input:checked+.slider:before{transform:translateX(26px)}.switch input:disabled+.slider{opacity:.55;cursor:wait}
+.closeTimePanel{margin-top:12px;padding:14px;border-radius:13px;background:#fff7ed;border:1px solid #fed7aa}.closeTimePanel b{display:block;margin-bottom:4px}.closeTimeActions{display:flex;gap:8px;margin-top:10px}.closeTimeActions button{flex:1}
 .search{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;font-size:16px;background:#fff}
 .cat{font-weight:900;font-size:16px;margin:20px 2px 8px}
 .row{background:#fff;border:1px solid var(--line);border-radius:14px;padding:13px 14px;margin-bottom:9px;display:flex;align-items:center;justify-content:space-between;gap:12px}
@@ -252,6 +253,15 @@ button{border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:poin
           <span class="slider"></span>
         </label>
       </div>
+      <div id="closeTimePanel" class="closeTimePanel hidden">
+        <b>Choose reopening time</b>
+        <div class="small">Select the time when customers can order again.</div>
+        <input id="shopReopenTime" type="time" aria-label="Shop reopening time">
+        <div class="closeTimeActions">
+          <button id="cancelShopCloseBtn" type="button" class="gray">Cancel</button>
+          <button id="confirmShopCloseBtn" type="button" class="red">Close Shop</button>
+        </div>
+      </div>
     </div>
 
     <div class="card locationCard">
@@ -289,7 +299,7 @@ import { ensureStaffPushSubscription } from "/staff-push.js";
 
 const cfg=window.SPIDY_CONFIG||{};
 const $=id=>document.getElementById(id);
-let sb=null, sessionUser=null, shopId=null, shopName="", shopIsOpen=true, shopLocation=null, products=[], shopOrders=[], orderPollTimer=null, audioCtx=null;
+let sb=null, sessionUser=null, shopId=null, shopName="", shopIsOpen=true, shopReopensAt=null, shopLocation=null, products=[], shopOrders=[], orderPollTimer=null, audioCtx=null;
 
 function configured(){return cfg.supabaseUrl&&cfg.supabaseAnonKey&&!String(cfg.supabaseUrl).includes("YOUR_")}
 function setStatus(msg){$("status").textContent=msg}
@@ -325,6 +335,13 @@ function effectiveAvailable(p){
   return p.is_available!==false;
 }
 
+function formatReopenTime(value){
+  if(!value)return "";
+  const [hours,minutes]=String(value).slice(0,5).split(":").map(Number);
+  if(!Number.isFinite(hours)||!Number.isFinite(minutes))return "";
+  return new Intl.DateTimeFormat("en-IN",{hour:"numeric",minute:"2-digit",hour12:true,timeZone:"Asia/Kolkata"}).format(new Date(Date.UTC(2000,0,1,hours,minutes)));
+}
+
 function renderShopOpenState(){
   const toggle=$("shopOpenSwitch"),label=$("shopOpenLabel"),note=$("shopOpenNote");
   if(!toggle||!label||!note)return;
@@ -332,7 +349,7 @@ function renderShopOpenState(){
   label.textContent=shopIsOpen?"Shop is Open":"Shop is Closed";
   note.textContent=shopIsOpen
     ?"Customers can see your products and place orders."
-    :"Customers cannot see this shop or place new orders until you open it.";
+    :`Customers will see: Closed now · Opens at ${formatReopenTime(shopReopensAt)||"the selected time"}.`;
 }
 
 function renderShopLocation(){
@@ -588,9 +605,9 @@ async function loadShopAndProducts(){
     return;
   }
   shopId=map.shop_id;
-  const {data:shop,error:shopErr}=await sb.from("shops").select("id,name,active,is_open,location_lat,location_lng,location_updated_at").eq("id",shopId).maybeSingle();
+  const {data:shop,error:shopErr}=await sb.from("shops").select("id,name,active,is_open,reopens_at,location_lat,location_lng,location_updated_at").eq("id",shopId).maybeSingle();
   if(shopErr||!shop){setStatus("Shop details could not be loaded.");return}
-  shopName=shop.name||"My Shop";shopIsOpen=shop.is_open!==false;shopLocation=shop;$("shopName").textContent=shopName;renderShopOpenState();renderShopLocation();
+  shopName=shop.name||"My Shop";shopIsOpen=shop.is_open!==false;shopReopensAt=shop.reopens_at||null;shopLocation=shop;$("shopName").textContent=shopName;renderShopOpenState();renderShopLocation();
   const {data,error}=await sb.from("products").select("id,shop_id,name,category,available,is_available").eq("shop_id",shopId).order("category",{ascending:true}).order("name",{ascending:true});
   if(error){setStatus("Products load error: "+error.message);return}
   products=data||[];
@@ -611,12 +628,22 @@ async function changeAvailability(product,newValue,btn){
   render();
 }
 
-async function changeShopOpenStatus(){
+function showCloseTimePicker(){
+  $("shopOpenSwitch").checked=true;
+  $("closeTimePanel").classList.remove("hidden");
+  $("shopReopenTime").focus();
+}
+
+function hideCloseTimePicker(){
+  $("closeTimePanel").classList.add("hidden");
+  $("shopOpenSwitch").checked=shopIsOpen;
+}
+
+async function saveShopOpenStatus(wanted,reopenTime=null){
   if(!sb||!shopId)return;
   const toggle=$("shopOpenSwitch");
-  const wanted=!!toggle.checked;
   toggle.disabled=true;
-  const {error}=await sb.rpc("set_my_shop_open_status",{p_is_open:wanted});
+  const {error}=await sb.rpc("set_my_shop_open_status",{p_is_open:wanted,p_reopens_at:reopenTime||null});
   if(error){
     setStatus("Shop status update failed: "+error.message);
     toggle.disabled=false;
@@ -624,9 +651,27 @@ async function changeShopOpenStatus(){
     return;
   }
   shopIsOpen=wanted;
+  shopReopensAt=wanted?null:reopenTime;
   toggle.disabled=false;
+  hideCloseTimePicker();
   renderShopOpenState();
-  setStatus(wanted?"Shop is now Open. Customers can place orders.":"Shop is now Closed. New customer orders are paused.");
+  setStatus(wanted?"Shop is now Open. Customers can place orders.":`Shop is now Closed. It will reopen at ${formatReopenTime(reopenTime)}.`);
+}
+
+async function changeShopOpenStatus(){
+  const wanted=!!$("shopOpenSwitch").checked;
+  if(wanted)await saveShopOpenStatus(true);
+  else showCloseTimePicker();
+}
+
+async function confirmShopClose(){
+  const reopenTime=$("shopReopenTime").value;
+  if(!reopenTime){
+    setStatus("Choose the reopening time before closing the shop.");
+    $("shopReopenTime").focus();
+    return;
+  }
+  await saveShopOpenStatus(false,reopenTime);
 }
 
 async function saveMyShopLocation(){
@@ -810,6 +855,8 @@ $("saveShopLocationBtn").onclick=saveMyShopLocation;
 $("logoutBtn").onclick=()=>sb?.auth.signOut();
 $("search").oninput=render;
 $("shopOpenSwitch").onchange=changeShopOpenStatus;
+$("confirmShopCloseBtn").onclick=confirmShopClose;
+$("cancelShopCloseBtn").onclick=hideCloseTimePicker;
 $("password").addEventListener("keydown",e=>{if(e.key==="Enter")$("loginBtn").click()});
 </script>
 
