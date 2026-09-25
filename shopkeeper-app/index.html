@@ -299,12 +299,13 @@ import { ensureStaffPushSubscription } from "/staff-push.js";
 
 const cfg=window.SPIDY_CONFIG||{};
 const $=id=>document.getElementById(id);
-let sb=null, sessionUser=null, shopId=null, shopName="", shopIsOpen=true, shopReopensAt=null, shopLocation=null, products=[], shopOrders=[], orderPollTimer=null, audioCtx=null;
+let sb=null, sessionUser=null, shopId=null, shopName="", shopIsOpen=true, shopReopensAt=null, shopLocation=null, products=[], shopOrders=[], orderPollTimer=null, shopRealtimeChannel=null, shopRealtimeTimer=null, audioCtx=null;
 
 function configured(){return cfg.supabaseUrl&&cfg.supabaseAnonKey&&!String(cfg.supabaseUrl).includes("YOUR_")}
 function setStatus(msg){$("status").textContent=msg}
 function showLoggedOut(){
   stopOrderPolling();
+  stopShopRealtime();
 
   $("loginBox").classList.remove("hidden");
   $("signupBox").classList.add("hidden");
@@ -586,12 +587,16 @@ async function updateShopOrderStatus(order,nextStatus,btn){
 function startOrderPolling(){
   if(orderPollTimer)clearInterval(orderPollTimer);
   loadShopOrders({alertNew:true});
-  orderPollTimer=setInterval(()=>loadShopOrders({alertNew:true}),8000);
+  orderPollTimer=setInterval(()=>loadShopOrders({alertNew:true}),60000);
 }
 
 function stopOrderPolling(){
   if(orderPollTimer){clearInterval(orderPollTimer);orderPollTimer=null}
 }
+
+function stopShopRealtime(){if(shopRealtimeTimer){clearTimeout(shopRealtimeTimer);shopRealtimeTimer=null}if(shopRealtimeChannel){sb?.removeChannel(shopRealtimeChannel);shopRealtimeChannel=null}}
+function queueShopRealtime(reloadShop=false){if(shopRealtimeTimer)clearTimeout(shopRealtimeTimer);shopRealtimeTimer=setTimeout(()=>{shopRealtimeTimer=null;(reloadShop?loadShopAndProducts():loadShopOrders({alertNew:true})).catch(error=>console.warn("Shop realtime refresh:",error))},250)}
+function startShopRealtime(){if(!sb||!sessionUser||!shopId)return;stopShopRealtime();shopRealtimeChannel=sb.channel("hunkart-shop-live-"+shopId).on("postgres_changes",{event:"*",schema:"public",table:"orders"},()=>queueShopRealtime()).on("postgres_changes",{event:"*",schema:"public",table:"products",filter:"shop_id=eq."+shopId},()=>queueShopRealtime(true)).on("postgres_changes",{event:"*",schema:"public",table:"shops",filter:"id=eq."+shopId},()=>queueShopRealtime(true)).subscribe()}
 
 async function loadShopAndProducts(){
   if(!sessionUser)return;
@@ -614,6 +619,7 @@ async function loadShopAndProducts(){
   setStatus(`${shopName}: ${products.length} products loaded.`);
   render();
   startOrderPolling();
+  startShopRealtime();
 }
 
 async function changeAvailability(product,newValue,btn){
