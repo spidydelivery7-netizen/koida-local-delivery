@@ -54,7 +54,8 @@
 
 <script>
 const cfg=window.SPIDY_CONFIG||{};
-const sb=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey);
+// Ride Partner must not inherit a customer/admin browser session.
+const sb=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{storageKey:"kld-ride-partner-auth",persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 let me=null,partner=null,watchId=null,offersTimer=null;
 const $=id=>document.getElementById(id);
 const say=m=>$("notice").textContent=m;
@@ -80,7 +81,10 @@ async function loadPartner(){
 async function signup(){
  const email=$("email").value.trim(),password=$("password").value;
  if(!email||password.length<6)return say("Enter email and a password of at least 6 characters.");
- const {data,error}=await sb.auth.signUp({email,password});
+ const {data,error}=await sb.auth.signUp({email,password,options:{
+  data:{account_type:"ride_partner"},
+  emailRedirectTo:window.location.origin+"/ride-partner-app/"
+ }});
  if(error)return say(error.message);
  say(data.session?"Account created. Complete your profile now.":"Account created. Verify email, then log in and complete profile.");await init();
 }
@@ -138,6 +142,9 @@ async function finishRide(id){const {error}=await sb.rpc("ride_partner_complete_
 $("loginBtn").onclick=login;$("signupBtn").onclick=signup;$("saveProfileBtn").onclick=saveProfile;
 $("onlineToggle").onchange=setOnline;
 $("logoutBtn").onclick=async()=>{stopTracking();clearInterval(offersTimer);await sb.auth.signOut();location.reload()};
+// When a verified email redirects back here, refresh this Ride Partner PWA
+// instead of leaving the user on a stale login screen.
+sb.auth.onAuthStateChange(()=>{init().catch(e=>say("Could not refresh account: "+(e?.message||e)))});
 init();
 </script>
  <script>if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js");</script>
