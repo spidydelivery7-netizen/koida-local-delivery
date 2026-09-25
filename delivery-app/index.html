@@ -575,6 +575,8 @@ const $ = id =>
 let sb = null;
 let profile = null;
 let deliveries = [];
+let deliveryRealtimeChannel = null;
+let deliveryRealtimeTimer = null;
 
 let watchId = null;
 let activeTrackingOrderId = null;
@@ -615,6 +617,8 @@ function hideAuthViews(){
 
 
 function showLoginView(){
+
+  stopDeliveryRealtime();
 
   passwordRecoveryMode = false;
 
@@ -887,6 +891,24 @@ async function loadDeliveries(){
 
   }
 
+}
+
+function stopDeliveryRealtime(){
+  if(deliveryRealtimeTimer){clearTimeout(deliveryRealtimeTimer);deliveryRealtimeTimer=null;}
+  if(deliveryRealtimeChannel){sb?.removeChannel(deliveryRealtimeChannel);deliveryRealtimeChannel=null;}
+}
+
+function queueDeliveryRealtime(){
+  if(deliveryRealtimeTimer)clearTimeout(deliveryRealtimeTimer);
+  deliveryRealtimeTimer=setTimeout(()=>{deliveryRealtimeTimer=null;loadDeliveries().catch(error=>console.warn("Delivery realtime refresh:",error));},250);
+}
+
+function startDeliveryRealtime(){
+  if(!sb||!profile?.id)return;
+  stopDeliveryRealtime();
+  deliveryRealtimeChannel=sb.channel("hunkart-delivery-live-"+profile.id)
+    .on("postgres_changes",{event:"*",schema:"public",table:"delivery_tracking",filter:"delivery_boy_id=eq."+profile.id},queueDeliveryRealtime)
+    .subscribe();
 }
 
 
@@ -2069,6 +2091,7 @@ if (!data || data.success !== true) {
 
 
     await loadDeliveries();
+    startDeliveryRealtime();
 
   }
   catch(e){
