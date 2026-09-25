@@ -1488,6 +1488,7 @@ const $=id=>document.getElementById(id);
 let products=[],shops=[],serviceSections=[],activeShopId=null,activeCat="All",activeServiceSection="food",cart=[],deliverySettings=null,deliveryInfo=null,productRatingSummaryById={};
 const DEFAULT_BIKE_RIDE_RATE_PER_KM=10,DEFAULT_CAR_RIDE_RATE_PER_KM=15,BIKE_RIDE_MIN_FARE=20;
 let currentSession=null,currentCustomer=null;
+let customerRealtimeChannel=null,customerRealtimeTimer=null,customerRealtimeUserId="";
   const VAPID_PUBLIC_KEY = "BEyKFl_KeSmIboBWWUhfItErCRw9AlwjoVRq55NBedCSX_iLskyLH2Bm4ZmCc4e3ZAWBMjn07NAEU5TeIcSqObg";
 function urlBase64ToUint8Array(base64String){
   const padding = "=".repeat((4 - base64String.length % 4) % 4);
@@ -2974,10 +2975,12 @@ async function refreshAccountState(){
     await loadMyOrders();
 
     startCustomerReachedWatcher();
+    startCustomerRealtime();
 
   }else{
 
     stopCustomerReachedWatcher();
+    stopCustomerRealtime();
 
     $("loginPin").value = "";
 
@@ -3141,6 +3144,7 @@ async function customerForgotPin(){
   finally{$("forgotCustomer").disabled=false;$("forgotCustomer").textContent="Forgot PIN?"}
 }
 async function customerLogout(){
+  stopCustomerRealtime();
   await sb.auth.signOut();
   currentSession=null;
   currentCustomer=null;
@@ -3602,6 +3606,9 @@ renderProducts();
 renderFavourites();
 }
 async function loadSettings(){const {data,error}=await sb.from("delivery_settings").select("*").eq("id",1).single();if(!error)deliverySettings=data}
+function stopCustomerRealtime(){if(customerRealtimeTimer){clearTimeout(customerRealtimeTimer);customerRealtimeTimer=null}if(customerRealtimeChannel){sb.removeChannel(customerRealtimeChannel);customerRealtimeChannel=null}customerRealtimeUserId=""}
+function queueCustomerRealtime({catalog=false,orders=false}={}){if(customerRealtimeTimer)clearTimeout(customerRealtimeTimer);customerRealtimeTimer=setTimeout(async()=>{customerRealtimeTimer=null;try{if(catalog)await Promise.all([loadProducts(),loadSettings()]);if(orders&&currentSession?.user){await loadMyOrders();checkCustomerReachedEvents()}}catch(error){console.warn("Customer realtime refresh:",error)}},300)}
+function startCustomerRealtime(){const userId=currentSession?.user?.id||"guest";if(customerRealtimeChannel&&customerRealtimeUserId===userId)return;stopCustomerRealtime();customerRealtimeUserId=userId;customerRealtimeChannel=sb.channel("hunkart-customer-live-"+userId);if(userId!=="guest")customerRealtimeChannel.on("postgres_changes",{event:"*",schema:"public",table:"orders",filter:"customer_id=eq."+userId},()=>queueCustomerRealtime({orders:true}));customerRealtimeChannel.on("postgres_changes",{event:"*",schema:"public",table:"products"},()=>queueCustomerRealtime({catalog:true})).on("postgres_changes",{event:"*",schema:"public",table:"shops"},()=>queueCustomerRealtime({catalog:true})).on("postgres_changes",{event:"*",schema:"public",table:"service_sections"},()=>queueCustomerRealtime({catalog:true})).on("postgres_changes",{event:"*",schema:"public",table:"delivery_settings"},()=>queueCustomerRealtime({catalog:true})).subscribe()}
 function getCheckoutShop(){
   const first=cart[0];
   const shopId=first?.shop_id||products.find(p=>p.id===first?.product_id)?.shop_id||activeShopId;

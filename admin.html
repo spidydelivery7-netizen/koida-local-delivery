@@ -511,7 +511,9 @@ shopkeepers=[],
 deliveryBoys=[],
 activeView="products",
 poll=null,
-adminAccessToken="";
+adminAccessToken="",
+adminRealtimeChannel=null,
+adminRealtimeTimer=null;
 
 function configured(){
 return cfg.supabaseUrl &&
@@ -2169,6 +2171,10 @@ function renderDeliveryPreview(){
 }
 
 
+function stopAdminRealtime(){if(adminRealtimeTimer){clearTimeout(adminRealtimeTimer);adminRealtimeTimer=null}if(adminRealtimeChannel){sb?.removeChannel(adminRealtimeChannel);adminRealtimeChannel=null}}
+function queueAdminRealtime(){if(adminRealtimeTimer)clearTimeout(adminRealtimeTimer);adminRealtimeTimer=setTimeout(async()=>{adminRealtimeTimer=null;try{await Promise.all([loadShops(),loadProducts(),loadDeliveryBoys(),loadOrders(),loadShopkeepers(),loadDeliverySettings(),loadDeliveryPartnerReport()])}catch(error){console.warn("Admin realtime refresh:",error)}},250)}
+function startAdminRealtime(){if(!sb||adminRealtimeChannel)return;adminRealtimeChannel=sb.channel("hunkart-admin-live").on("postgres_changes",{event:"*",schema:"public",table:"orders"},queueAdminRealtime).on("postgres_changes",{event:"*",schema:"public",table:"delivery_tracking"},queueAdminRealtime).on("postgres_changes",{event:"*",schema:"public",table:"shops"},queueAdminRealtime).on("postgres_changes",{event:"*",schema:"public",table:"products"},queueAdminRealtime).on("postgres_changes",{event:"*",schema:"public",table:"shopkeepers"},queueAdminRealtime).on("postgres_changes",{event:"*",schema:"public",table:"delivery_boys"},queueAdminRealtime).on("postgres_changes",{event:"*",schema:"public",table:"delivery_settings"},queueAdminRealtime).subscribe()}
+
 async function checkAdmin(){
 
   const {
@@ -2177,6 +2183,8 @@ async function checkAdmin(){
   await sb.auth.getSession();
 
   if(!session){
+
+    stopAdminRealtime();
 
     $("login").classList.remove(
       "hidden"
@@ -2220,6 +2228,8 @@ async function checkAdmin(){
     .maybeSingle();
 
   if(adminError || !admin){
+
+    stopAdminRealtime();
 
     $("login").classList.remove(
       "hidden"
@@ -2294,6 +2304,7 @@ window.testPushNotification = async function(customerId){
   await loadOrders();
 
   await loadShopkeepers();
+  startAdminRealtime();
 
   if(!poll){
 
@@ -2303,7 +2314,7 @@ window.testPushNotification = async function(customerId){
           loadOrders();
         }
       },
-      20000
+      60000
     );
   }
 }
