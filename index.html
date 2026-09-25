@@ -1482,7 +1482,8 @@ header.hk-header .menu-btn:active{
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 const cfg=window.SPIDY_CONFIG||{};
-const sb=createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{storageKey:"kld-customer-auth",persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
+// Keep the customer session isolated and consume confirmation links in this customer PWA.
+const sb=createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{storageKey:"kld-customer-auth",persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 const $=id=>document.getElementById(id);
 let products=[],shops=[],serviceSections=[],activeShopId=null,activeCat="All",activeServiceSection="food",cart=[],deliverySettings=null,deliveryInfo=null,productRatingSummaryById={};
 const DEFAULT_BIKE_RIDE_RATE_PER_KM=10,DEFAULT_CAR_RIDE_RATE_PER_KM=15,BIKE_RIDE_MIN_FARE=20;

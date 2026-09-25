@@ -2317,9 +2317,11 @@ if(!configured()){
 
 }else{
 
+  // Never reuse customer/shopkeeper/rider browser sessions in the admin panel.
   sb=createClient(
     cfg.supabaseUrl,
-    cfg.supabaseAnonKey
+    cfg.supabaseAnonKey,
+    {auth:{storageKey:"kld-admin-auth",persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}}
   );
 
   await checkAdmin();
