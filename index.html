@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="hunkart-build" content="shop-location-v2-2026-09-25">
 <title>HUNKART – Food & Grocery Delivery in Koida</title>
 <meta name="description" content="Order food, groceries and daily essentials online with HUNKART. Fast and convenient local delivery in Koida, Odisha.">
 <meta name="robots" content="index, follow">
@@ -3169,9 +3170,10 @@ function addCart(p,v){if(cart.length){
     );
     return;
   }
-}if(!v){alert("Price is not set for this item yet.");return}const key=p.id+"_"+v.key,found=cart.find(x=>x.key===key);if(found)found.qty++;else cart.push({key,product_id:p.id,name:p.name,variant:v.key,variant_label:v.label,unit_price:v.price,qty:1});updateCart()}
+}if(!v){alert("Price is not set for this item yet.");return}const key=p.id+"_"+v.key,found=cart.find(x=>x.key===key);if(found)found.qty++;else cart.push({key,product_id:p.id,shop_id:p.shop_id,name:p.name,variant:v.key,variant_label:v.label,unit_price:v.price,qty:1});if(deliveryInfo&&deliveryInfo.shop_id&&deliveryInfo.shop_id!==p.shop_id)deliveryInfo=null;updateCart()}
 function updateCart(){
   const count=cartItemCount();
+  if(!count)deliveryInfo=null;
   $("cartCount").textContent=count+" item"+(count===1?"":"s");
   const dc=calculatedDelivery(),pf=calculatedPlatformFee();
   if(!count)$("cartTotal").textContent="";
@@ -3594,6 +3596,11 @@ renderProducts();
 renderFavourites();
 }
 async function loadSettings(){const {data,error}=await sb.from("delivery_settings").select("*").eq("id",1).single();if(!error)deliverySettings=data}
+function getCheckoutShop(){
+  const first=cart[0];
+  const shopId=first?.shop_id||products.find(p=>p.id===first?.product_id)?.shop_id||activeShopId;
+  return shops.find(shop=>shop.id===shopId)||null;
+}
 function haversineKm(lat1,lng1,lat2,lng2){const R=6371,toRad=x=>x*Math.PI/180,dLat=toRad(lat2-lat1),dLng=toRad(lng2-lng1),a=Math.sin(dLat/2)**2+Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;return 2*R*Math.asin(Math.sqrt(a))}
 async function routeDistanceKm(storeLat,storeLng,userLat,userLng){
   const url=`https://router.project-osrm.org/route/v1/driving/${storeLng},${storeLat};${userLng},${userLat}?overview=false`;
@@ -3606,12 +3613,16 @@ async function routeDistanceKm(storeLat,storeLng,userLat,userLng){
 async function detectLocation(){
   deliveryInfo = null;
   $("placeOrder").disabled = true;
+  const checkoutShop=getCheckoutShop();
   if(
     !deliverySettings ||
-    deliverySettings.store_lat == null ||
-    deliverySettings.store_lng == null
+    !checkoutShop ||
+    checkoutShop.location_lat == null ||
+    checkoutShop.location_lng == null
   ){
-    alert("Shop location is not set yet. Admin must set it in Delivery Settings.");
+    alert(checkoutShop
+      ? `${checkoutShop.name||"This shop"} has not set its delivery location yet. Please try again shortly.`
+      : "Please add an item from a shop before detecting your delivery location.");
     return;
   }
 
@@ -3633,8 +3644,8 @@ async function detectLocation(){
         const lng = pos.coords.longitude;
 
         const r = await routeDistanceKm(
-          Number(deliverySettings.store_lat),
-          Number(deliverySettings.store_lng),
+          Number(checkoutShop.location_lat),
+          Number(checkoutShop.location_lng),
           lat,
           lng
         );
@@ -3644,7 +3655,9 @@ async function detectLocation(){
           service_distance_km:r.km,
           lat,
           lng,
-          route_source:r.source
+          route_source:r.source,
+          shop_id:checkoutShop.id,
+          shop_name:checkoutShop.name||"this shop"
         };
 
         if (r.km > 8) {
@@ -3661,8 +3674,8 @@ async function detectLocation(){
         $("distanceBox").classList.remove("warn");
         $("distanceResult").innerHTML =
           deliverySettings.free_delivery_enabled === true
-            ? `Distance: <b>${deliveryInfo.distance_km} km</b> · Delivery charge: <b>FREE</b> 🎁`
-            : `Distance: <b>${deliveryInfo.distance_km} km</b> · Delivery charge: <b>₹${dc}</b>${deliverySettings.rain_mode ? ` · Rain extra included ₹${Number(deliverySettings.rain_extra ?? 0)}` : ""}`;
+            ? `Distance from <b>${esc(deliveryInfo.shop_name)}</b>: <b>${deliveryInfo.distance_km} km</b> · Delivery charge: <b>FREE</b> 🎁`
+            : `Distance from <b>${esc(deliveryInfo.shop_name)}</b>: <b>${deliveryInfo.distance_km} km</b> · Delivery charge: <b>₹${dc}</b>${deliverySettings.rain_mode ? ` · Rain extra included ₹${Number(deliverySettings.rain_extra ?? 0)}` : ""}`;
 
         renderCheckoutSummary();
         updateCart();
