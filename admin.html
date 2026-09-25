@@ -324,6 +324,20 @@ Free Delivery Offer
 </label>
 
 <label>
+Platform Fee
+<select id="platform_fee_enabled">
+<option value="false">OFF — No Platform Fee</option>
+<option value="true">ON — Charge Platform Fee</option>
+</select>
+</label>
+
+<label>
+Platform Fee Per Item (₹)
+<input id="platform_fee_per_item" type="number" min="0" step="0.01" placeholder="Example: 5">
+<div class="small" style="margin-top:5px">Applied separately to every item quantity and shown in the customer bill.</div>
+</label>
+
+<label>
 Rain Mode
 <select id="rain_mode">
 <option value="false">OFF</option>
@@ -2040,6 +2054,14 @@ async function loadDeliverySettings(){
       data.free_delivery_enabled===true
     );
 
+  $("platform_fee_enabled").value=
+    String(
+      data.platform_fee_enabled===true
+    );
+
+  $("platform_fee_per_item").value=
+    data.platform_fee_per_item??0;
+
   $("rain_mode").value=
     String(
       data.rain_mode===true
@@ -2063,10 +2085,23 @@ function renderDeliveryPreview(){
   const free=
     $("free_delivery").value==="true";
 
+  const platformOn=
+    $("platform_fee_enabled").value==="true";
+
+  const platformFee=Math.max(
+    0,
+    Number($("platform_fee_per_item").value||0)
+  );
+
+  const platformText=platformOn
+    ? ` · Platform fee ₹${platformFee} per item`
+    : " · Platform fee OFF";
+
   if(free){
 
     $("deliveryPreview").innerHTML=
-      "🎁 Free Delivery Offer is ON · Customer delivery charge = ₹0";
+      "🎁 Free Delivery Offer is ON · Customer delivery charge = ₹0"+
+      platformText;
 
     return;
   }
@@ -2099,7 +2134,7 @@ function renderDeliveryPreview(){
           $("rain_extra").value||0
         )
       : ""
-    }`;
+    }${platformText}`;
 }
 
 
@@ -2411,6 +2446,8 @@ $("refreshServices").onclick=
   "step_distance_km",
   "step_charge",
   "free_delivery",
+  "platform_fee_enabled",
+  "platform_fee_per_item",
   "rain_mode",
   "rain_extra"
 ].forEach(
@@ -2480,6 +2517,15 @@ $("detectShopLocation").onclick=()=>{
 
 $("saveDelivery").onclick=async()=>{
 
+  const platformFee=Number(
+    $("platform_fee_per_item").value||0
+  );
+
+  if(!Number.isFinite(platformFee)||platformFee<0){
+    setStatus("Platform fee must be a valid amount of ₹0 or more.");
+    return;
+  }
+
   const payload={
 
     base_distance_km:
@@ -2504,6 +2550,12 @@ $("saveDelivery").onclick=async()=>{
 
     free_delivery_enabled:
       $("free_delivery").value==="true",
+
+    platform_fee_enabled:
+      $("platform_fee_enabled").value==="true",
+
+    platform_fee_per_item:
+      platformFee,
 
     rain_mode:
       $("rain_mode").value==="true",
