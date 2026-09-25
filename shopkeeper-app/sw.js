@@ -1,7 +1,9 @@
-const CACHE_NAME = "hunkart-shopkeeper-v1";
+const CACHE_NAME = "hunkart-shopkeeper-v2";
 
 const APP_FILES = [
-  "/shopkeeper.html",
+  "/shopkeeper-app/",
+  "/shopkeeper-app/index.html",
+  "/config.js",
   "/shopkeeper-app/manifest.webmanifest",
   "/icons/icon-192.png",
   "/icons/icon-512.png"
@@ -48,7 +50,7 @@ self.addEventListener("fetch", (event) => {
           if (cached) return cached;
 
           if (event.request.mode === "navigate") {
-            return caches.match("/shopkeeper.html");
+            return caches.match("/shopkeeper-app/index.html") || caches.match("/shopkeeper-app/");
           }
         });
       })

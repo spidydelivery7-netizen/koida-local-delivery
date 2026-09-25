@@ -710,7 +710,8 @@ async function checkSession(){
 if(!configured()){
   setStatus("Supabase is not connected. Keep this file beside your existing config.js.");
 }else{
-  sb=createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{storageKey:"kld-shopkeeper-auth",persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
+  // Keep shopkeeper confirmation links and sessions inside the shopkeeper panel.
+  sb=createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{storageKey:"kld-shopkeeper-auth",persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
   await checkSession();
   sb.auth.onAuthStateChange(async(_event,session)=>{sessionUser=session?.user||null;if(sessionUser){showLoggedIn();await loadShopAndProducts();ensureStaffPushSubscription({sb,user:sessionUser,role:"shopkeeper",serviceWorkerUrl:"/shopkeeper-app/sw.js",scope:"/shopkeeper-app/"}).catch(error=>console.warn("Shopkeeper push subscription:",error))}else showLoggedOut()});
 }
