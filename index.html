@@ -1488,7 +1488,7 @@ const $=id=>document.getElementById(id);
 let products=[],shops=[],serviceSections=[],activeShopId=null,activeCat="All",activeServiceSection="food",cart=[],deliverySettings=null,deliveryInfo=null,productRatingSummaryById={};
 const DEFAULT_BIKE_RIDE_RATE_PER_KM=10,DEFAULT_CAR_RIDE_RATE_PER_KM=15,BIKE_RIDE_MIN_FARE=20;
 let currentSession=null,currentCustomer=null;
-let customerRealtimeChannel=null,customerRealtimeTimer=null,customerRealtimeUserId="";
+let customerRealtimeChannel=null,customerRealtimeTimer=null,customerRealtimeUserId="",customerCatalogSyncTimer=null,customerCatalogSyncBusy=false;
   const VAPID_PUBLIC_KEY = "BEyKFl_KeSmIboBWWUhfItErCRw9AlwjoVRq55NBedCSX_iLskyLH2Bm4ZmCc4e3ZAWBMjn07NAEU5TeIcSqObg";
 function urlBase64ToUint8Array(base64String){
   const padding = "=".repeat((4 - base64String.length % 4) % 4);
@@ -3541,7 +3541,7 @@ async function loadProductRatingSummaries(){
     productRatingSummaryById={};
   }
 }
-async function loadProducts(){
+async function loadProducts({loadRatings=true}={}){
   const [
     {data:productData,error:productError},
     {data:shopData,error:shopError},
@@ -3569,7 +3569,7 @@ async function loadProducts(){
   }
   if(sectionError){console.warn("Service section load error:",sectionError.message)}
 
-  await loadProductRatingSummaries();
+  if(loadRatings)await loadProductRatingSummaries();
   // Closed shops remain visible so their reopening time is clear to customers.
   shops = shopData || [];
   serviceSections=sectionData||[];
@@ -3610,6 +3610,8 @@ async function loadSettings(){const {data,error}=await sb.from("delivery_setting
 function stopCustomerRealtime(){if(customerRealtimeTimer){clearTimeout(customerRealtimeTimer);customerRealtimeTimer=null}if(customerRealtimeChannel){sb.removeChannel(customerRealtimeChannel);customerRealtimeChannel=null}customerRealtimeUserId=""}
 function queueCustomerRealtime({catalog=false,orders=false}={}){if(customerRealtimeTimer)clearTimeout(customerRealtimeTimer);customerRealtimeTimer=setTimeout(async()=>{customerRealtimeTimer=null;try{if(catalog)await Promise.all([loadProducts(),loadSettings()]);if(orders&&currentSession?.user){await loadMyOrders();checkCustomerReachedEvents()}}catch(error){console.warn("Customer realtime refresh:",error)}},300)}
 function startCustomerRealtime(){const userId=currentSession?.user?.id||"guest";if(customerRealtimeChannel&&customerRealtimeUserId===userId)return;stopCustomerRealtime();customerRealtimeUserId=userId;customerRealtimeChannel=sb.channel("hunkart-customer-live-"+userId);if(userId!=="guest")customerRealtimeChannel.on("postgres_changes",{event:"*",schema:"public",table:"orders",filter:"customer_id=eq."+userId},()=>queueCustomerRealtime({orders:true}));customerRealtimeChannel.on("postgres_changes",{event:"*",schema:"public",table:"products"},()=>queueCustomerRealtime({catalog:true})).on("postgres_changes",{event:"*",schema:"public",table:"shops"},()=>queueCustomerRealtime({catalog:true})).on("postgres_changes",{event:"*",schema:"public",table:"service_sections"},()=>queueCustomerRealtime({catalog:true})).on("postgres_changes",{event:"*",schema:"public",table:"delivery_settings"},()=>queueCustomerRealtime({catalog:true})).subscribe()}
+async function syncCustomerCatalog(){if(document.hidden||customerCatalogSyncBusy)return;customerCatalogSyncBusy=true;try{await Promise.all([loadProducts({loadRatings:false}),loadSettings()])}catch(error){console.warn("Customer live backup sync:",error)}finally{customerCatalogSyncBusy=false}}
+function startCustomerCatalogFallback(){if(customerCatalogSyncTimer)return;customerCatalogSyncTimer=setInterval(syncCustomerCatalog,4000);window.addEventListener("focus",syncCustomerCatalog);window.addEventListener("online",syncCustomerCatalog);document.addEventListener("visibilitychange",()=>{if(!document.hidden)syncCustomerCatalog()});}
 function getCheckoutShop(){
   const first=cart[0];
   const shopId=first?.shop_id||products.find(p=>p.id===first?.product_id)?.shop_id||activeShopId;
@@ -4157,7 +4159,7 @@ $("search").oninput=renderProducts;$("addressBtn").onclick=()=>{fillAddress();re
 </body>
 </html>`);
   w.document.close();
-};$("closeSuccess").onclick=()=>closeModal($("successModal"));$("closeRideSuccess").onclick=()=>closeModal($("rideSuccessModal"));[$("accountModal"),$("orderDetailsModal"),$("cartModal"),$("checkoutModal"),$("successModal"),$("rideSuccessModal")].forEach(m=>m.addEventListener("click",e=>{if(e.target===m)closeModal(m)}));$("placeOrder").textContent=cfg.onlinePaymentEnabled?"Place Order & Pay":"Place Order";refreshSavedAddress();switchAuthTab("login");await refreshAccountState();await ensurePushSubscription();await loadSettings();loadProducts();
+};$("closeSuccess").onclick=()=>closeModal($("successModal"));$("closeRideSuccess").onclick=()=>closeModal($("rideSuccessModal"));[$("accountModal"),$("orderDetailsModal"),$("cartModal"),$("checkoutModal"),$("successModal"),$("rideSuccessModal")].forEach(m=>m.addEventListener("click",e=>{if(e.target===m)closeModal(m)}));$("placeOrder").textContent=cfg.onlinePaymentEnabled?"Place Order & Pay":"Place Order";refreshSavedAddress();switchAuthTab("login");await refreshAccountState();await ensurePushSubscription();await loadSettings();await loadProducts();startCustomerCatalogFallback();
 </script>
 
 <script>
