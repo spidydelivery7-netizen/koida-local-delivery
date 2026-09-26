@@ -257,8 +257,14 @@ Product Image
 <button id="refreshOrders" class="gray">Refresh Orders</button>
 </div>
 
+<div class="actions" style="margin-top:12px">
+<button type="button" class="green orderFilterBtn" data-order-filter="active">Active Orders</button>
+<button type="button" class="gray orderFilterBtn" data-order-filter="overdue">Overdue</button>
+<button type="button" class="gray orderFilterBtn" data-order-filter="history">Order History</button>
+</div>
+
 <div class="small">
-Orders auto-refresh every 20 seconds while this page is open.
+Live updates appear automatically. Active orders stay here; older records are kept safely in History.
 </div>
 
 </div>
@@ -510,6 +516,7 @@ serviceSections=[],
 shopkeepers=[],
 deliveryBoys=[],
 activeView="products",
+orderViewMode="active",
 poll=null,
 adminAccessToken="",
 adminRealtimeChannel=null,
@@ -1144,6 +1151,12 @@ function orderStatusLabel(status){
   return labels[status]||String(status||"Updated").replaceAll("_"," ");
 }
 
+const ORDER_ACTIVE_WINDOW_MS=24*60*60*1000;
+function isFinalOrder(order){return ["delivered","cancelled"].includes(String(order?.status||"").toLowerCase())||["refunded","refund_processed"].includes(String(order?.payment_status||"").toLowerCase())}
+function isOverdueOrder(order){const created=Date.parse(order?.created_at||"");return !isFinalOrder(order)&&Number.isFinite(created)&&Date.now()-created>ORDER_ACTIVE_WINDOW_MS}
+function matchesOrderSearch(order,query){return !query||String(order.order_number||"").toLowerCase().includes(query)||String(order.customer_name||"").toLowerCase().includes(query)||String(order.phone||"").includes(query)}
+function syncOrderFilterButtons(){document.querySelectorAll(".orderFilterBtn").forEach(btn=>{const selected=btn.dataset.orderFilter===orderViewMode;btn.classList.toggle("green",selected);btn.classList.toggle("gray",!selected)})}
+
 function renderOrders(){
 
 const q=
@@ -1154,26 +1167,16 @@ $("ordersList");
 
 box.innerHTML="";
 
-const filtered=
-orders.filter(o=>
-
-!q ||
-
-o.order_number
-.toLowerCase()
-.includes(q) ||
-
-o.customer_name
-.toLowerCase()
-.includes(q) ||
-
-o.phone.includes(q)
-
-);
+const filtered=orders.filter(o=>{
+  if(!matchesOrderSearch(o,q))return false;
+  if(orderViewMode==="history")return isFinalOrder(o);
+  if(orderViewMode==="overdue")return isOverdueOrder(o);
+  return !isFinalOrder(o)&&!isOverdueOrder(o);
+});
 
 const newOrders=
 orders.filter(
-o=>o.status==="new"
+o=>o.status==="new"&&!isOverdueOrder(o)
 ).length;
 
 $("newCount").textContent=
@@ -1181,10 +1184,12 @@ newOrders
 ?"("+newOrders+")"
 :"";
 
+syncOrderFilterButtons();
+
 if(!filtered.length){
 
 box.innerHTML=
-'<div class="panel">No orders found.</div>';
+`<div class="panel">No ${orderViewMode==="active"?"active":orderViewMode} orders found.</div>`;
 
 return;
 
@@ -2449,6 +2454,10 @@ $("q").oninput=
 
 $("refreshOrders").onclick=
   loadOrders;
+
+document.querySelectorAll(".orderFilterBtn").forEach(btn=>{
+  btn.onclick=()=>{orderViewMode=btn.dataset.orderFilter;renderOrders()};
+});
 
 $("refreshDeliveryReport").onclick=
   loadDeliveryPartnerReport;

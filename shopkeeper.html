@@ -462,17 +462,22 @@ async function enableOrderAlerts(){
   setStatus("Order alerts enabled. Keep this page open for instant alarm.");
 }
 
+const SHOP_ORDER_ACTIVE_WINDOW_MS=24*60*60*1000;
+function isShopFinalOrder(order){return ["cancelled","delivered"].includes(String(order?.order_status||"").toLowerCase())}
+function isShopOverdueOrder(order){const created=Date.parse(order?.created_at||"");return !isShopFinalOrder(order)&&Number.isFinite(created)&&Date.now()-created>SHOP_ORDER_ACTIVE_WINDOW_MS}
+
 function renderOrders(){
   const box=$("orderList");
   if(!box)return;
   box.innerHTML="";
-  const active=shopOrders.filter(o=>o.order_status!=="cancelled" && o.order_status!=="delivered");
+  const active=shopOrders.filter(o=>!isShopFinalOrder(o)&&!isShopOverdueOrder(o));
+  const storedCount=shopOrders.length-active.length;
   const newCount=active.filter(o=>o.shop_status!=="packed").length;
   $("newOrderCount").textContent=String(newCount);
   $("newOrderCount").classList.toggle("hidden",newCount===0);
 
   if(!active.length){
-    box.innerHTML='<div class="card orderEmpty">No active paid orders for your shop.</div>';
+    box.innerHTML=`<div class="card orderEmpty">No active paid orders for your shop.${storedCount?` ${storedCount} older order${storedCount===1?" is":"s are"} safely kept in Admin Order History.`:""}</div>`;
     return;
   }
 
@@ -532,7 +537,7 @@ async function loadShopOrders({alertNew=true}={}){
   const next=Array.isArray(data)?data:[];
   if(alertNew){
     const alerted=getAlertedOrderIds();
-    const fresh=next.filter(o=>o.shop_status!=="packed" && !alerted.has(o.order_id));
+    const fresh=next.filter(o=>!isShopFinalOrder(o)&&!isShopOverdueOrder(o)&&o.shop_status!=="packed"&&!alerted.has(o.order_id));
     if(fresh.length){
       fresh.forEach(o=>alerted.add(o.order_id));
       saveAlertedOrderIds(alerted);
