@@ -642,6 +642,8 @@ async function changeAvailability(product,newValue,btn){
 function showCloseTimePicker(){
   $("shopOpenSwitch").checked=true;
   $("closeTimePanel").classList.remove("hidden");
+  setStatus("Choose a reopening time, then tap Close Shop to confirm.");
+  $("closeTimePanel").scrollIntoView({behavior:"smooth",block:"nearest"});
   $("shopReopenTime").focus();
 }
 
@@ -651,22 +653,25 @@ function hideCloseTimePicker(){
 }
 
 async function saveShopOpenStatus(wanted,reopenTime=null){
-  if(!sb||!shopId)return;
+  if(!sb||!shopId){setStatus("Shop details are still loading. Please wait a moment and try again.");return false;}
   const toggle=$("shopOpenSwitch");
   toggle.disabled=true;
-  const {error}=await sb.rpc("set_my_shop_open_status",{p_is_open:wanted,p_reopens_at:reopenTime||null});
-  if(error){
-    setStatus("Shop status update failed: "+error.message);
-    toggle.disabled=false;
+  setStatus(wanted?"Opening shop...":"Closing shop...");
+  try{
+    const {error}=await sb.rpc("set_my_shop_open_status",{p_is_open:wanted,p_reopens_at:reopenTime||null});
+    if(error)throw error;
+    await loadShopAndProducts();
+    hideCloseTimePicker();
     renderShopOpenState();
-    return;
+    setStatus(wanted?"Shop is now Open. Customers can place orders.":`Shop is now Closed. It will reopen at ${formatReopenTime(reopenTime)}.`);
+    return true;
+  }catch(error){
+    setStatus("Shop status update failed: "+(error?.message||error));
+    renderShopOpenState();
+    return false;
+  }finally{
+    toggle.disabled=false;
   }
-  shopIsOpen=wanted;
-  shopReopensAt=wanted?null:reopenTime;
-  toggle.disabled=false;
-  hideCloseTimePicker();
-  renderShopOpenState();
-  setStatus(wanted?"Shop is now Open. Customers can place orders.":`Shop is now Closed. It will reopen at ${formatReopenTime(reopenTime)}.`);
 }
 
 async function changeShopOpenStatus(){
