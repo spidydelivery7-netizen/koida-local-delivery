@@ -257,14 +257,8 @@ Product Image
 <button id="refreshOrders" class="gray">Refresh Orders</button>
 </div>
 
-<div class="actions" style="margin-top:12px">
-<button type="button" class="green orderFilterBtn" data-order-filter="active">Active Orders</button>
-<button type="button" class="gray orderFilterBtn" data-order-filter="overdue">Overdue</button>
-<button type="button" class="gray orderFilterBtn" data-order-filter="history">Order History</button>
-</div>
-
 <div class="small">
-Live updates appear automatically. Active orders stay here; older records are kept safely in History.
+Orders auto-refresh every 20 seconds while this page is open.
 </div>
 
 </div>
@@ -465,6 +459,14 @@ Shop Status
 </select>
 </label>
 
+<label>
+Shop Section
+<select id="newShopSection">
+<option value="food">Food / Restaurant</option>
+<option value="grocery">Grocery</option>
+</select>
+</label>
+
 </div>
 
 <div class="actions">
@@ -516,11 +518,8 @@ serviceSections=[],
 shopkeepers=[],
 deliveryBoys=[],
 activeView="products",
-orderViewMode="active",
 poll=null,
-adminAccessToken="",
-adminRealtimeChannel=null,
-adminRealtimeTimer=null;
+adminAccessToken="";
 
 function configured(){
 return cfg.supabaseUrl &&
@@ -1151,12 +1150,6 @@ function orderStatusLabel(status){
   return labels[status]||String(status||"Updated").replaceAll("_"," ");
 }
 
-const ORDER_ACTIVE_WINDOW_MS=24*60*60*1000;
-function isFinalOrder(order){return ["delivered","cancelled"].includes(String(order?.status||"").toLowerCase())||["refunded","refund_processed"].includes(String(order?.payment_status||"").toLowerCase())}
-function isOverdueOrder(order){const created=Date.parse(order?.created_at||"");return !isFinalOrder(order)&&Number.isFinite(created)&&Date.now()-created>ORDER_ACTIVE_WINDOW_MS}
-function matchesOrderSearch(order,query){return !query||String(order.order_number||"").toLowerCase().includes(query)||String(order.customer_name||"").toLowerCase().includes(query)||String(order.phone||"").includes(query)}
-function syncOrderFilterButtons(){document.querySelectorAll(".orderFilterBtn").forEach(btn=>{const selected=btn.dataset.orderFilter===orderViewMode;btn.classList.toggle("green",selected);btn.classList.toggle("gray",!selected)})}
-
 function renderOrders(){
 
 const q=
@@ -1167,16 +1160,26 @@ $("ordersList");
 
 box.innerHTML="";
 
-const filtered=orders.filter(o=>{
-  if(!matchesOrderSearch(o,q))return false;
-  if(orderViewMode==="history")return isFinalOrder(o);
-  if(orderViewMode==="overdue")return isOverdueOrder(o);
-  return !isFinalOrder(o)&&!isOverdueOrder(o);
-});
+const filtered=
+orders.filter(o=>
+
+!q ||
+
+o.order_number
+.toLowerCase()
+.includes(q) ||
+
+o.customer_name
+.toLowerCase()
+.includes(q) ||
+
+o.phone.includes(q)
+
+);
 
 const newOrders=
 orders.filter(
-o=>o.status==="new"&&!isOverdueOrder(o)
+o=>o.status==="new"
 ).length;
 
 $("newCount").textContent=
@@ -1184,12 +1187,10 @@ newOrders
 ?"("+newOrders+")"
 :"";
 
-syncOrderFilterButtons();
-
 if(!filtered.length){
 
 box.innerHTML=
-`<div class="panel">No ${orderViewMode==="active"?"active":orderViewMode} orders found.</div>`;
+'<div class="panel">No orders found.</div>';
 
 return;
 
@@ -1928,6 +1929,11 @@ async function createShop(){
   const active=
     $("newShopActive").value==="true";
 
+  const shop_section=
+    $("newShopSection").value==="grocery"
+      ?"grocery"
+      :"food";
+
   $("createShopBtn").disabled=true;
 
   try{
@@ -1936,7 +1942,12 @@ async function createShop(){
       .from("shops")
       .insert({
         name,
-        active
+        active,
+        shop_section,
+        // Shops created by an authenticated admin are ready for customer
+        // visibility. Self-registered shopkeepers still require assignment
+        // and activation through the separate approval flow.
+        approval_status:"approved"
       });
 
     if(error)throw error;
@@ -1944,7 +1955,7 @@ async function createShop(){
     $("newShopName").value="";
 
     setStatus(
-      "New shop created."
+      "New shop created and approved for customer visibility."
     );
 
     await loadShops();
@@ -2176,10 +2187,6 @@ function renderDeliveryPreview(){
 }
 
 
-function stopAdminRealtime(){if(adminRealtimeTimer){clearTimeout(adminRealtimeTimer);adminRealtimeTimer=null}if(adminRealtimeChannel){sb?.removeChannel(adminRealtimeChannel);adminRealtimeChannel=null}}
-function queueAdminRealtime(){if(adminRealtimeTimer)clearTimeout(adminRealtimeTimer);adminRealtimeTimer=setTimeout(async()=>{adminRealtimeTimer=null;try{await Promise.all([loadShops(),loadProducts(),loadDeliveryBoys(),loadOrders(),loadShopkeepers(),loadDeliverySettings(),loadDeliveryPartnerReport()])}catch(error){console.warn("Admin realtime refresh:",error)}},250)}
-function startAdminRealtime(){if(!sb||adminRealtimeChannel)return;adminRealtimeChannel=sb.channel("hunkart-admin-live").on("postgres_changes",{event:"*",schema:"public",table:"orders"},queueAdminRealtime).on("postgres_changes",{event:"*",schema:"public",table:"delivery_tracking"},queueAdminRealtime).on("postgres_changes",{event:"*",schema:"public",table:"shops"},queueAdminRealtime).on("postgres_changes",{event:"*",schema:"public",table:"products"},queueAdminRealtime).on("postgres_changes",{event:"*",schema:"public",table:"shopkeepers"},queueAdminRealtime).on("postgres_changes",{event:"*",schema:"public",table:"delivery_boys"},queueAdminRealtime).on("postgres_changes",{event:"*",schema:"public",table:"delivery_settings"},queueAdminRealtime).subscribe()}
-
 async function checkAdmin(){
 
   const {
@@ -2188,8 +2195,6 @@ async function checkAdmin(){
   await sb.auth.getSession();
 
   if(!session){
-
-    stopAdminRealtime();
 
     $("login").classList.remove(
       "hidden"
@@ -2233,8 +2238,6 @@ async function checkAdmin(){
     .maybeSingle();
 
   if(adminError || !admin){
-
-    stopAdminRealtime();
 
     $("login").classList.remove(
       "hidden"
@@ -2309,7 +2312,6 @@ window.testPushNotification = async function(customerId){
   await loadOrders();
 
   await loadShopkeepers();
-  startAdminRealtime();
 
   if(!poll){
 
@@ -2319,7 +2321,7 @@ window.testPushNotification = async function(customerId){
           loadOrders();
         }
       },
-      60000
+      20000
     );
   }
 }
@@ -2333,11 +2335,9 @@ if(!configured()){
 
 }else{
 
-  // Never reuse customer/shopkeeper/rider browser sessions in the admin panel.
   sb=createClient(
     cfg.supabaseUrl,
-    cfg.supabaseAnonKey,
-    {auth:{storageKey:"kld-admin-auth",persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}}
+    cfg.supabaseAnonKey
   );
 
   await checkAdmin();
@@ -2454,10 +2454,6 @@ $("q").oninput=
 
 $("refreshOrders").onclick=
   loadOrders;
-
-document.querySelectorAll(".orderFilterBtn").forEach(btn=>{
-  btn.onclick=()=>{orderViewMode=btn.dataset.orderFilter;renderOrders()};
-});
 
 $("refreshDeliveryReport").onclick=
   loadDeliveryPartnerReport;
