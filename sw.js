@@ -1,4 +1,4 @@
-const CACHE = "hunkart-shell-v2";
+const CACHE = "hunkart-shell-v3";
 const SHELL = [
   "/",
   "/manifest.webmanifest",

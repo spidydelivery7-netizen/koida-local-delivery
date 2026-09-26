@@ -2980,7 +2980,8 @@ async function refreshAccountState(){
   }else{
 
     stopCustomerReachedWatcher();
-    stopCustomerRealtime();
+    // Guests also need live shop/product updates; only their private order feed stays off.
+    startCustomerRealtime();
 
     $("loginPin").value = "";
 
