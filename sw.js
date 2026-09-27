@@ -1,4 +1,4 @@
-const CACHE = "hunkart-shell-v5";
+const CACHE = "hunkart-shell-v6";
 const SHELL = [
   "/",
   "/manifest.webmanifest",
@@ -18,7 +18,7 @@ self.addEventListener("activate", event => {
     caches.keys().then(keys =>
       Promise.all(
         keys
-          .filter(key => key !== CACHE)
+          .filter(key => key.startsWith("hunkart-shell-") && key !== CACHE)
           .map(key => caches.delete(key))
       )
     )
@@ -45,12 +45,12 @@ self.addEventListener("fetch", event => {
   // Network-first for HTML navigation so deployments stay fresh.
   if (req.mode === "navigate") {
     event.respondWith(
-      fetch(req)
+      fetch(req, { cache: "no-store" })
         .then(res => {
           const copy = res.clone();
 
           caches.open(CACHE).then(cache => {
-            cache.put(req, copy);
+            if (res.ok) cache.put(req, copy);
           });
 
           return res;
