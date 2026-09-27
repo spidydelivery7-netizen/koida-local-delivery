@@ -1,0 +1,227 @@
+name: Build HUNKART Shopkeeper APK
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/shopkeeper-apk.yml'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Prepare HUNKART Shopkeeper Android project
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$(dirname "android/shopkeeper/settings.gradle")"
+          cat > "android/shopkeeper/settings.gradle" <<'HUNKART_SOURCE_0_END'
+          pluginManagement {
+              repositories { google(); mavenCentral(); gradlePluginPortal() }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories { google(); mavenCentral() }
+          }
+          rootProject.name = "HunkartShopkeeper"
+          include ':app'
+          HUNKART_SOURCE_0_END
+          mkdir -p "$(dirname "android/shopkeeper/build.gradle")"
+          cat > "android/shopkeeper/build.gradle" <<'HUNKART_SOURCE_1_END'
+          plugins {
+              id 'com.android.application' version '8.7.3' apply false
+          }
+          HUNKART_SOURCE_1_END
+          mkdir -p "$(dirname "android/shopkeeper/gradle.properties")"
+          cat > "android/shopkeeper/gradle.properties" <<'HUNKART_SOURCE_2_END'
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          android.useAndroidX=true
+          HUNKART_SOURCE_2_END
+          mkdir -p "$(dirname "android/shopkeeper/app/build.gradle")"
+          cat > "android/shopkeeper/app/build.gradle" <<'HUNKART_SOURCE_3_END'
+          plugins {
+              id 'com.android.application'
+          }
+
+          android {
+              namespace 'com.hunkart.shopkeeper'
+              compileSdk 35
+
+              defaultConfig {
+                  applicationId 'com.hunkart.shopkeeper'
+                  minSdk 24
+                  targetSdk 35
+                  versionCode 1
+                  versionName '1.0'
+              }
+          }
+          HUNKART_SOURCE_3_END
+          mkdir -p "$(dirname "android/shopkeeper/app/src/main/AndroidManifest.xml")"
+          cat > "android/shopkeeper/app/src/main/AndroidManifest.xml" <<'HUNKART_SOURCE_4_END'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+              <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+              <application
+                  android:allowBackup="false"
+                  android:label="HUNKART Shopkeeper"
+                  android:icon="@drawable/hunkart_icon"
+                  android:usesCleartextTraffic="false"
+                  android:theme="@android:style/Theme.Material.Light.NoActionBar">
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:configChanges="orientation|screenSize|keyboardHidden">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          HUNKART_SOURCE_4_END
+          mkdir -p "$(dirname "android/shopkeeper/app/src/main/java/com/hunkart/shopkeeper/MainActivity.java")"
+          cat > "android/shopkeeper/app/src/main/java/com/hunkart/shopkeeper/MainActivity.java" <<'HUNKART_SOURCE_5_END'
+          package com.hunkart.shopkeeper;
+
+          import android.Manifest;
+          import android.app.Activity;
+          import android.content.ActivityNotFoundException;
+          import android.content.Intent;
+          import android.content.pm.PackageManager;
+          import android.net.Uri;
+          import android.os.Build;
+          import android.os.Bundle;
+          import android.view.View;
+          import android.webkit.CookieManager;
+          import android.webkit.GeolocationPermissions;
+          import android.webkit.ValueCallback;
+          import android.webkit.WebChromeClient;
+          import android.webkit.WebResourceRequest;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+          import android.widget.Toast;
+
+          public class MainActivity extends Activity {
+              private static final String HOME = "https://hunkart.com/shopkeeper-app/";
+              private static final int LOCATION_REQUEST = 2001;
+              private static final int FILE_REQUEST = 2002;
+              private WebView webView;
+              private GeolocationPermissions.Callback locationCallback;
+              private String locationOrigin;
+              private ValueCallback<Uri[]> fileCallback;
+
+              @Override public void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  getWindow().setStatusBarColor(0xff0f172a);
+                  getWindow().setNavigationBarColor(0xff0f172a);
+                  webView = new WebView(this);
+                  webView.setId(View.generateViewId());
+                  setContentView(webView);
+
+                  WebSettings settings = webView.getSettings();
+                  settings.setJavaScriptEnabled(true);
+                  settings.setDomStorageEnabled(true);
+                  settings.setGeolocationEnabled(true);
+                  settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+                  settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+                  settings.setAllowFileAccess(false);
+                  settings.setAllowContentAccess(true);
+                  CookieManager.getInstance().setAcceptCookie(true);
+                  CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
+
+                  webView.setWebViewClient(new WebViewClient() {
+                      @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                          Uri uri = request.getUrl();
+                          if ("https".equalsIgnoreCase(uri.getScheme()) &&
+                              "hunkart.com".equalsIgnoreCase(uri.getHost())) return false;
+                          try { startActivity(new Intent(Intent.ACTION_VIEW, uri)); }
+                          catch (ActivityNotFoundException e) { Toast.makeText(MainActivity.this, "No app can open this link", Toast.LENGTH_SHORT).show(); }
+                          return true;
+                      }
+                  });
+                  webView.setWebChromeClient(new WebChromeClient() {
+                      @Override public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
+                          if (Build.VERSION.SDK_INT < 23 ||
+                              checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+                              checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                              callback.invoke(origin, true, false);
+                          } else {
+                              locationOrigin = origin;
+                              locationCallback = callback;
+                              requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, LOCATION_REQUEST);
+                          }
+                      }
+                      @Override public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
+                          if (fileCallback != null) fileCallback.onReceiveValue(null);
+                          fileCallback = callback;
+                          try {
+                              Intent picker = params.createIntent();
+                              startActivityForResult(picker, FILE_REQUEST);
+                              return true;
+                          } catch (ActivityNotFoundException e) {
+                              fileCallback = null;
+                              Toast.makeText(MainActivity.this, "No file picker available", Toast.LENGTH_SHORT).show();
+                              return false;
+                          }
+                      }
+                  });
+                  if (savedInstanceState == null) webView.loadUrl(HOME);
+                  else webView.restoreState(savedInstanceState);
+              }
+
+              @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
+                  super.onRequestPermissionsResult(requestCode, permissions, results);
+                  if (requestCode == LOCATION_REQUEST && locationCallback != null) {
+                      boolean granted = false;
+                      for (int result : results) granted |= result == PackageManager.PERMISSION_GRANTED;
+                      locationCallback.invoke(locationOrigin, granted, false);
+                      locationCallback = null;
+                      locationOrigin = null;
+                  }
+              }
+
+              @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+                  super.onActivityResult(requestCode, resultCode, data);
+                  if (requestCode == FILE_REQUEST && fileCallback != null) {
+                      fileCallback.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, data));
+                      fileCallback = null;
+                  }
+              }
+
+              @Override protected void onSaveInstanceState(Bundle state) {
+                  webView.saveState(state);
+                  super.onSaveInstanceState(state);
+              }
+              @Override protected void onResume() { super.onResume(); if (webView != null) webView.onResume(); }
+              @Override protected void onPause() { if (webView != null) webView.onPause(); super.onPause(); }
+              @Override public void onBackPressed() {
+                  if (webView != null && webView.canGoBack()) webView.goBack();
+                  else super.onBackPressed();
+              }
+          }
+          HUNKART_SOURCE_5_END
+          mkdir -p android/shopkeeper/app/src/main/res/drawable-nodpi
+          cp icons/icon-192.png android/shopkeeper/app/src/main/res/drawable-nodpi/hunkart_icon.png
+      - name: Install Android SDK 35
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Build installable APK
+        working-directory: android/shopkeeper
+        run: gradle --no-daemon assembleDebug
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: HUNKART_Shopkeeper_APK
+          path: android/shopkeeper/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
