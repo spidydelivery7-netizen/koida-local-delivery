@@ -4150,6 +4150,31 @@ $("search").oninput=renderProducts;$("addressBtn").onclick=()=>{fillAddress();re
 </html>`);
   w.document.close();
 };$("closeSuccess").onclick=()=>closeModal($("successModal"));$("closeRideSuccess").onclick=()=>closeModal($("rideSuccessModal"));[$("accountModal"),$("orderDetailsModal"),$("cartModal"),$("checkoutModal"),$("successModal"),$("rideSuccessModal")].forEach(m=>m.addEventListener("click",e=>{if(e.target===m)closeModal(m)}));$("placeOrder").textContent=cfg.onlinePaymentEnabled?"Place Order & Pay":"Place Order";refreshSavedAddress();switchAuthTab("login");await refreshAccountState();await ensurePushSubscription();await loadSettings();loadProducts();
+
+// Refresh admin-managed catalog and settings while the customer app is open.
+let customerDataRefreshBusy=false;
+let lastCustomerDataRefresh=Date.now();
+async function refreshCustomerData(){
+  if(customerDataRefreshBusy || document.visibilityState!=="visible")return;
+  customerDataRefreshBusy=true;
+  lastCustomerDataRefresh=Date.now();
+  try{
+    await Promise.all([loadProducts(),loadSettings()]);
+    if(typeof updateCart==="function")updateCart();
+  }catch(error){
+    console.warn("Customer data refresh failed:",error);
+  }finally{
+    customerDataRefreshBusy=false;
+  }
+}
+setInterval(refreshCustomerData,20000);
+document.addEventListener("visibilitychange",()=>{
+  if(document.visibilityState==="visible" &&
+     Date.now()-lastCustomerDataRefresh>2000)refreshCustomerData();
+});
+window.addEventListener("focus",()=>{
+  if(Date.now()-lastCustomerDataRefresh>2000)refreshCustomerData();
+});
 </script>
 
 <script>
