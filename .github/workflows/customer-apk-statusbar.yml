@@ -1,4 +1,4 @@
-name: Build HUNKART Customer APK (location permission fix)
+name: Build HUNKART Customer APK
 on:
   workflow_dispatch:
   push:
@@ -9,8 +9,11 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    concurrency:
+      group: hunkart-customer-apk-release
+      cancel-in-progress: false
     permissions:
-      contents: read
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -53,8 +56,8 @@ jobs:
                   applicationId 'com.hunkart.delivery'
                   minSdk 24
                   targetSdk 35
-                  versionCode 3
-                  versionName '1.0.2'
+                  versionCode = (System.getenv('GITHUB_RUN_NUMBER') ?: '1').toInteger() + 3
+                  versionName = "1.0.${System.getenv('GITHUB_RUN_NUMBER') ?: '1'}"
               }
           }
           EOF
@@ -205,9 +208,24 @@ jobs:
       - name: Build customer APK
         working-directory: android/customer
         run: gradle --no-daemon assembleDebug
+      - name: Publish latest customer APK
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cp android/customer/app/build/outputs/apk/debug/app-debug.apk HUNKART_Customer.apk
+          if gh release view customer-app >/dev/null 2>&1; then
+            gh release upload customer-app HUNKART_Customer.apk --clobber
+          else
+            gh release create customer-app HUNKART_Customer.apk \
+              --title "HUNKART Customer App" \
+              --notes "Latest HUNKART Android customer APK. This asset is replaced after each successful customer APK build." \
+              --target "$GITHUB_SHA"
+          fi
       - name: Upload customer APK
         uses: actions/upload-artifact@v4
         with:
-          name: HUNKART_Customer_Location_Fixed_APK
+          name: HUNKART_Customer_APK
           path: android/customer/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
