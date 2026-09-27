@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.hunkart.delivery",
+      "sha256_cert_fingerprints": [
+        "CE:B9:9B:EA:7F:0C:FC:7C:4C:DD:9B:11:73:A2:39:49:6A:E8:E4:6C:FD:AC:D8:B9:2E:04:86:70:25:AD:05:86"
+      ]
+    }
+  }
+]
