@@ -1,4 +1,4 @@
-name: Build HUNKART Customer APK (status bar fix)
+name: Build HUNKART Customer APK (location permission fix)
 on:
   workflow_dispatch:
   push:
@@ -53,8 +53,8 @@ jobs:
                   applicationId 'com.hunkart.delivery'
                   minSdk 24
                   targetSdk 35
-                  versionCode 2
-                  versionName '1.0.1'
+                  versionCode 3
+                  versionName '1.0.2'
               }
           }
           EOF
@@ -62,6 +62,8 @@ jobs:
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
               <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+              <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
               <application android:allowBackup="false" android:label="HUNKART"
                   android:icon="@drawable/hunkart_icon" android:usesCleartextTraffic="false"
                   android:theme="@android:style/Theme.Material.Light.NoActionBar">
@@ -77,7 +79,9 @@ jobs:
           cat > android/customer/app/src/main/java/com/hunkart/delivery/MainActivity.java <<'EOF'
           package com.hunkart.delivery;
 
+          import android.Manifest;
           import android.app.Activity;
+          import android.content.pm.PackageManager;
           import android.content.Intent;
           import android.net.Uri;
           import android.os.Build;
@@ -85,6 +89,7 @@ jobs:
           import android.view.ViewGroup;
           import android.view.WindowInsets;
           import android.webkit.WebChromeClient;
+          import android.webkit.GeolocationPermissions;
           import android.webkit.WebResourceRequest;
           import android.webkit.WebSettings;
           import android.webkit.WebView;
@@ -93,7 +98,22 @@ jobs:
 
           public class MainActivity extends Activity {
               private static final String HOME_URL = "https://hunkart.com/";
+              private static final int LOCATION_REQUEST = 1001;
               private WebView webView;
+              private String pendingLocationOrigin;
+              private GeolocationPermissions.Callback pendingLocationCallback;
+
+              private boolean locationGranted() {
+                  return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                      || checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+              }
+
+              private boolean trustedOrigin(String origin) {
+                  Uri uri = Uri.parse(origin);
+                  String host = uri.getHost();
+                  return "https".equalsIgnoreCase(uri.getScheme())
+                      && ("hunkart.com".equalsIgnoreCase(host) || "www.hunkart.com".equalsIgnoreCase(host));
+              }
 
               @Override public void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
@@ -128,7 +148,27 @@ jobs:
                   settings.setUseWideViewPort(true);
                   settings.setLoadWithOverviewMode(true);
                   settings.setMediaPlaybackRequiresUserGesture(false);
-                  webView.setWebChromeClient(new WebChromeClient());
+                  settings.setGeolocationEnabled(true);
+                  webView.setWebChromeClient(new WebChromeClient() {
+                      @Override public void onGeolocationPermissionsShowPrompt(
+                          String origin, GeolocationPermissions.Callback callback) {
+                          if (!trustedOrigin(origin)) {
+                              callback.invoke(origin, false, false);
+                              return;
+                          }
+                          if (locationGranted()) {
+                              callback.invoke(origin, true, false);
+                          } else {
+                              // Ask only when checkout or another page requests location.
+                              pendingLocationOrigin = origin;
+                              pendingLocationCallback = callback;
+                              requestPermissions(new String[] {
+                                  Manifest.permission.ACCESS_FINE_LOCATION,
+                                  Manifest.permission.ACCESS_COARSE_LOCATION
+                              }, LOCATION_REQUEST);
+                          }
+                      }
+                  });
                   webView.setWebViewClient(new WebViewClient() {
                       @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                           Uri uri = request.getUrl();
@@ -142,6 +182,16 @@ jobs:
                   Uri data = getIntent().getData();
                   String initialUrl = data == null ? HOME_URL : data.toString();
                   webView.loadUrl(initialUrl);
+              }
+
+              @Override public void onRequestPermissionsResult(
+                  int requestCode, String[] permissions, int[] grantResults) {
+                  super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+                  if (requestCode == LOCATION_REQUEST && pendingLocationCallback != null) {
+                      pendingLocationCallback.invoke(pendingLocationOrigin, locationGranted(), false);
+                      pendingLocationCallback = null;
+                      pendingLocationOrigin = null;
+                  }
               }
 
               @Override public void onBackPressed() {
@@ -158,6 +208,6 @@ jobs:
       - name: Upload customer APK
         uses: actions/upload-artifact@v4
         with:
-          name: HUNKART_Customer_Status_Bar_Fixed_APK
+          name: HUNKART_Customer_Location_Fixed_APK
           path: android/customer/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
