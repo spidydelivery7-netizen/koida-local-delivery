@@ -213,7 +213,7 @@ jobs:
           }
           HUNKART_SOURCE_5_END
           mkdir -p android/shopkeeper/app/src/main/res/drawable-nodpi
-          cp icons/icon-192.png android/shopkeeper/app/src/main/res/drawable-nodpi/hunkart_icon.png
+          cp shopkeeper-logo.png android/shopkeeper/app/src/main/res/drawable-nodpi/hunkart_icon.png
       - name: Install Android SDK 35
         run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
       - name: Build installable APK
