@@ -3785,6 +3785,7 @@ async function startRazorpayPayment(ctx){
       name:"HUNKART",
       description:"HUNKART order payment",
       order_id:rzOrder.id,
+      webview_intent:true,
       prefill:{name:ctx.a.name,contact:ctx.a.phone},
       notes:{payment_attempt_id:attemptId},
       theme:{},
