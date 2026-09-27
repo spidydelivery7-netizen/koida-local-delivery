@@ -176,6 +176,43 @@ button:disabled{
   gap:12px;
 }
 
+.delivery-tabs{
+  display:flex;
+  gap:8px;
+  margin:0 0 12px;
+}
+
+.delivery-tabs button{
+  flex:1;
+  background:#fff;
+  color:#334155;
+  border:1px solid var(--line);
+}
+
+.delivery-tabs button.selected{
+  background:var(--dark);
+  color:#fff;
+  border-color:var(--dark);
+}
+
+.delivery-count{
+  color:var(--muted);
+  font-size:13px;
+  margin:0 2px 12px;
+}
+
+.history-card .order-head{align-items:center}
+.history-card .small{margin-top:5px}
+.history-summary{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  margin-top:12px;
+}
+.history-card details{margin-top:12px;border-top:1px solid var(--line);padding-top:12px}
+.history-card summary{color:var(--blue);font-weight:800;cursor:pointer}
+.history-card .info{margin-top:10px}
+
 .badge{
   display:inline-block;
   border-radius:999px;
@@ -552,6 +589,12 @@ button:disabled{
       Browser tracking may pause if the app is force-closed.
     </div>
 
+    <nav class="delivery-tabs" aria-label="Delivery lists">
+      <button id="activeTab" class="selected" type="button" aria-pressed="true">Active</button>
+      <button id="historyTab" type="button" aria-pressed="false">History</button>
+    </nav>
+    <div id="deliveryCount" class="delivery-count"></div>
+
     <div id="ordersList"></div>
 
   </section>
@@ -575,6 +618,7 @@ const $ = id =>
 let sb = null;
 let profile = null;
 let deliveries = [];
+let deliveryView = "active";
 let deliveryRealtimeChannel = null;
 let deliveryRealtimeTimer = null;
 
@@ -1218,16 +1262,41 @@ function renderDeliveries(){
 
   box.innerHTML = "";
 
-  if(!deliveries.length){
+  const active = deliveries.filter(o =>
+    String(o.delivery_status || "").toLowerCase() !== "delivered"
+  );
+  const history = deliveries.filter(o =>
+    String(o.delivery_status || "").toLowerCase() === "delivered"
+  ).sort((a,b) =>
+    (Date.parse(b.delivered_at || b.created_at || "") || 0) -
+    (Date.parse(a.delivered_at || a.created_at || "") || 0)
+  );
+  const shown = deliveryView === "history" ? history : active;
+
+  $("activeTab").textContent = `Active (${active.length})`;
+  $("historyTab").textContent = `History (${history.length})`;
+  for(const [id,selected] of [
+    ["activeTab", deliveryView === "active"],
+    ["historyTab", deliveryView === "history"]
+  ]){
+    $(id).classList.toggle("selected", selected);
+    $(id).setAttribute("aria-pressed", String(selected));
+  }
+  $("deliveryCount").textContent = deliveryView === "history"
+    ? "Completed deliveries"
+    : "Current assigned deliveries";
+
+  if(!shown.length){
 
     box.innerHTML = `
       <div class="panel empty">
 
-        <b>No assigned deliveries</b>
+        <b>${deliveryView === "history" ? "No delivered orders yet" : "No active deliveries"}</b>
 
         <div style="margin-top:6px">
-          Admin assigns an order,
-          then it will appear here.
+          ${deliveryView === "history"
+            ? "Completed orders will appear here."
+            : "New assignments will appear here."}
         </div>
 
       </div>
@@ -1237,7 +1306,7 @@ function renderDeliveries(){
   }
 
 
-  deliveries.forEach(o => {
+  shown.forEach(o => {
 
     const card =
       document.createElement("div");
@@ -1279,6 +1348,32 @@ function renderDeliveries(){
 
       `)
       .join("");
+
+    if(String(o.delivery_status || "").toLowerCase() === "delivered"){
+      card.className = "panel order-card history-card";
+      card.innerHTML = `
+        <div class="order-head">
+          <b>${esc(o.order_number)}</b>
+          <span class="badge delivered">Delivered</span>
+        </div>
+        <div class="small">${esc(fmt(o.delivered_at))}</div>
+        <div class="history-summary">
+          <span>${esc(o.customer_name)}</span>
+          <b>${money(o.total)}</b>
+        </div>
+        <details>
+          <summary>View order details</summary>
+          <div class="small">Order ID: ${esc(o.order_id)}</div>
+          <div class="info"><b>Delivery Address</b><div>${esc(o.address)}</div>
+            <div>${esc([o.landmark,o.area].filter(Boolean).join(" · "))}</div>
+          </div>
+          <div class="items">${items || '<div class="small">No item details.</div>'}
+            <div class="small">Payment: ${esc(o.payment_status || "")}</div>
+          </div>
+        </details>`;
+      box.appendChild(card);
+      return;
+    }
 
 
     const hasCustomerGps =
@@ -2925,6 +3020,16 @@ async () => {
 
 };
 
+$("activeTab").onclick = () => {
+  deliveryView = "active";
+  renderDeliveries();
+};
+
+$("historyTab").onclick = () => {
+  deliveryView = "history";
+  renderDeliveries();
+};
+
 
 $("logoutBtn").onclick =
 async () => {
@@ -2935,6 +3040,7 @@ async () => {
 
   profile = null;
   deliveries = [];
+  deliveryView = "active";
 
   $("ordersList").innerHTML =
     "";
