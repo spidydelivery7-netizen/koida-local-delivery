@@ -3,6 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
+<script>
+// WebView's default user agent contains "; wv". Installed PWAs use standalone mode.
+if (/;\s*wv[);]/i.test(navigator.userAgent) ||
+    window.matchMedia("(display-mode: standalone)").matches ||
+    navigator.standalone === true) {
+  document.documentElement.classList.add("hunkart-installed-app");
+}
+</script>
 <meta name="hunkart-build" content="shop-location-v2-2026-09-25">
 <title>HUNKART – Food & Grocery Delivery in Koida</title>
 <meta name="description" content="Order food, groceries and daily essentials online with HUNKART. Fast and convenient local delivery in Koida, Odisha.">
@@ -1185,6 +1193,8 @@ header.hk-header .menu-btn:active{
   .app-install-btn{padding:10px 11px;font-size:12px}
 }
 
+/* Hide the install prompt before first paint inside the APK or installed PWA. */
+.hunkart-installed-app .app-install-banner{display:none!important}
 /* Hide the web install banner inside the installed HUNKART app. */
 @media (display-mode: standalone){
   .app-install-banner{display:none!important}
@@ -4185,7 +4195,8 @@ const installHunkartApp = document.getElementById("installHunkartApp");
 function hunkartIsStandalone(){
   return (
     window.matchMedia("(display-mode: standalone)").matches ||
-    window.navigator.standalone === true
+    window.navigator.standalone === true ||
+    /;\s*wv[);]/i.test(window.navigator.userAgent)
   );
 }
 
