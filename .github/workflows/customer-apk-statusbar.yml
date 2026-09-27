@@ -52,12 +52,26 @@ jobs:
           android {
               namespace 'com.hunkart.delivery'
               compileSdk 35
+              signingConfigs {
+                  release {
+                      storeFile file(System.getenv('HUNKART_KEYSTORE_PATH'))
+                      storePassword System.getenv('HUNKART_KEYSTORE_PASSWORD')
+                      keyAlias 'hunkart'
+                      keyPassword System.getenv('HUNKART_KEYSTORE_PASSWORD')
+                  }
+              }
               defaultConfig {
                   applicationId 'com.hunkart.delivery'
                   minSdk 24
                   targetSdk 35
                   versionCode = (System.getenv('GITHUB_RUN_NUMBER') ?: '1').toInteger() + 3
                   versionName = "1.0.${System.getenv('GITHUB_RUN_NUMBER') ?: '1'}"
+              }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                      minifyEnabled false
+                  }
               }
           }
           EOF
@@ -67,6 +81,7 @@ jobs:
               <uses-permission android:name="android.permission.INTERNET" />
               <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
               <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+              <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
               <application android:allowBackup="false" android:label="HUNKART"
                   android:icon="@drawable/hunkart_icon" android:usesCleartextTraffic="false"
                   android:theme="@android:style/Theme.Material.Light.NoActionBar">
@@ -84,11 +99,18 @@ jobs:
 
           import android.Manifest;
           import android.app.Activity;
+          import android.app.AlertDialog;
+          import android.app.DownloadManager;
+          import android.content.BroadcastReceiver;
+          import android.content.Context;
           import android.content.pm.PackageManager;
           import android.content.Intent;
+          import android.content.IntentFilter;
           import android.net.Uri;
           import android.os.Build;
           import android.os.Bundle;
+          import android.database.Cursor;
+          import android.provider.Settings;
           import android.view.ViewGroup;
           import android.view.WindowInsets;
           import android.webkit.WebChromeClient;
@@ -98,13 +120,116 @@ jobs:
           import android.webkit.WebView;
           import android.webkit.WebViewClient;
           import android.widget.FrameLayout;
+          import android.widget.Toast;
+          import org.json.JSONObject;
+          import java.io.BufferedReader;
+          import java.io.InputStreamReader;
+          import java.net.HttpURLConnection;
+          import java.net.URL;
 
           public class MainActivity extends Activity {
               private static final String HOME_URL = "https://hunkart.com/";
+              private static final String UPDATE_INFO_URL =
+                  "https://github.com/spidydelivery7-netizen/koida-local-delivery/releases/download/customer-app/HUNKART_Customer_latest.json";
+              private static final String UPDATE_APK_URL =
+                  "https://github.com/spidydelivery7-netizen/koida-local-delivery/releases/download/customer-app/HUNKART_Customer.apk";
               private static final int LOCATION_REQUEST = 1001;
               private WebView webView;
               private String pendingLocationOrigin;
               private GeolocationPermissions.Callback pendingLocationCallback;
+              private long updateDownloadId = -1L;
+              private Uri downloadedUpdate;
+              private boolean waitingForInstallPermission;
+              private boolean updateCheckStarted;
+              private final BroadcastReceiver updateReceiver = new BroadcastReceiver() {
+                  @Override public void onReceive(Context context, Intent intent) {
+                      if (!DownloadManager.ACTION_DOWNLOAD_COMPLETE.equals(intent.getAction())) return;
+                      if (intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L) != updateDownloadId) return;
+                      DownloadManager manager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+                      DownloadManager.Query query = new DownloadManager.Query().setFilterById(updateDownloadId);
+                      try (Cursor cursor = manager.query(query)) {
+                          if (cursor != null && cursor.moveToFirst()
+                              && cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
+                                  == DownloadManager.STATUS_SUCCESSFUL) {
+                              downloadedUpdate = manager.getUriForDownloadedFile(updateDownloadId);
+                              if (downloadedUpdate != null) showInstallPrompt();
+                          } else {
+                              Toast.makeText(MainActivity.this, "Update download failed. Please try again later.", Toast.LENGTH_LONG).show();
+                          }
+                      }
+                  }
+              };
+
+              private void checkForUpdate() {
+                  if (updateCheckStarted) return;
+                  updateCheckStarted = true;
+                  new Thread(() -> {
+                      HttpURLConnection connection = null;
+                      try {
+                          connection = (HttpURLConnection) new URL(UPDATE_INFO_URL).openConnection();
+                          connection.setConnectTimeout(7000);
+                          connection.setReadTimeout(7000);
+                          connection.setUseCaches(false);
+                          if (connection.getResponseCode() != 200) return;
+                          StringBuilder response = new StringBuilder();
+                          try (BufferedReader reader = new BufferedReader(
+                                  new InputStreamReader(connection.getInputStream(), "UTF-8"))) {
+                              String line;
+                              while ((line = reader.readLine()) != null && response.length() < 4096) response.append(line);
+                          }
+                          int latest = new JSONObject(response.toString()).optInt("version_code", 0);
+                          int installed = getPackageManager().getPackageInfo(getPackageName(), 0).versionCode;
+                          if (latest > installed) runOnUiThread(this::downloadUpdate);
+                      } catch (Exception ignored) {
+                          // A network failure must not block opening the app.
+                      } finally {
+                          if (connection != null) connection.disconnect();
+                      }
+                  }).start();
+              }
+
+              private void downloadUpdate() {
+                  if (updateDownloadId != -1L) return;
+                  try {
+                      DownloadManager.Request request = new DownloadManager.Request(Uri.parse(UPDATE_APK_URL));
+                      request.setTitle("HUNKART update");
+                      request.setDescription("Downloading the latest customer app");
+                      request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+                      DownloadManager manager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+                      updateDownloadId = manager.enqueue(request);
+                  } catch (Exception e) {
+                      updateDownloadId = -1L;
+                      Toast.makeText(this, "Could not download update.", Toast.LENGTH_LONG).show();
+                  }
+              }
+
+              private void showInstallPrompt() {
+                  new AlertDialog.Builder(this)
+                      .setTitle("HUNKART update ready")
+                      .setMessage("The latest app is downloaded. Install it now?")
+                      .setPositiveButton("Install", (dialog, which) -> installUpdate())
+                      .setNegativeButton("Later", null)
+                      .show();
+              }
+
+              private void installUpdate() {
+                  if (downloadedUpdate == null) return;
+                  if (Build.VERSION.SDK_INT >= 26 && !getPackageManager().canRequestPackageInstalls()) {
+                      waitingForInstallPermission = true;
+                      Intent settings = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                          Uri.parse("package:" + getPackageName()));
+                      startActivity(settings);
+                      return;
+                  }
+                  waitingForInstallPermission = false;
+                  Intent installer = new Intent(Intent.ACTION_VIEW);
+                  installer.setDataAndType(downloadedUpdate, "application/vnd.android.package-archive");
+                  installer.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                  try { startActivity(installer); }
+                  catch (Exception e) {
+                      Toast.makeText(this, "Open the downloaded APK to install the update.", Toast.LENGTH_LONG).show();
+                  }
+              }
 
               private boolean locationGranted() {
                   return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
@@ -185,6 +310,21 @@ jobs:
                   Uri data = getIntent().getData();
                   String initialUrl = data == null ? HOME_URL : data.toString();
                   webView.loadUrl(initialUrl);
+                  registerReceiver(updateReceiver, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+                  checkForUpdate();
+              }
+
+              @Override protected void onResume() {
+                  super.onResume();
+                  if (waitingForInstallPermission && downloadedUpdate != null
+                      && (Build.VERSION.SDK_INT < 26 || getPackageManager().canRequestPackageInstalls())) {
+                      installUpdate();
+                  }
+              }
+
+              @Override protected void onDestroy() {
+                  unregisterReceiver(updateReceiver);
+                  super.onDestroy();
               }
 
               @Override public void onRequestPermissionsResult(
@@ -205,20 +345,37 @@ jobs:
           EOF
       - name: Install Android SDK 35
         run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Prepare stable APK signing key
+        shell: bash
+        env:
+          HUNKART_KEYSTORE_BASE64: ${{ secrets.HUNKART_KEYSTORE_BASE64 }}
+          HUNKART_KEYSTORE_PASSWORD: ${{ secrets.HUNKART_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$HUNKART_KEYSTORE_BASE64"
+          test -n "$HUNKART_KEYSTORE_PASSWORD"
+          printf '%s' "$HUNKART_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/hunkart-customer.jks"
+          keytool -list -keystore "$RUNNER_TEMP/hunkart-customer.jks" \
+            -storepass "$HUNKART_KEYSTORE_PASSWORD" -alias hunkart >/dev/null
       - name: Build customer APK
         working-directory: android/customer
-        run: gradle --no-daemon assembleDebug
+        env:
+          HUNKART_KEYSTORE_PATH: ${{ runner.temp }}/hunkart-customer.jks
+          HUNKART_KEYSTORE_PASSWORD: ${{ secrets.HUNKART_KEYSTORE_PASSWORD }}
+        run: gradle --no-daemon assembleRelease
       - name: Publish latest customer APK
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          cp android/customer/app/build/outputs/apk/debug/app-debug.apk HUNKART_Customer.apk
+          cp android/customer/app/build/outputs/apk/release/app-release.apk HUNKART_Customer.apk
+          printf '{"version_code":%s}\n' "$((GITHUB_RUN_NUMBER + 3))" > HUNKART_Customer_latest.json
           if gh release view customer-app >/dev/null 2>&1; then
             gh release upload customer-app HUNKART_Customer.apk --clobber
+            gh release upload customer-app HUNKART_Customer_latest.json --clobber
           else
-            gh release create customer-app HUNKART_Customer.apk \
+            gh release create customer-app HUNKART_Customer.apk HUNKART_Customer_latest.json \
               --title "HUNKART Customer App" \
               --notes "Latest HUNKART Android customer APK. This asset is replaced after each successful customer APK build." \
               --target "$GITHUB_SHA"
@@ -227,5 +384,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: HUNKART_Customer_APK
-          path: android/customer/app/build/outputs/apk/debug/app-debug.apk
+          path: android/customer/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
