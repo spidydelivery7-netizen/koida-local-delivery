@@ -1,0 +1,425 @@
+name: Build HUNKART Admin APK
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/admin-apk.yml'
+      - 'icons/icon-192.png'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: hunkart-admin-apk-release
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Prepare admin Android project
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s icons/icon-192.png
+          mkdir -p android/admin/app/src/main/java/com/hunkart/admin android/admin/app/src/main/res/drawable-nodpi
+          cp icons/icon-192.png android/admin/app/src/main/res/drawable-nodpi/hunkart_icon.png
+          cat > android/admin/settings.gradle <<'EOF'
+          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories { google(); mavenCentral() }
+          }
+          rootProject.name = 'HunkartAdmin'
+          include ':app'
+          EOF
+          cat > android/admin/build.gradle <<'EOF'
+          plugins { id 'com.android.application' version '8.7.3' apply false }
+          EOF
+          cat > android/admin/gradle.properties <<'EOF'
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          android.useAndroidX=true
+          EOF
+          cat > android/admin/app/build.gradle <<'EOF'
+          plugins { id 'com.android.application' }
+          android {
+              namespace 'com.hunkart.admin'
+              compileSdk 35
+              signingConfigs {
+                  release {
+                      storeFile file(System.getenv('HUNKART_KEYSTORE_PATH'))
+                      storePassword System.getenv('HUNKART_KEYSTORE_PASSWORD')
+                      keyAlias 'hunkart'
+                      keyPassword System.getenv('HUNKART_KEYSTORE_PASSWORD')
+                  }
+              }
+              defaultConfig {
+                  applicationId 'com.hunkart.admin'
+                  minSdk 24
+                  targetSdk 35
+                  versionCode = (System.getenv('GITHUB_RUN_NUMBER') ?: '1').toInteger() + 3
+                  versionName = "1.0.${System.getenv('GITHUB_RUN_NUMBER') ?: '1'}"
+              }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                      minifyEnabled false
+                  }
+              }
+          }
+          EOF
+          cat > android/admin/app/src/main/AndroidManifest.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+              <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+              <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+              <application android:allowBackup="false" android:label="HUNKART Admin"
+                  android:icon="@drawable/hunkart_icon" android:usesCleartextTraffic="false"
+                  android:theme="@android:style/Theme.Material.Light.NoActionBar">
+                  <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+          cat > android/admin/app/src/main/java/com/hunkart/admin/MainActivity.java <<'EOF'
+          package com.hunkart.admin;
+
+          import android.Manifest;
+          import android.app.Activity;
+          import android.app.AlertDialog;
+          import android.app.DownloadManager;
+          import android.content.BroadcastReceiver;
+          import android.content.Context;
+          import android.content.pm.PackageManager;
+          import android.content.Intent;
+          import android.content.IntentFilter;
+          import android.net.Uri;
+          import android.os.Build;
+          import android.os.Bundle;
+          import android.database.Cursor;
+          import android.provider.Settings;
+          import android.view.ViewGroup;
+          import android.view.WindowInsets;
+          import android.webkit.WebChromeClient;
+          import android.webkit.GeolocationPermissions;
+          import android.webkit.WebResourceRequest;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+          import android.webkit.ValueCallback;
+          import android.widget.FrameLayout;
+          import android.widget.Toast;
+          import org.json.JSONObject;
+          import java.io.BufferedReader;
+          import java.io.InputStreamReader;
+          import java.net.HttpURLConnection;
+          import java.net.URL;
+
+          public class MainActivity extends Activity {
+              private static final String HOME_URL = "https://hunkart.com/admin.html";
+              private static final String UPDATE_INFO_URL =
+                  "https://github.com/spidydelivery7-netizen/koida-local-delivery/releases/download/admin-app/HUNKART_Admin_latest.json";
+              private static final String UPDATE_APK_URL =
+                  "https://github.com/spidydelivery7-netizen/koida-local-delivery/releases/download/admin-app/HUNKART_Admin.apk";
+              private static final int LOCATION_REQUEST = 1001;
+              private static final int FILE_REQUEST = 1002;
+              private WebView webView;
+              private ValueCallback<Uri[]> pendingFiles;
+              private String pendingLocationOrigin;
+              private GeolocationPermissions.Callback pendingLocationCallback;
+              private long updateDownloadId = -1L;
+              private Uri downloadedUpdate;
+              private boolean updateReceiverRegistered;
+              private boolean waitingForInstallPermission;
+              private boolean updateCheckStarted;
+              private final BroadcastReceiver updateReceiver = new BroadcastReceiver() {
+                  @Override public void onReceive(Context context, Intent intent) {
+                      if (!DownloadManager.ACTION_DOWNLOAD_COMPLETE.equals(intent.getAction())) return;
+                      if (intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L) != updateDownloadId) return;
+                      DownloadManager manager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+                      DownloadManager.Query query = new DownloadManager.Query().setFilterById(updateDownloadId);
+                      try (Cursor cursor = manager.query(query)) {
+                          if (cursor != null && cursor.moveToFirst()
+                              && cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
+                                  == DownloadManager.STATUS_SUCCESSFUL) {
+                              downloadedUpdate = manager.getUriForDownloadedFile(updateDownloadId);
+                              if (downloadedUpdate != null) showInstallPrompt();
+                          } else {
+                              Toast.makeText(MainActivity.this, "Update download failed. Please try again later.", Toast.LENGTH_LONG).show();
+                          }
+                      }
+                  }
+              };
+
+              private void checkForUpdate() {
+                  if (updateCheckStarted) return;
+                  updateCheckStarted = true;
+                  new Thread(() -> {
+                      HttpURLConnection connection = null;
+                      try {
+                          connection = (HttpURLConnection) new URL(UPDATE_INFO_URL).openConnection();
+                          connection.setConnectTimeout(7000);
+                          connection.setReadTimeout(7000);
+                          connection.setUseCaches(false);
+                          if (connection.getResponseCode() != 200) return;
+                          StringBuilder response = new StringBuilder();
+                          try (BufferedReader reader = new BufferedReader(
+                                  new InputStreamReader(connection.getInputStream(), "UTF-8"))) {
+                              String line;
+                              while ((line = reader.readLine()) != null && response.length() < 4096) response.append(line);
+                          }
+                          int latest = new JSONObject(response.toString()).optInt("version_code", 0);
+                          int installed = getPackageManager().getPackageInfo(getPackageName(), 0).versionCode;
+                          if (latest > installed) runOnUiThread(this::downloadUpdate);
+                      } catch (Exception ignored) {
+                          // A network failure must not block opening the app.
+                      } finally {
+                          if (connection != null) connection.disconnect();
+                      }
+                  }).start();
+              }
+
+              private void downloadUpdate() {
+                  if (updateDownloadId != -1L) return;
+                  try {
+                      DownloadManager.Request request = new DownloadManager.Request(Uri.parse(UPDATE_APK_URL));
+                      request.setTitle("HUNKART Admin update");
+                      request.setDescription("Downloading the latest admin app");
+                      request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+                      DownloadManager manager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+                      updateDownloadId = manager.enqueue(request);
+                  } catch (Exception e) {
+                      updateDownloadId = -1L;
+                      Toast.makeText(this, "Could not download update.", Toast.LENGTH_LONG).show();
+                  }
+              }
+
+              private void showInstallPrompt() {
+                  new AlertDialog.Builder(this)
+                      .setTitle("HUNKART Admin update ready")
+                      .setMessage("The latest app is downloaded. Install it now?")
+                      .setPositiveButton("Install", (dialog, which) -> installUpdate())
+                      .setNegativeButton("Later", null)
+                      .show();
+              }
+
+              private void installUpdate() {
+                  if (downloadedUpdate == null) return;
+                  if (Build.VERSION.SDK_INT >= 26 && !getPackageManager().canRequestPackageInstalls()) {
+                      waitingForInstallPermission = true;
+                      Intent settings = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                          Uri.parse("package:" + getPackageName()));
+                      startActivity(settings);
+                      return;
+                  }
+                  waitingForInstallPermission = false;
+                  Intent installer = new Intent(Intent.ACTION_VIEW);
+                  installer.setDataAndType(downloadedUpdate, "application/vnd.android.package-archive");
+                  installer.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                  try { startActivity(installer); }
+                  catch (Exception e) {
+                      Toast.makeText(this, "Open the downloaded APK to install the update.", Toast.LENGTH_LONG).show();
+                  }
+              }
+
+              private boolean locationGranted() {
+                  return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                      || checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+              }
+
+              private boolean trustedOrigin(String origin) {
+                  Uri uri = Uri.parse(origin);
+                  String host = uri.getHost();
+                  return "https".equalsIgnoreCase(uri.getScheme())
+                      && ("hunkart.com".equalsIgnoreCase(host) || "www.hunkart.com".equalsIgnoreCase(host));
+              }
+
+              @Override public void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  FrameLayout root = new FrameLayout(this);
+                  root.setBackgroundColor(0xff00243c);
+                  webView = new WebView(this);
+                  webView.setBackgroundColor(0xff00243c);
+                  root.addView(webView, new FrameLayout.LayoutParams(-1, -1));
+                  setContentView(root);
+
+                  // Android 15+ draws the page behind system bars. Keep the entire
+                  // WebView viewport below the status bar and above the gesture bar.
+                  if (Build.VERSION.SDK_INT >= 35) {
+                      root.setOnApplyWindowInsetsListener((view, insets) -> {
+                          int top = insets.getInsets(WindowInsets.Type.statusBars()).top;
+                          int bottom = insets.getInsets(WindowInsets.Type.navigationBars()).bottom;
+                          FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) webView.getLayoutParams();
+                          if (lp.topMargin != top || lp.bottomMargin != bottom) {
+                              lp.topMargin = top;
+                              lp.bottomMargin = bottom;
+                              webView.setLayoutParams(lp);
+                          }
+                          return insets;
+                      });
+                      root.requestApplyInsets();
+                  }
+
+                  WebSettings settings = webView.getSettings();
+                  settings.setJavaScriptEnabled(true);
+                  settings.setDomStorageEnabled(true);
+                  settings.setDatabaseEnabled(true);
+                  settings.setUseWideViewPort(true);
+                  settings.setLoadWithOverviewMode(true);
+                  settings.setMediaPlaybackRequiresUserGesture(false);
+                  settings.setGeolocationEnabled(true);
+                  webView.setWebChromeClient(new WebChromeClient() {
+                      @Override public boolean onShowFileChooser(WebView view,
+                          ValueCallback<Uri[]> callback, FileChooserParams params) {
+                          if (pendingFiles != null) pendingFiles.onReceiveValue(null);
+                          pendingFiles = callback;
+                          try {
+                              startActivityForResult(params.createIntent(), FILE_REQUEST);
+                          } catch (Exception e) {
+                              pendingFiles = null;
+                              callback.onReceiveValue(null);
+                              Toast.makeText(MainActivity.this, "Could not open files.", Toast.LENGTH_LONG).show();
+                          }
+                          return true;
+                      }
+                      @Override public void onGeolocationPermissionsShowPrompt(
+                          String origin, GeolocationPermissions.Callback callback) {
+                          if (!trustedOrigin(origin)) {
+                              callback.invoke(origin, false, false);
+                              return;
+                          }
+                          if (locationGranted()) {
+                              callback.invoke(origin, true, false);
+                          } else {
+                              // Ask only when checkout or another page requests location.
+                              pendingLocationOrigin = origin;
+                              pendingLocationCallback = callback;
+                              requestPermissions(new String[] {
+                                  Manifest.permission.ACCESS_FINE_LOCATION,
+                                  Manifest.permission.ACCESS_COARSE_LOCATION
+                              }, LOCATION_REQUEST);
+                          }
+                      }
+                  });
+                  webView.setWebViewClient(new WebViewClient() {
+                      @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                          Uri uri = request.getUrl();
+                          String scheme = uri.getScheme();
+                          if ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme)) return false;
+                          try { startActivity(new Intent(Intent.ACTION_VIEW, uri)); }
+                          catch (Exception ignored) { }
+                          return true;
+                      }
+                  });
+                  Uri data = getIntent().getData();
+                  webView.loadUrl(data != null && trustedOrigin(data.toString())
+                      ? data.toString() : HOME_URL);
+                  // Android 14+ requires an export flag for runtime receivers
+                  // that are not on its protected system-broadcast list.
+                  IntentFilter updateFilter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
+                  if (Build.VERSION.SDK_INT >= 33) {
+                      registerReceiver(updateReceiver, updateFilter, Context.RECEIVER_EXPORTED);
+                  } else {
+                      registerReceiver(updateReceiver, updateFilter);
+                  }
+                  updateReceiverRegistered = true;
+                  checkForUpdate();
+              }
+
+              @Override protected void onResume() {
+                  super.onResume();
+                  if (waitingForInstallPermission && downloadedUpdate != null
+                      && (Build.VERSION.SDK_INT < 26 || getPackageManager().canRequestPackageInstalls())) {
+                      installUpdate();
+                  }
+              }
+
+              @Override protected void onDestroy() {
+                  if (pendingFiles != null) {
+                      pendingFiles.onReceiveValue(null);
+                      pendingFiles = null;
+                  }
+                  if (updateReceiverRegistered) unregisterReceiver(updateReceiver);
+                  super.onDestroy();
+              }
+
+              @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+                  super.onActivityResult(requestCode, resultCode, data);
+                  if (requestCode == FILE_REQUEST && pendingFiles != null) {
+                      pendingFiles.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, data));
+                      pendingFiles = null;
+                  }
+              }
+
+              @Override public void onRequestPermissionsResult(
+                  int requestCode, String[] permissions, int[] grantResults) {
+                  super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+                  if (requestCode == LOCATION_REQUEST && pendingLocationCallback != null) {
+                      pendingLocationCallback.invoke(pendingLocationOrigin, locationGranted(), false);
+                      pendingLocationCallback = null;
+                      pendingLocationOrigin = null;
+                  }
+              }
+
+              @Override public void onBackPressed() {
+                  if (webView != null && webView.canGoBack()) webView.goBack();
+                  else super.onBackPressed();
+              }
+          }
+          EOF
+      - name: Install Android SDK 35
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Prepare stable APK signing key
+        shell: bash
+        env:
+          HUNKART_KEYSTORE_BASE64: ${{ secrets.HUNKART_KEYSTORE_BASE64 }}
+          HUNKART_KEYSTORE_PASSWORD: ${{ secrets.HUNKART_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$HUNKART_KEYSTORE_BASE64"
+          test -n "$HUNKART_KEYSTORE_PASSWORD"
+          printf '%s' "$HUNKART_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/hunkart-admin.jks"
+          keytool -list -keystore "$RUNNER_TEMP/hunkart-admin.jks" \
+            -storepass "$HUNKART_KEYSTORE_PASSWORD" -alias hunkart >/dev/null
+      - name: Build admin APK
+        working-directory: android/admin
+        env:
+          HUNKART_KEYSTORE_PATH: ${{ runner.temp }}/hunkart-admin.jks
+          HUNKART_KEYSTORE_PASSWORD: ${{ secrets.HUNKART_KEYSTORE_PASSWORD }}
+        run: gradle --no-daemon assembleRelease
+      - name: Publish latest admin APK
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cp android/admin/app/build/outputs/apk/release/app-release.apk HUNKART_Admin.apk
+          printf '{"version_code":%s}\n' "$((GITHUB_RUN_NUMBER + 3))" > HUNKART_Admin_latest.json
+          if gh release view admin-app >/dev/null 2>&1; then
+            gh release upload admin-app HUNKART_Admin.apk --clobber
+            gh release upload admin-app HUNKART_Admin_latest.json --clobber
+          else
+            gh release create admin-app HUNKART_Admin.apk HUNKART_Admin_latest.json \
+              --title "HUNKART Admin App" \
+              --notes "Latest HUNKART Android admin APK. This asset is replaced after each successful admin APK build." \
+              --target "$GITHUB_SHA"
+          fi
+      - name: Upload admin APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: HUNKART_Admin_APK
+          path: android/admin/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
