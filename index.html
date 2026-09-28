@@ -1134,6 +1134,24 @@ header.hk-header .menu-btn:active{
 }  
 
 /* ===== HUNKART App Install Banner ===== */
+.play-coming-banner{
+  max-width:1180px;
+  margin:0 auto 10px;
+  padding:9px 12px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  border:1px solid #47617c;
+  border-radius:13px;
+  background:#eaf2ff;
+  color:#14243a;
+  font-size:13px;
+  line-height:1.35;
+  font-weight:700;
+}
+.play-coming-banner svg{width:27px;height:27px;flex:0 0 27px}
+@media(max-width:1210px){.play-coming-banner{margin:0 18px 10px}}
+@media print{.play-coming-banner{display:none!important}}
 .app-install-banner{
   display:flex;
   align-items:center;
@@ -1253,6 +1271,16 @@ header.hk-header .menu-btn:active{
       </button>
     </div>
 
+  </div>
+
+  <div class="play-coming-banner" role="status">
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path fill="#34a853" d="M3 2.5v19l9.5-9.5z"/>
+      <path fill="#4285f4" d="M3 2.5 14 9.6l-1.5 2.4z"/>
+      <path fill="#fbbc04" d="m14 9.6 6.2 4a1.9 1.9 0 0 0 0-3.2l-6.2-4z"/>
+      <path fill="#ea4335" d="M3 21.5 14 14.4 12.5 12z"/>
+    </svg>
+    <span>Coming soon to Google Play. We'll notify you when HUNKART is available there.</span>
   </div>
 
   <button type="button" id="topLocationBtn" class="hk-location-pill">
