@@ -1,0 +1,249 @@
+name: Build HUNKART Customer Play AAB
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/customer-play-aab.yml'
+      - 'customer-apk-assets.zip'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Prepare customer Android project for Google Play
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s customer-apk-assets.zip
+          mkdir -p android/customer/app/src/main/java/com/hunkart/delivery android/customer/app/src/main/res/drawable-nodpi
+          unzip -p customer-apk-assets.zip customer-icon.png > android/customer/app/src/main/res/drawable-nodpi/hunkart_icon.png
+          test -s android/customer/app/src/main/res/drawable-nodpi/hunkart_icon.png
+          cat > android/customer/settings.gradle <<'EOF'
+          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories { google(); mavenCentral() }
+          }
+          rootProject.name = 'HunkartCustomerPlay'
+          include ':app'
+          EOF
+          cat > android/customer/build.gradle <<'EOF'
+          plugins { id 'com.android.application' version '8.13.2' apply false }
+          EOF
+          cat > android/customer/gradle.properties <<'EOF'
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          android.useAndroidX=true
+          EOF
+          cat > android/customer/app/build.gradle <<'EOF'
+          plugins { id 'com.android.application' }
+          android {
+              namespace 'com.hunkart.delivery'
+              compileSdk 36
+              signingConfigs {
+                  release {
+                      storeFile file(System.getenv('HUNKART_KEYSTORE_PATH'))
+                      storePassword System.getenv('HUNKART_KEYSTORE_PASSWORD')
+                      keyAlias 'hunkart'
+                      keyPassword System.getenv('HUNKART_KEYSTORE_PASSWORD')
+                  }
+              }
+              defaultConfig {
+                  applicationId 'com.hunkart.delivery'
+                  minSdk 24
+                  targetSdk 36
+                  versionCode = (System.getenv('GITHUB_RUN_NUMBER') ?: '1').toInteger() + 1000
+                  versionName = "1.0.${System.getenv('GITHUB_RUN_NUMBER') ?: '1'}"
+              }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                      minifyEnabled false
+                  }
+              }
+          }
+          EOF
+          cat > android/customer/app/src/main/AndroidManifest.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+              <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+              <application android:allowBackup="false" android:label="HUNKART"
+                  android:icon="@drawable/hunkart_icon" android:usesCleartextTraffic="false"
+                  android:theme="@android:style/Theme.Material.Light.NoActionBar">
+                  <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+          cat > android/customer/app/src/main/java/com/hunkart/delivery/MainActivity.java <<'EOF'
+          package com.hunkart.delivery;
+
+          import android.Manifest;
+          import android.app.Activity;
+          import android.content.Intent;
+          import android.content.pm.PackageManager;
+          import android.net.Uri;
+          import android.os.Build;
+          import android.os.Bundle;
+          import android.view.WindowInsets;
+          import android.webkit.GeolocationPermissions;
+          import android.webkit.WebChromeClient;
+          import android.webkit.WebResourceRequest;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+          import android.widget.FrameLayout;
+
+          public class MainActivity extends Activity {
+              private static final String HOME_URL = "https://hunkart.com/";
+              private static final int LOCATION_REQUEST = 1001;
+              private WebView webView;
+              private String pendingLocationOrigin;
+              private GeolocationPermissions.Callback pendingLocationCallback;
+
+              private boolean locationGranted() {
+                  return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                      || checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+              }
+
+              private boolean trustedOrigin(String origin) {
+                  Uri uri = Uri.parse(origin);
+                  String host = uri.getHost();
+                  return "https".equalsIgnoreCase(uri.getScheme())
+                      && ("hunkart.com".equalsIgnoreCase(host) || "www.hunkart.com".equalsIgnoreCase(host));
+              }
+
+              @Override public void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  FrameLayout root = new FrameLayout(this);
+                  root.setBackgroundColor(0xff00243c);
+                  webView = new WebView(this);
+                  webView.setBackgroundColor(0xff00243c);
+                  root.addView(webView, new FrameLayout.LayoutParams(-1, -1));
+                  setContentView(root);
+
+                  if (Build.VERSION.SDK_INT >= 35) {
+                      root.setOnApplyWindowInsetsListener((view, insets) -> {
+                          int top = insets.getInsets(WindowInsets.Type.statusBars()).top;
+                          int bottom = insets.getInsets(WindowInsets.Type.navigationBars()).bottom;
+                          FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) webView.getLayoutParams();
+                          if (lp.topMargin != top || lp.bottomMargin != bottom) {
+                              lp.topMargin = top;
+                              lp.bottomMargin = bottom;
+                              webView.setLayoutParams(lp);
+                          }
+                          return insets;
+                      });
+                      root.requestApplyInsets();
+                  }
+
+                  WebSettings settings = webView.getSettings();
+                  settings.setJavaScriptEnabled(true);
+                  settings.setDomStorageEnabled(true);
+                  settings.setDatabaseEnabled(true);
+                  settings.setUseWideViewPort(true);
+                  settings.setLoadWithOverviewMode(true);
+                  settings.setMediaPlaybackRequiresUserGesture(false);
+                  settings.setGeolocationEnabled(true);
+                  webView.setWebChromeClient(new WebChromeClient() {
+                      @Override public void onGeolocationPermissionsShowPrompt(
+                          String origin, GeolocationPermissions.Callback callback) {
+                          if (!trustedOrigin(origin)) {
+                              callback.invoke(origin, false, false);
+                              return;
+                          }
+                          if (locationGranted()) {
+                              callback.invoke(origin, true, false);
+                          } else {
+                              pendingLocationOrigin = origin;
+                              pendingLocationCallback = callback;
+                              requestPermissions(new String[] {
+                                  Manifest.permission.ACCESS_FINE_LOCATION,
+                                  Manifest.permission.ACCESS_COARSE_LOCATION
+                              }, LOCATION_REQUEST);
+                          }
+                      }
+                  });
+                  webView.setWebViewClient(new WebViewClient() {
+                      @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                          Uri uri = request.getUrl();
+                          String scheme = uri.getScheme();
+                          if ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme)) return false;
+                          try { startActivity(new Intent(Intent.ACTION_VIEW, uri)); }
+                          catch (Exception ignored) { }
+                          return true;
+                      }
+                  });
+                  webView.loadUrl(HOME_URL);
+              }
+
+              @Override public void onRequestPermissionsResult(
+                  int requestCode, String[] permissions, int[] grantResults) {
+                  super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+                  if (requestCode == LOCATION_REQUEST && pendingLocationCallback != null) {
+                      pendingLocationCallback.invoke(pendingLocationOrigin, locationGranted(), false);
+                      pendingLocationCallback = null;
+                      pendingLocationOrigin = null;
+                  }
+              }
+
+              @Override public void onBackPressed() {
+                  if (webView != null && webView.canGoBack()) webView.goBack();
+                  else super.onBackPressed();
+              }
+          }
+          EOF
+      - name: Install Android SDK 36
+        run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
+      - name: Verify existing signing key
+        shell: bash
+        env:
+          HUNKART_KEYSTORE_BASE64: ${{ secrets.HUNKART_KEYSTORE_BASE64 }}
+          HUNKART_KEYSTORE_PASSWORD: ${{ secrets.HUNKART_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$HUNKART_KEYSTORE_BASE64"
+          test -n "$HUNKART_KEYSTORE_PASSWORD"
+          printf '%s' "$HUNKART_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/hunkart-customer.jks"
+          keytool -list -keystore "$RUNNER_TEMP/hunkart-customer.jks" \
+            -storepass "$HUNKART_KEYSTORE_PASSWORD" -alias hunkart >/dev/null
+      - name: Build signed Play AAB
+        working-directory: android/customer
+        env:
+          HUNKART_KEYSTORE_PATH: ${{ runner.temp }}/hunkart-customer.jks
+          HUNKART_KEYSTORE_PASSWORD: ${{ secrets.HUNKART_KEYSTORE_PASSWORD }}
+        run: gradle --no-daemon bundleRelease
+      - name: Verify bundle signature and manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          BUNDLE=android/customer/app/build/outputs/bundle/release/app-release.aab
+          test -s "$BUNDLE"
+          jarsigner -verify "$BUNDLE" >/dev/null
+          if grep -q 'REQUEST_INSTALL_PACKAGES' android/customer/app/src/main/AndroidManifest.xml; then
+            echo 'Play bundle must not request package installation' >&2
+            exit 1
+          fi
+      - name: Upload signed Play AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: HUNKART_Customer_Play_AAB
+          path: android/customer/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
