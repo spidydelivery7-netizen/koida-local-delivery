@@ -2,7 +2,7 @@ window.SPIDY_CONFIG = {
   businessName: "HUNKART STAGING",
   whatsappNumber: "",
   supabaseUrl: "https://jjitqihblpubqwbggjpv.supabase.co",
-  supabaseAnonKey: "",
+  supabaseAnonKey: "sb_publishable_RxMB6BPXWcEnmmHCFFa_Bg_arV4t45w",
   onlinePaymentEnabled: true,
   razorpayKeyId: "",
   stagingMode: true
