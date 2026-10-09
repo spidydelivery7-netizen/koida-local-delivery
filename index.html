@@ -116,6 +116,13 @@ header{background:#fff;color:#111827;border-bottom:1px solid #edf0f3;box-shadow:
 .cats{padding:10px 0 2px;gap:8px}
 .chip{padding:9px 13px;border-radius:12px;border:1px solid #e5e7eb;box-shadow:none;font-size:13px}
 .chip.active{background:#111827;color:#fff}
+.service-picture-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;overflow:visible}
+.service-picture{min-width:0;min-height:116px;padding:10px 8px 9px;border:2px solid transparent;border-radius:18px;background:#fff;color:#172033;box-shadow:0 5px 18px #0b172918;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font:inherit;font-size:13px;font-weight:900;cursor:pointer}
+.service-picture svg{display:block;width:min(100%,92px);height:67px;flex:none}
+.service-picture.active{border-color:#ffb703;background:#fff9e9;box-shadow:0 6px 20px #ffb70340}
+.service-picture:focus-visible{outline:3px solid #2563eb;outline-offset:2px}
+.service-picture-label{white-space:normal;line-height:1.15;text-align:center}
+@media(max-width:390px){.service-picture-grid{gap:6px}.service-picture{min-height:105px;padding:7px 4px;font-size:11px}.service-picture svg{height:60px}}
 .grid{margin-top:12px;gap:12px}
 .card{border:1px solid #edf0f3;border-radius:16px;box-shadow:0 5px 18px #0000000a;overflow:hidden}
 .img{height:150px}
@@ -3257,7 +3264,13 @@ function shopServiceSection(shop){
   return normalizeShopSection(shop?.shop_section||shop?.section||shop?.shop_type||shop?.category);
 }
 function sectionName(key){return ({food:"Food",grocery:"Grocery",ride:"Ride"}[key])||(key.replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase()))}
-function serviceLabel(key){return ({food:"🍽️ Food",grocery:"🛒 Grocery",ride:"🏍️ Ride"}[key])||("📦 "+sectionName(key))}
+function serviceLabel(key){return ({food:"Food",grocery:"Grocery",ride:"Ride & Porter"}[key])||("📦 "+sectionName(key))}
+function servicePicture(key){
+  if(key==="food")return '<svg viewBox="0 0 100 72" role="img" aria-label="Meal on a plate"><rect width="100" height="72" rx="15" fill="#fff0d8"/><ellipse cx="51" cy="54" rx="34" ry="8" fill="#e3b78a"/><ellipse cx="51" cy="48" rx="30" ry="15" fill="#fff" stroke="#ddd6ce" stroke-width="3"/><path d="M30 46c5-18 13-22 22-22s19 5 22 22" fill="#d75c28"/><path d="M34 42c8-9 14-8 20-2 7-8 14-7 17 2" fill="none" stroke="#f6aa38" stroke-width="5" stroke-linecap="round"/><path d="M43 29l6-7m13 8 5-6" stroke="#43834a" stroke-width="4" stroke-linecap="round"/><path d="M13 26v28m-5-26v-8m5 8v-8m5 8v-8" stroke="#8c9ba8" stroke-width="3" stroke-linecap="round"/></svg>';
+  if(key==="grocery")return '<svg viewBox="0 0 100 72" role="img" aria-label="Grocery bag with vegetables"><rect width="100" height="72" rx="15" fill="#e9f7ed"/><path d="M28 29h47l-5 33H33z" fill="#d69b5b" stroke="#ac7144" stroke-width="2"/><path d="M40 31c0-12 21-12 21 0" fill="none" stroke="#9b683e" stroke-width="4"/><path d="M38 27c-8-7-7-14-1-18 8 2 10 8 8 16" fill="#4b9a55"/><path d="M54 28c-2-13 5-17 15-16 2 9-2 16-15 16" fill="#67b771"/><circle cx="46" cy="37" r="8" fill="#ed6654"/><path d="M43 29l4 2 3-2" fill="none" stroke="#347b44" stroke-width="3"/><path d="M61 30c5 0 8 3 8 8" fill="none" stroke="#f3b54d" stroke-width="8" stroke-linecap="round"/></svg>';
+  if(key==="ride")return '<svg viewBox="0 0 100 72" role="img" aria-label="Delivery rider with parcel"><rect width="100" height="72" rx="15" fill="#e5f1ff"/><path d="M12 58h78" stroke="#c2d5ea" stroke-width="3"/><circle cx="29" cy="55" r="9" fill="#172033"/><circle cx="29" cy="55" r="4" fill="#fff"/><circle cx="73" cy="55" r="9" fill="#172033"/><circle cx="73" cy="55" r="4" fill="#fff"/><path d="M28 52h15l8-16h13l12 17H54l-10-8-7 8" fill="#ffb703" stroke="#bb7a03" stroke-width="2" stroke-linejoin="round"/><path d="M58 35l-4-11-12 1-7 12 16 5" fill="#235a9f"/><circle cx="54" cy="17" r="7" fill="#eda980"/><path d="M46 14c2-11 16-11 19 0" fill="#14233b"/><rect x="67" y="25" width="16" height="17" rx="2" fill="#b7814f"/><path d="M75 25v17" stroke="#e9c89f" stroke-width="2"/></svg>';
+  return "";
+}
 function serviceConfig(key){return serviceSections.find(s=>s.slug===key)||{slug:key,label:sectionName(key),is_public:true,coming_soon_text:"Coming soon"}}
 function isServicePublic(key){return serviceConfig(key).is_public===true}
 function shopsForActiveSection(){return shops.filter(s=>shopServiceSection(s)===activeServiceSection)}
@@ -3288,11 +3301,17 @@ function renderServiceSections(){
   if(!box)return;
   const found=new Set(shops.map(shopServiceSection));
   const sections=["food","grocery","ride",...Array.from(found).filter(s=>!['food','grocery','ride'].includes(s)),...serviceSections.map(s=>s.slug).filter(s=>!['food','grocery','ride'].includes(s)&&!found.has(s))];
+  box.classList.add("service-picture-grid");
   box.innerHTML="";
   sections.forEach(section=>{
     const b=document.createElement("button");
-    b.className="chip"+(section===activeServiceSection?" active":"");
-    b.textContent=serviceLabel(section);
+    const pictured=["food","grocery","ride"].includes(section);
+    b.type="button";
+    b.className=(pictured?"service-picture":"chip")+(section===activeServiceSection?" active":"");
+    b.setAttribute("aria-label",serviceLabel(section));
+    b.setAttribute("aria-pressed",String(section===activeServiceSection));
+    if(pictured)b.innerHTML=servicePicture(section)+'<span class="service-picture-label">'+serviceLabel(section)+'</span>';
+    else b.textContent=serviceLabel(section);
     b.onclick=()=>{
       activeServiceSection=section;
       syncActiveShop();
@@ -4023,21 +4042,22 @@ function closeBottomNavOverlays(){
 $("bottomHomeBtn").onclick = () => {
   closeBottomNavOverlays();
   setBottomNavActive($("bottomHomeBtn"));
-
-  window.scrollTo({
-    top:0,
-    behavior:"smooth"
-  });
+  activeServiceSection="food";
+  activeShopId=null;
+  activeCat="All";
+  if($("search"))$("search").value="";
+  syncActiveShop();
+  renderServiceSections();renderShops();renderCats();renderProducts();
+  window.scrollTo(0,0);
+  document.documentElement.scrollTop=0;
+  document.body.scrollTop=0;
 };
 
 $("bottomCategoriesBtn").onclick = () => {
   closeBottomNavOverlays();
   setBottomNavActive($("bottomCategoriesBtn"));
 
-  $("cats")?.scrollIntoView({
-    behavior:"smooth",
-    block:"start"
-  });
+  openSelectedShopCategories();
 };
 const searchCategoriesBtn = $("searchCategoriesBtn");
 if(searchCategoriesBtn){
