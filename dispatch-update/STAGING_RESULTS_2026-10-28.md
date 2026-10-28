@@ -23,3 +23,9 @@ Feature enabled=false. Zero test orders, refund rows and notification-outbox row
 - Permanent dispatch tick schedule. Automatic approval review rejected enabling pg_cron and a recurring 10-second job as ongoing activity beyond current testing scope. No scheduler was installed; manual tick execution is verified. Do not retry or bypass that rejection without further authorization or a safer approved plan.
 
 Current code and tests are on PR #1: https://github.com/spidydelivery7-netizen/koida-local-delivery/pull/1 . Do not merge based solely on these passing checks.
+
+
+## Scheduler checkpoint — 28 October 2026, 5:36 PM IST
+The user explicitly authorized the permanent every-10-second dispatch process on HUNKART-STAGING. pg_cron is now installed; job 1 (`hunkart-dispatch-tick`) is active and runs `select hunkart_dispatch.tick();` every 10 seconds. Three consecutive executions were verified succeeded at 12:05:46, 12:05:56 and 12:06:06 UTC. This supersedes earlier scheduler-blocked notes above.
+
+Feature flag remains false outside controlled tests, so these successful executions prove the schedule/worker invocation, not processing of real orders. Production/main/Play unchanged. Authenticated app integration, actual push delivery and final tracking/OTP verification remain release requirements. No need to ask the user to repeat this scheduler authorization.
