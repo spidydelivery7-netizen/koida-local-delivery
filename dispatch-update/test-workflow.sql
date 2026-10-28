@@ -107,5 +107,27 @@ begin
  perform pg_temp.check_ok((select state='attention' from hunkart_dispatch.jobs where order_id=oid3),'no rider escalates to admin after deadline');
  perform pg_temp.check_ok(not has_function_privilege('anon','public.hd_accept_shop_order(uuid)','execute') and not has_function_privilege('anon','public.hd_respond_offer(uuid,boolean)','execute'),'anonymous RPC access revoked');
  perform pg_temp.check_ok(not has_table_privilege('authenticated','hunkart_dispatch.offers','select'),'direct offer table access denied');
+ perform set_config('request.jwt.claim.sub',b::text,true);
+ update public.orders set delivery_lat=21.91,delivery_lng=85.23 where id=oid;
+ r:=public.delivery_update_location(oid,21.91,85.23,10);
+ perform pg_temp.check_ok(r->>'success'='true','legacy GPS update works with new dispatch');
+ r:=public.delivery_mark_reached(oid,22.0,85.23,10);
+ perform pg_temp.check_ok(r->>'status'='too_far','Reached rejects distant rider');
+ r:=public.delivery_mark_reached(oid,21.91,85.23,10);
+ perform pg_temp.check_ok(r->>'success'='true','Reached at customer location');
+ r:=public.delivery_issue_otp(oid);
+ perform pg_temp.check_ok(r->>'status'='otp_ready' and not (r?'otp_code'),'OTP generated without returning secret to rider');
+ r:=public.delivery_verify_otp_and_mark_delivered(oid,'INVALID',21.91,85.23,10);
+ perform pg_temp.check_ok(r->>'status'='incorrect_otp','wrong delivery OTP denied');
+ perform pg_temp.check_ok((select status='out_for_delivery' from public.orders where id=oid),'wrong OTP preserves undelivered state');
+ perform set_config('request.jwt.claim.sub',a::text,true);
+ perform pg_temp.denied(format('select public.delivery_issue_otp(%L)',oid),'other rider cannot issue OTP');
+ perform set_config('request.jwt.claim.sub',b::text,true);
+ r:=public.delivery_verify_otp_and_mark_delivered(oid,(select otp_code from public.delivery_otp_codes where order_id=oid),21.91,85.23,10);
+ perform pg_temp.check_ok(r->>'success'='true' and r->>'otp_verified'='true','correct OTP completes new dispatch delivery');
+ perform pg_temp.check_ok((select status='delivered' from public.orders where id=oid) and (select status='delivered' from public.delivery_tracking where order_id=oid),'order and tracking delivered together');
+ perform pg_temp.check_ok((select verified_at is not null and attempt_count=1 from public.delivery_otp_codes where order_id=oid),'OTP verification and wrong attempt audited');
+ perform pg_temp.denied(format('select public.delivery_verify_otp_and_mark_delivered(%L,%L,21.91,85.23,10)',oid,'0000'),'completed delivery cannot be repeated');
+
 end $$;
 select count(*) as passed_assertions,jsonb_agg(name) as checks from hd_test_results;
