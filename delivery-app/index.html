@@ -874,12 +874,7 @@ async function loadProfile(){
     return null;
   }
 
-  const {data,error} =
-    await sb
-      .from("delivery_boys")
-      .select("id,full_name,phone,is_active")
-      .eq("user_id",session.user.id)
-      .maybeSingle();
+  const {data,error} = await sb.rpc("hd_staff_profile",{p_kind:"rider"});
 
   if(error){
     throw error;

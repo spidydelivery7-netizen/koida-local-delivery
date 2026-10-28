@@ -27,6 +27,9 @@ begin
  update public.orders set payment_status='pending' where id=oid;
  perform pg_temp.denied(format('select public.hd_accept_shop_order(%L)',oid),'unpaid order denied');
  update public.orders set payment_status='paid' where id=oid;
+ perform pg_temp.check_ok(public.hd_staff_profile('keeper')->'shop'->>'id'=sid::text,'keeper own profile');
+ perform pg_temp.check_ok(jsonb_array_length(public.hd_staff_profile('keeper')->'products')=1,'keeper own products');
+ perform pg_temp.check_ok(public.hd_staff_profile('rider') is null,'keeper cannot read rider profile');
  perform pg_temp.check_ok(jsonb_array_length(public.hd_my_shop_orders())=2,'keeper sees own paid pending orders');
  r:=public.hd_accept_shop_order(oid);perform pg_temp.check_ok(r->>'ok'='true','keeper acceptance');
  r:=public.hd_accept_shop_order(oid);perform pg_temp.check_ok(r->>'already_accepted'='true','acceptance idempotence');
@@ -51,6 +54,8 @@ begin
 
  perform pg_temp.denied(format($q$select public.hd_set_shop_stage(%L,'packed')$q$,oid),'packing cannot skip preparation');
  perform set_config('request.jwt.claim.sub',a::text,true);
+ perform pg_temp.check_ok(public.hd_staff_profile('rider')->>'id'=rid::text,'rider own profile');
+ perform pg_temp.check_ok(public.hd_staff_profile('keeper') is null,'rider cannot read keeper profile');
  perform public.hd_heartbeat(true,21.9101,85.2301);
  perform set_config('request.jwt.claim.sub',b::text,true);
  perform public.hd_heartbeat(true,21.92,85.24);

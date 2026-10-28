@@ -638,21 +638,18 @@ function startShopRealtime(){if(!sb||!sessionUser||!shopId)return;stopShopRealti
 async function loadShopAndProducts(){
   if(!sessionUser)return;
   setStatus("Loading your shop...");
-  const {data:map,error:mapErr}=await sb.from("shopkeepers").select("shop_id").eq("user_id",sessionUser.id).maybeSingle();
-  if(mapErr){setStatus("Shop mapping error: "+mapErr.message);return}
-  if(!map||!map.shop_id){
+  const {data:profile,error}=await sb.rpc("hd_staff_profile",{p_kind:"keeper"});
+  if(error){setStatus("Shop details could not be loaded: "+error.message);return}
+  if(!profile?.shop){
     showLoggedOut();
     await sb.auth.signOut();
-    setStatus("This login is not assigned to a shop. Contact HUNKART admin.");
+    setStatus("This login is not assigned to an active shop. Contact HUNKART admin.");
     return;
   }
-  shopId=map.shop_id;
-  const {data:shop,error:shopErr}=await sb.from("shops").select("id,name,active,is_open,reopens_at,location_lat,location_lng,location_updated_at").eq("id",shopId).maybeSingle();
-  if(shopErr||!shop){setStatus("Shop details could not be loaded.");return}
+  const shop=profile.shop;
+  shopId=shop.id;
   shopName=shop.name||"My Shop";shopIsOpen=shop.is_open!==false;shopReopensAt=shop.reopens_at||null;shopLocation=shop;$("shopName").textContent=shopName;renderShopOpenState();renderShopLocation();
-  const {data,error}=await sb.from("products").select("id,shop_id,name,category,available,is_available").eq("shop_id",shopId).order("category",{ascending:true}).order("name",{ascending:true});
-  if(error){setStatus("Products load error: "+error.message);return}
-  products=data||[];
+  products=profile.products||[];
   setStatus(`${shopName}: ${products.length} products loaded.`);
   render();
   startOrderPolling();
