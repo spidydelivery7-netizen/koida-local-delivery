@@ -1,4 +1,6 @@
 -- Invoked inside a staging-only transaction which ALWAYS ROLLS BACK.
+-- Synthetic refund-policy fixture: never persist this setup outside the test transaction.
+insert into hunkart_cancel.settings(id,enabled,full_refund_policy_accepted) values(true,true,true) on conflict(id) do update set enabled=true,full_refund_policy_accepted=true;
 create temp table hd_test_results(name text,passed boolean);
 create function pg_temp.check_ok(v boolean,n text) returns void language plpgsql as $$begin if v is distinct from true then raise exception 'FAILED: %',n;end if;insert into hd_test_results values(n,true);end $$;
 create function pg_temp.denied(q text,n text) returns void language plpgsql as $$declare failed boolean:=false;begin begin execute q;exception when others then failed:=true;end;if not failed then raise exception 'FAILED: %',n;end if;insert into hd_test_results values(n,true);end $$;
@@ -128,6 +130,20 @@ begin
  perform pg_temp.check_ok((select status='delivered' from public.orders where id=oid) and (select status='delivered' from public.delivery_tracking where order_id=oid),'order and tracking delivered together');
  perform pg_temp.check_ok((select verified_at is not null and attempt_count=1 from public.delivery_otp_codes where order_id=oid),'OTP verification and wrong attempt audited');
  perform pg_temp.denied(format('select public.delivery_verify_otp_and_mark_delivered(%L,%L,21.91,85.23,10)',oid,'0000'),'completed delivery cannot be repeated');
+
+ perform set_config('request.jwt.claim.sub',k::text,true);
+ perform pg_temp.check_ok(public.hd_save_staff_push_subscription('shopkeeper','https://fcm.googleapis.com/fcm/send/hd-test-'||k,repeat('A',87),repeat('B',22),'Synthetic test'),'keeper can save own subscription');
+ perform pg_temp.check_ok(public.hd_save_staff_push_subscription('shopkeeper','https://fcm.googleapis.com/fcm/send/hd-test-'||k,repeat('A',87),repeat('B',22),'Synthetic update'),'subscription save idempotent');
+ perform pg_temp.check_ok((select count(*)=1 from public.staff_push_subscriptions where user_id=k),'subscription not duplicated');
+ perform pg_temp.denied($q$select public.hd_save_staff_push_subscription('delivery_boy','https://fcm.googleapis.com/test',repeat('A',87),repeat('B',22))$q$,'keeper cannot claim rider role');
+ perform pg_temp.denied($q$select public.hd_save_staff_push_subscription('shopkeeper','https://attacker.example/test',repeat('A',87),repeat('B',22))$q$,'untrusted push host rejected');
+ perform pg_temp.denied($q$select public.hd_save_staff_push_subscription('shopkeeper','https://fcm.googleapis.com/test','bad','bad')$q$,'invalid subscription keys rejected');
+ perform set_config('request.jwt.claim.sub',a::text,true);
+ perform pg_temp.denied(format($q$select public.hd_save_staff_push_subscription('delivery_boy',%L,repeat('A',87),repeat('B',22))$q$,'https://fcm.googleapis.com/fcm/send/hd-test-'||k),'another staff account cannot take subscription');
+ perform pg_temp.check_ok(public.hd_save_staff_push_subscription('delivery_boy','https://fcm.googleapis.com/fcm/send/hd-test-'||a,repeat('A',87),repeat('B',22)),'rider can save own subscription');
+ perform set_config('request.jwt.claim.sub',c::text,true);
+ perform pg_temp.denied($q$select public.hd_save_staff_push_subscription('shopkeeper','https://fcm.googleapis.com/test',repeat('A',87),repeat('B',22))$q$,'customer cannot register staff push');
+ perform pg_temp.check_ok(not has_function_privilege('anon','public.hd_save_staff_push_subscription(text,text,text,text,text)','execute'),'anonymous subscription RPC denied');
 
 end $$;
 select count(*) as passed_assertions,jsonb_agg(name) as checks from hd_test_results;
