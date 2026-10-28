@@ -3,7 +3,7 @@ let count=0;
 (async()=>{
  const shop=fs.readFileSync(path.join(root,'shopkeeper.html'),'utf8');const fn=shop.slice(shop.indexOf('async function decideShopOrder('),shop.indexOf('async function loadShopOrders('));
  const calls=[],messages=[];let reloads=0;let reply={data:{ok:true}};
- const context=vm.createContext({confirm:()=>true,setStatus:s=>messages.push(s),loadShopOrders:async()=>reloads++,sb:{rpc:async(...args)=>{calls.push(args);return reply;}}});vm.runInContext(fn,context);
+ const context=vm.createContext({notifyStoredOrder:async()=>({ok:true}),cfg:{supabaseUrl:"fixture"},confirm:()=>true,setStatus:s=>messages.push(s),loadShopOrders:async()=>reloads++,sb:{rpc:async(...args)=>{calls.push(args);return reply;}}});vm.runInContext(fn,context);
  function card(){const controls=[{disabled:false},{disabled:false}];return {dataset:{},controls,querySelectorAll:()=>controls};}
  let c=card();context.o={order_id:'order-fixture'};context.c=c;
  await vm.runInContext('decideShopOrder(o,true,"",c)',context);assert.equal(calls[0][0],'hd_accept_shop_order');assert.equal(calls[0][1].p_order_id,'order-fixture');assert.equal(reloads,1);count++;

@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';import {deliverForOrder,allowedPushEndpoint} from './core.mjs';
+const id='11111111-1111-4111-8111-111111111111';let n=0,calls=[];
+const deps={configured:true,authorize:async()=>true,claim:async()=>[{id:'job',lease_token:'lease',payload:{title:'fixture'}}],send:async()=>{},ack:async(...a)=>calls.push(a)};
+assert.equal((await deliverForOrder('bad',deps)).status,400);n++;
+assert.equal((await deliverForOrder(id,{...deps,authorize:async()=>false,claim:async()=>{throw Error('must not claim')}})).status,403);n++;
+assert.equal((await deliverForOrder(id,{...deps,configured:false,claim:async()=>{throw Error('must not claim')}})).status,503);n++;
+const r=await deliverForOrder(id,deps);assert.equal(r.sent,1);assert.deepEqual(calls.pop(),['job','lease','sent',null]);n++;
+await deliverForOrder(id,{...deps,send:async()=>{throw Error('timeout')}});assert.equal(calls.pop()[2],'retry');n++;
+await deliverForOrder(id,{...deps,send:async()=>{throw Object.assign(Error('none'),{permanent:true})}});assert.equal(calls.pop()[2],'failed');n++;
+assert.ok(allowedPushEndpoint('https://fcm.googleapis.com/test'));assert.ok(!allowedPushEndpoint('http://fcm.googleapis.com/test'));assert.ok(!allowedPushEndpoint('https://127.0.0.1/test'));assert.ok(!allowedPushEndpoint('https://fcm.googleapis.com.attacker.test/test'));n++;
+console.log(n+' notification worker unit checks passed; transport is mocked.');

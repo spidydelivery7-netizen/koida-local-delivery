@@ -1914,7 +1914,7 @@ async function startDelivery(
 
     const {error} =
       await sb.rpc(
-        "delivery_start",
+        "hd_start_delivery",
         {
           p_order_id:orderId,
           p_lat:lat,

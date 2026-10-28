@@ -502,6 +502,7 @@ Create Shop
 <script src="config.js"></script>
 
 <script type="module">
+import { notifyStoredOrder } from "/dispatch-notify.js";
 
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 import { ensureStaffPushSubscription } from "/staff-push.js";
@@ -1391,6 +1392,7 @@ style="font-size:18px"
 <div class="small" style="align-self:center">${o.status==="new"?"Awaiting shopkeeper acceptance. Contact the shop if delayed.":"Shopkeeper controls Preparing / Ready / Packed. Partner accepts the delivery request."}</div>
 
 <div class="small" style="align-self:center">Payment: ${orderStatusLabel(o.payment_status)}</div>
+<button class="gray retryDispatchNotice" type="button">Retry customer notification</button>
 
 </div>
 
@@ -1483,6 +1485,12 @@ card.querySelector(
 assigned.delivery_boy_id||"";
 
 }
+
+card.querySelector(".retryDispatchNotice").onclick=async()=>{
+ const button=card.querySelector(".retryDispatchNotice");button.disabled=true;
+ const notice=await notifyStoredOrder({sb,supabaseUrl:cfg.supabaseUrl,orderId:o.id});
+ setStatus(notice.ok?(notice.sent?"Customer notification sent.":"No pending customer notification."):"Notification pending. Order status is unchanged.");button.disabled=false;
+};
 
 card.querySelector(
 ".assignBtn"

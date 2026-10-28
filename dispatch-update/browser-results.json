@@ -1,0 +1,9 @@
+{
+  "checks": 10,
+  "transport": "mock SDK/HTTP fixture, not staging API E2E",
+  "widths": [
+    390,
+    1280
+  ],
+  "errors": []
+}
