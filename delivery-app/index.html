@@ -908,6 +908,11 @@ async function loadDeliveries(){
 
   renderDeliveries();
 
+  // Cards are replaced during refresh; apply the latest GPS after insertion.
+  if(lastKnownDeliveryPosition && activeTrackingOrderId){
+    updateReachedButtonForOrder(activeTrackingOrderId,lastKnownDeliveryPosition);
+  }
+
   const live =
     deliveries.find(
       d =>
