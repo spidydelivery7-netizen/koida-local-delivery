@@ -1,4 +1,4 @@
-const CACHE_NAME = "hunkart-shopkeeper-v5";
+const CACHE_NAME = "hunkart-shopkeeper-v5-dispatch-v1";
 
 const APP_FILES = [
   "/shopkeeper-app/",

@@ -496,7 +496,7 @@ function renderOrders(){
     const packed=shopStatus==="packed";
     const confirmed=["confirmed","preparing"].includes(String(o.order_status||"").toLowerCase());
     const stage={
-      new:{badge:"NEW ORDER",badgeClass:"new",button:"Start Packing",buttonClass:"startBtn",next:"preparing",note:confirmed?"Admin confirmed. Start preparing this order.":"Waiting for Admin confirmation."},
+      new:{badge:"NEW ORDER",badgeClass:"new",button:confirmed?"Start Packing":"Accept Order",buttonClass:"startBtn",next:confirmed?"preparing":"accept",note:confirmed?"Order accepted. Start preparing this order.":"Accept only if your shop can fulfil this paid order."},
       confirmed:{badge:"CONFIRMED",badgeClass:"new",button:"Start Packing",buttonClass:"startBtn",next:"preparing",note:"Start preparing this order."},
       preparing:{badge:"PACKING",badgeClass:"preparing",button:"Mark Ready",buttonClass:"readyBtn",next:"ready",note:"Preparation is in progress."},
       ready:{badge:"READY",badgeClass:"ready",button:"Mark Packed",buttonClass:"",next:"packed",note:"Pack the order before delivery pickup."},
@@ -527,14 +527,33 @@ function renderOrders(){
       <button class="packBtn ${stage.buttonClass}" ${packed || (!confirmed && stage.next==="preparing") ?"disabled":""}>
         ${stage.button}
       </button>
+      ${o.order_status==="new"?'<label>Cannot fulfil this order?<select class="rejectReason"><option value="">Choose reason</option><option>Item unavailable</option><option>Shop cannot fulfil order</option></select></label><button type="button" class="rejectOrder red">Reject Order</button>':""}
       <div class="stageNote">${stage.note}</div>`;
     const btn=card.querySelector(".packBtn");
     if(!packed){
-      if(stage.next==="packed")btn.onclick=()=>markOrderPacked(o,btn);
+      if(stage.next==="accept")btn.onclick=()=>decideShopOrder(o,true,"",card);
+      else if(stage.next==="packed")btn.onclick=()=>markOrderPacked(o,btn);
       else if(stage.next)btn.onclick=()=>updateShopOrderStatus(o,stage.next,btn);
     }
+    const reject=card.querySelector(".rejectOrder");
+    if(reject)reject.onclick=()=>decideShopOrder(o,false,card.querySelector(".rejectReason").value,card);
     box.appendChild(card);
   });
+}
+
+async function decideShopOrder(order,accept,reason,card){
+  if(card.dataset.saving==="yes")return;
+  if(!accept&&!reason){setStatus("Choose a rejection reason first.");return;}
+  if(!confirm(accept?"Accept this paid order for your shop?":"Reject this order and queue its remaining paid amount for refund?"))return;
+  card.dataset.saving="yes";
+  card.querySelectorAll("button,select").forEach(b=>b.disabled=true);
+  try{
+    const {data,error}=await sb.rpc(accept?"hd_accept_shop_order":"hd_reject_shop_order",accept?{p_order_id:order.order_id}:{p_order_id:order.order_id,p_reason:reason});
+    if(error)throw error;
+    if(!data?.ok)throw new Error("Order decision could not be confirmed. Refresh before retrying.");
+    setStatus(accept?"Order accepted. Preparing can now start; delivery partner search is queued.":"Order rejected. Refund queued; it is not yet confirmed by the bank.");
+    await loadShopOrders({alertNew:false});
+  }catch(error){setStatus("Order decision failed: "+error.message);delete card.dataset.saving;card.querySelectorAll("button,select").forEach(b=>b.disabled=false);}
 }
 
 async function loadShopOrders({alertNew=true}={}){

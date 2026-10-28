@@ -1,4 +1,4 @@
-const CACHE_NAME = "hunkart-delivery-v3";
+const CACHE_NAME = "hunkart-delivery-dispatch-v4";
 
 const APP_FILES = [
   "/delivery-app/",

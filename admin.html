@@ -1388,10 +1388,7 @@ style="font-size:18px"
 
 <div class="actions">
 
-${o.status==="new"
-?`<button class="green confirmOrder">Confirm Order</button>
-  <div class="small" style="align-self:center">After confirmation, Packing / Ready / Packed is controlled by the assigned shopkeeper.</div>`
-:`<div class="small" style="align-self:center">Admin status action is complete. Shopkeeper manages Packing / Ready / Packed; delivery partner manages Out for Delivery.</div>`}
+<div class="small" style="align-self:center">${o.status==="new"?"Awaiting shopkeeper acceptance. Contact the shop if delayed.":"Shopkeeper controls Preparing / Ready / Packed. Partner accepts the delivery request."}</div>
 
 <div class="small" style="align-self:center">Payment: ${orderStatusLabel(o.payment_status)}</div>
 
@@ -1487,25 +1484,6 @@ assigned.delivery_boy_id||"";
 
 }
 
-const confirmButton=card.querySelector(".confirmOrder");
-
-if(confirmButton){
-confirmButton.onclick=async()=>{
-  confirmButton.disabled=true;
-  const payload={status:"confirmed",updated_at:new Date().toISOString()};
-  const {error}=await sb.from("orders").update(payload).eq("id",o.id).eq("status","new");
-  if(error){
-    confirmButton.disabled=false;
-    setStatus("Order confirmation error: "+error.message);
-    return;
-  }
-  setStatus("Order confirmed. Sending customer notification...");
-  const pushResult=await sendCustomerPush(o.customer_id,"HUNKART Order Confirmed",`Order ${o.order_number}: Confirmed`,"/");
-  setStatus(pushResult.ok?"Order confirmed and customer notification sent.":"Order confirmed, but push notification failed: "+(pushResult?.data?.error||pushResult?.data?.message||pushResult?.error||("HTTP "+(pushResult?.status||"error"))));
-  loadOrders();
-};
-}
-
 card.querySelector(
 ".assignBtn"
 ).onclick=
@@ -1574,7 +1552,14 @@ box.appendChild(card);
 
 }
 
+async function loadDispatchQueue(){
+  let box=document.getElementById("dispatchQueue");
+  if(!box){box=document.createElement("div");box.id="dispatchQueue";box.className="card";document.getElementById("ordersList")?.before(box);}
+  const {data,error}=await sb.rpc("hd_admin_queue");
+  box.textContent=error?"Dispatch monitoring unavailable: "+error.message:(data?.length?data.map(x=>x.order_number+": "+x.state+" — "+x.note).join(" · "):"No dispatch exceptions or overdue shop responses.");
+}
 async function loadOrders(){
+  loadDispatchQueue().catch(e=>setStatus("Dispatch monitoring: "+e.message));
 
 if(!deliveryBoys.length){
 
