@@ -1,8 +1,8 @@
 window.SPIDY_CONFIG = {
-  businessName: "Koida Local Delivery",
+  businessName: "HUNKART STAGING",
   whatsappNumber: "918638794932",
-  supabaseUrl: "https://amnqqxgmqciipcortpmi.supabase.co",
-  supabaseAnonKey: "sb_publishable_IfYta_zgbZSgoIUS0hsA1w_eRLLAQjk",
-  onlinePaymentEnabled: true,
+  supabaseUrl: "https://jjitqihblpubqwbggjpv.supabase.co",
+  supabaseAnonKey: "sb_publishable_RxMB6BPXWcEnmmHCFFa_Bg_arV4t45w",
+  onlinePaymentEnabled: false,
   razorpayKeyId: ""
 };
