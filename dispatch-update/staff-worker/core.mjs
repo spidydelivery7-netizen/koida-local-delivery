@@ -15,8 +15,14 @@ export async function runStaffBatch(deps) {
    const ttl=Math.min(delivery.ttl,remaining);
    if(!Number.isFinite(ttl)||ttl<1){await deps.ack(job.id,job.lease_token,'retry');return 'cancelled';}
    const subs=(delivery.subscriptions||[]).filter(s=>allowedEndpoint(s.endpoint));
-   if(!subs.length){await deps.ack(job.id,job.lease_token,'retry');return 'retry';}
-   const results=await Promise.allSettled(subs.map(s=>deps.send(s,delivery.payload,ttl)));
+   const devices=Array.isArray(delivery.nativeDevices)?delivery.nativeDevices.filter(t=>typeof t==='string'&&t.length>=20):[];
+   if(!subs.length&&!devices.length){await deps.ack(job.id,job.lease_token,'retry');return 'retry';}
+   const results=await Promise.allSettled([
+    ...subs.map(s=>deps.send(s,delivery.payload,ttl)),
+    ...devices.map(t=>deps.sendNative(t,delivery.payload,ttl).then(result=>{
+     if(result.status!=='sent')throw {statusCode:result.status==='invalid_token'?410:503};
+    }))
+   ]);
    // Sent means provider acceptance on at least one device, not proof of viewing.
    const sent=results.some(r=>r.status==='fulfilled');
    const permanent=!sent&&results.every(r=>r.status==='rejected'&&[404,410].includes(r.reason?.statusCode));
