@@ -156,9 +156,29 @@ revoke all on function hunkart_dispatch.staff_notice_eligible(uuid),hunkart_disp
 revoke all on function hunkart_dispatch.claim_staff_notifications(),hunkart_dispatch.staff_notification_delivery(uuid,uuid),hunkart_dispatch.ack_staff_notification(uuid,uuid,text),public.hd_claim_staff_notifications(),public.hd_staff_notification_delivery(uuid,uuid),public.hd_ack_staff_notification(uuid,uuid,text) from public,anon,authenticated;
 grant execute on function hunkart_dispatch.claim_staff_notifications(),hunkart_dispatch.staff_notification_delivery(uuid,uuid),hunkart_dispatch.ack_staff_notification(uuid,uuid,text),public.hd_claim_staff_notifications(),public.hd_staff_notification_delivery(uuid,uuid),public.hd_ack_staff_notification(uuid,uuid,text) to service_role;
 
+create table if not exists hunkart_dispatch.staff_worker_invocations(
+ id uuid primary key default gen_random_uuid(),token_hash text not null unique,
+ expires_at timestamptz not null,consumed_at timestamptz,created_at timestamptz not null default now()
+);
+alter table hunkart_dispatch.staff_worker_invocations enable row level security;
+revoke all on hunkart_dispatch.staff_worker_invocations from public,anon,authenticated;
+create index if not exists hd_staff_invocation_expiry on hunkart_dispatch.staff_worker_invocations(expires_at);
+create or replace function hunkart_dispatch.consume_staff_worker_token(p_hash text)
+returns boolean language plpgsql security definer set search_path='' as $$
+declare n integer;
+begin
+ if (auth.jwt()->>'role') is distinct from 'service_role' then raise exception 'Service worker required' using errcode='42501';end if;
+ update hunkart_dispatch.staff_worker_invocations set consumed_at=clock_timestamp()
+ where token_hash=p_hash and consumed_at is null and expires_at>clock_timestamp();
+ get diagnostics n=row_count;return n=1;
+end $$;
+create or replace function public.hd_consume_staff_worker_token(p_hash text)
+returns boolean language sql security invoker set search_path='' as $$select hunkart_dispatch.consume_staff_worker_token(p_hash)$$;
+revoke all on function hunkart_dispatch.consume_staff_worker_token(text),public.hd_consume_staff_worker_token(text) from public,anon,authenticated;
+grant execute on function hunkart_dispatch.consume_staff_worker_token(text),public.hd_consume_staff_worker_token(text) to service_role;
 create or replace function hunkart_dispatch.staff_notification_tick()
 returns void language plpgsql security definer set search_path='' as $$
-declare token text;target text;request_id bigint;
+declare token text;request_id bigint;
 begin
  if not exists(select 1 from hunkart_dispatch.settings where enabled)
  or not exists(select 1 from hunkart_dispatch.staff_notification_settings where enabled) then return;end if;
@@ -166,21 +186,21 @@ begin
  perform hunkart_dispatch.enqueue_staff_notifications();
  update hunkart_dispatch.staff_notification_outbox n set status='cancelled',lease_until=null where status in ('pending','sending') and not hunkart_dispatch.staff_notice_eligible(n.id);
  if not exists(select 1 from hunkart_dispatch.staff_notification_outbox where next_attempt_at<=clock_timestamp() and (status='pending' or (status='sending' and lease_until<clock_timestamp()))) then return;end if;
- select decrypted_secret into token from vault.decrypted_secrets where name='hd_staff_worker_token';
- select decrypted_secret into target from vault.decrypted_secrets where name='hd_staff_worker_url';
- if token is null or target is null then
-  update hunkart_dispatch.staff_notification_settings set last_error='Worker configuration missing';return;
- end if;
- if target<>'https://jjitqihblpubqwbggjpv.supabase.co/functions/v1/dispatch-staff-worker' then
-  update hunkart_dispatch.staff_notification_settings set last_error='Staging worker URL mismatch';return;
- end if;
  begin
-  select net.http_post(url:=target,headers:=jsonb_build_object('Content-Type','application/json','Authorization','Bearer '||token),body:='{}'::jsonb,timeout_milliseconds:=15000) into request_id;
-  update hunkart_dispatch.staff_notification_settings set last_request_id=request_id,last_requested_at=clock_timestamp(),last_error=null;
+  token:=encode(extensions.gen_random_bytes(32),'hex');
+  insert into hunkart_dispatch.staff_worker_invocations(token_hash,expires_at)
+  values(encode(extensions.digest(token,'sha256'),'hex'),clock_timestamp()+interval '30 seconds');
+  select net.http_post(url:='https://jjitqihblpubqwbggjpv.supabase.co/functions/v1/dispatch-staff-worker',
+   headers:=jsonb_build_object('Content-Type','application/json','Authorization','Bearer '||token),
+   body:='{}'::jsonb,timeout_milliseconds:=15000) into request_id;
+  update hunkart_dispatch.staff_notification_settings set last_request_id=request_id,last_requested_at=clock_timestamp(),last_error=null where singleton=true;
  exception when others then
-  update hunkart_dispatch.staff_notification_settings set last_error='Worker invocation failed';
+  update hunkart_dispatch.staff_notification_settings set last_error='Worker invocation failed' where singleton=true;
  end;
 end $$;
 revoke all on function hunkart_dispatch.staff_notification_tick() from public,anon,authenticated,service_role;
+
 -- Separate from dispatch cron: notification errors cannot roll back rider assignment.
 select cron.schedule('hunkart-staff-notifications','5 seconds','select hunkart_dispatch.staff_notification_tick();');
+
+-- Temporary invocation cleanup is deferred; implement bounded retention before enabling in production.
