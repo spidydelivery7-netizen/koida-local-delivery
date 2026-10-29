@@ -1,7 +1,7 @@
 // Pure helpers for staging FCM delivery. No credentials or database access.
 export function fcmMessage(token, event, now = Date.now()) {
   if (typeof token !== 'string' || token.length < 20 || token.length > 4096 || /\s/.test(token)) throw new Error('Invalid device token');
-  if (!event || !['shop_order','rider_offer'].includes(event.kind)) throw new Error('Invalid event');
+  if (!event || !['shop_order_ready','rider_offer'].includes(event.kind)) throw new Error('Invalid event');
   const expiry = Date.parse(event.expiresAt);
   if (!Number.isFinite(expiry) || expiry <= now) return null;
   const seconds = Math.min(3600, Math.floor((expiry - now) / 1000));
