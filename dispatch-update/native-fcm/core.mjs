@@ -6,7 +6,7 @@ export function fcmMessage(token, event, now = Date.now()) {
   if (!Number.isFinite(expiry) || expiry <= now) return null;
   const seconds = Math.min(3600, Math.floor((expiry - now) / 1000));
   if (seconds < 1) return null;
-  return {message:{token, data:{kind:event.kind, expiresAt:new Date(expiry).toISOString()}, android:{priority:'HIGH',ttl:seconds+'s'}}};
+  return {message:{token, data:{kind:event.kind, expiresAt:new Date(expiry).toISOString(), orderId:String(event.orderId||''), offerId:String(event.offerId||'')}, android:{priority:'HIGH',ttl:seconds+'s'}}};
 }
 export function classifyFcm(status, errorCode) {
   if (status >= 200 && status < 300) return 'sent';
