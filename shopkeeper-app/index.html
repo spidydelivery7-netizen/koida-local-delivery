@@ -297,6 +297,7 @@ button{border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:poin
 import { notifyStoredOrder } from "/dispatch-notify.js";
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 import { ensureStaffPushSubscription } from "/staff-push.js";
+import { attachNativeStaffRegistration } from "/dispatch-update/native-fcm/staff-registration.js";
 
 const cfg=window.SPIDY_CONFIG||{};
 const $=id=>document.getElementById(id);
@@ -765,6 +766,7 @@ if(!configured()){
 }else{
   // Keep shopkeeper confirmation links and sessions inside the shopkeeper panel.
   sb=createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{storageKey:"kld-shopkeeper-auth",persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+  attachNativeStaffRegistration({sb,role:"shopkeeper",supabaseUrl:cfg.supabaseUrl});
   await checkSession();
   sb.auth.onAuthStateChange(async(_event,session)=>{sessionUser=session?.user||null;if(sessionUser){showLoggedIn();await loadShopAndProducts();ensureStaffPushSubscription({sb,user:sessionUser,role:"shopkeeper",serviceWorkerUrl:"/shopkeeper-app/sw.js",scope:"/shopkeeper-app/"}).catch(error=>console.warn("Shopkeeper push subscription:",error))}else showLoggedOut()});
 }
