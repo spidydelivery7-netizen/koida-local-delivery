@@ -1,4 +1,5 @@
 const hunkartPreviewHost = location.hostname === "deploy-preview-1--cheery-marshmallow-1e366d.netlify.app"
+  || location.hostname.endsWith(".koida-local-delivery.pages.dev")
   || (location.hostname.endsWith(".workers.dev")
     && location.hostname !== "koida-local-delivery.spidydelivery7.workers.dev");
 window.SPIDY_CONFIG = hunkartPreviewHost ? {
