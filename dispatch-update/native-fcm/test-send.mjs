@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {sendFcm} from './send.mjs';
+const base={accessToken:'test',projectId:'test-project',deviceToken:'a'.repeat(64),event:{kind:'rider_offer',expiresAt:'2026-01-01T00:00:30Z'},now:Date.parse('2026-01-01T00:00:00Z')};
+let calls=0;
+const send=async (response, extra={})=>sendFcm({...base,...extra,fetchImpl:async (url,options)=>{calls++;assert.equal(url,'https://fcm.googleapis.com/v1/projects/test-project/messages:send');assert.equal(JSON.parse(options.body).message.android.ttl,'30s');return response}});
+assert.equal((await send({ok:true})).status,'sent');
+assert.equal((await send({ok:false,status:404,json:async()=>({error:{details:[{'@type':'type.googleapis.com/google.firebase.fcm.v1.FcmError',errorCode:'UNREGISTERED'}]}})})).status,'invalid_token');
+assert.equal((await send({ok:false,status:503,json:async()=>({})})).status,'retry');
+assert.equal((await send({ok:false,status:403,json:async()=>({})})).status,'failed');
+assert.equal((await sendFcm({...base,fetchImpl:async()=>{throw Error('network')}})).status,'retry');
+assert.equal((await sendFcm({...base,now:Date.parse('2026-01-01T00:01:00Z'),fetchImpl:async()=>{throw Error('must not send')}})).status,'expired');
+await assert.rejects(()=>sendFcm({...base,projectId:'bad/host',fetchImpl:()=>{}}));
+assert.equal(calls,4);
+console.log('FCM send checks passed');
