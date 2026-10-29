@@ -615,6 +615,7 @@ import {
   createClient
 } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 import { ensureStaffPushSubscription } from "/staff-push.js?v=staff-rpc-v3";
+import { attachNativeStaffRegistration } from "/dispatch-update/native-fcm/staff-registration.js";
 
 const cfg = window.SPIDY_CONFIG || {};
 
@@ -2325,6 +2326,7 @@ async function boot(){
     );
 
 
+  attachNativeStaffRegistration({sb,role:"delivery_boy",supabaseUrl:cfg.supabaseUrl});
   sb.auth.onAuthStateChange(
     async (
       event,
