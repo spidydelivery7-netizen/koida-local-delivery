@@ -28,6 +28,6 @@ export function attachNativeStaffRegistration({sb,role,supabaseUrl,host=window})
   registered=null;
   return originalSignOut(...args);
  };
- host.HunkartRequestNativeToken?.();
+ host.HunkartNative?.requestToken?.();
  return ()=>{active=false;host.removeEventListener('hunkart-native-token',onToken);subscription.unsubscribe();sb.auth.signOut=originalSignOut;};
 }
