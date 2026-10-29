@@ -855,7 +855,7 @@ $("signupBackBtn").onclick = () => {
           requested_category: category,
           account_type: "shopkeeper"
         },
-        emailRedirectTo: "https://hunkart.com/shopkeeper-app/"
+        emailRedirectTo: window.location.origin + "/shopkeeper-app/"
       }
     });
 
@@ -894,7 +894,7 @@ $("forgotPasswordBtn").onclick=async()=>{
   $("forgotPasswordBtn").textContent="Sending reset link...";
   try{
     const {error}=await sb.auth.resetPasswordForEmail(email,{
-      redirectTo:"https://hunkart.com/shopkeeper-reset-password.html"
+      redirectTo:window.location.origin+"/shopkeeper-reset-password.html"
     });
     if(error)throw error;
     setStatus("Password reset link sent. Check your email.");
