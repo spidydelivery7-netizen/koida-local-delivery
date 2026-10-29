@@ -176,6 +176,19 @@ create or replace function public.hd_consume_staff_worker_token(p_hash text)
 returns boolean language sql security invoker set search_path='' as $$select hunkart_dispatch.consume_staff_worker_token(p_hash)$$;
 revoke all on function hunkart_dispatch.consume_staff_worker_token(text),public.hd_consume_staff_worker_token(text) from public,anon,authenticated;
 grant execute on function hunkart_dispatch.consume_staff_worker_token(text),public.hd_consume_staff_worker_token(text) to service_role;
+create or replace function hunkart_dispatch.prune_staff_invocations()
+returns integer language plpgsql security definer set search_path='' as $$
+declare removed integer;
+begin
+ with expired as (
+ select id from hunkart_dispatch.staff_worker_invocations
+ where expires_at<clock_timestamp()-interval '1 hour'
+ order by expires_at limit 1000 for update skip locked
+ )
+ delete from hunkart_dispatch.staff_worker_invocations t using expired e where t.id=e.id;
+ get diagnostics removed=row_count;return removed;
+end $$;
+revoke all on function hunkart_dispatch.prune_staff_invocations() from public,anon,authenticated,service_role;
 create or replace function hunkart_dispatch.staff_notification_tick()
 returns void language plpgsql security definer set search_path='' as $$
 declare token text;request_id bigint;
@@ -183,6 +196,7 @@ begin
  if not exists(select 1 from hunkart_dispatch.settings where enabled)
  or not exists(select 1 from hunkart_dispatch.staff_notification_settings where enabled) then return;end if;
  if not pg_try_advisory_xact_lock(hashtext('hunkart_dispatch.staff_notification_tick')) then return;end if;
+ perform hunkart_dispatch.prune_staff_invocations();
  perform hunkart_dispatch.enqueue_staff_notifications();
  update hunkart_dispatch.staff_notification_outbox n set status='cancelled',lease_until=null where status in ('pending','sending') and not hunkart_dispatch.staff_notice_eligible(n.id);
  if not exists(select 1 from hunkart_dispatch.staff_notification_outbox where next_attempt_at<=clock_timestamp() and (status='pending' or (status='sending' and lease_until<clock_timestamp()))) then return;end if;
@@ -203,4 +217,4 @@ revoke all on function hunkart_dispatch.staff_notification_tick() from public,an
 -- Separate from dispatch cron: notification errors cannot roll back rider assignment.
 select cron.schedule('hunkart-staff-notifications','5 seconds','select hunkart_dispatch.staff_notification_tick();');
 
--- Temporary invocation cleanup is deferred; implement bounded retention before enabling in production.
+-- Invocation retention: delete at most 1000 records expired over one hour per enabled tick.
