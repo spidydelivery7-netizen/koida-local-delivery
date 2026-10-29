@@ -24,6 +24,12 @@ async function scenario(mode){
 for(const [mode,status,send] of [['success','sent',1],['permanent','failed',1],['transient','retry',1],['expired','cancelled',0],['invalidexpiry','cancelled',0],['missing','retry',0],['blocked','retry',0],['cancelled','cancelled',0],['ackerror','unacknowledged',1]]){
  const r=await scenario(mode);ok(r.result[status]===1);ok(r.sends===send);
 }
+for(const expected of ['sent','invalid_token','retry']){
+ const acks=[];
+ const result=await runStaffBatch({claim:async()=>[{id:'id',lease_token:'lease'}],delivery:async()=>({payload:{event:'rider_offer',expiresAt:new Date(Date.now()+30000).toISOString()},ttl:30,subscriptions:[],nativeDevices:['a'.repeat(64)]}),sendNative:async()=>({status:expected}),ack:async(_id,_lease,status)=>acks.push(status)});
+ ok(result[expected==='sent'?'sent':expected==='invalid_token'?'failed':'retry']===1);
+ ok(acks.length===1);
+}
 for(const file of ['../../delivery-app/sw.js','../../shopkeeper-app/sw.js']){
  const handlers={};const notifications=[];
  const ctx={URL,Date,Number,self:{addEventListener:(n,f)=>handlers[n]=f,registration:{showNotification:async(t,n)=>notifications.push({t,n})}}};
