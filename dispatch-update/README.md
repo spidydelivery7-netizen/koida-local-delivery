@@ -19,3 +19,7 @@ The assigned shopkeeper accepts a paid order after the three-minute cancellation
 Production backend, live website, GitHub `main`, Razorpay and Play Console have not been changed for this feature. This branch contains staging-only configuration and Android package IDs; these must never be copied verbatim into production. A production rollout requires a separate, reviewed installer with current schema/ACL backup, rollback plan, production frontend configuration, stable APK signing and deployment sequence. Verify a real paid order and refund/cancellation paths in a controlled production release. The optional long alert sound/vibration check remains deferred at the user's request.
 
 Candidate SQL and related source files in this directory are draft installers, not production migrations. Avoid replaying test fixtures or the staging cron setup on live data.
+
+## Read-only live compatibility check — 30 October 2026
+
+The seven shared public tables used by this flow (`orders`, `shops`, `shopkeepers`, `delivery_boys`, `delivery_tracking`, `shop_order_status`, `delivery_otp_codes`) have matching column names and types in staging and live. Live does **not** have the `hunkart_dispatch` schema or its `hd_*` public API functions, so the staff workflow cannot be activated merely by replacing APKs. Live already has `save_my_shop_location`, but its definition differs from staging; the production installer must compare and preserve that existing behavior rather than blindly overwrite it. No live SQL was changed during this check.
