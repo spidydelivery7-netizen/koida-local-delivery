@@ -104,13 +104,13 @@ begin
    update hunkart_dispatch.jobs set state=case when exists(select 1 from public.delivery_tracking where order_id=o.id) then 'assigned' else 'closed' end where order_id=o.id;continue;
   end if;
   if hunkart_cancel.held(o.id) then continue;end if;
-  update hunkart_dispatch.offers f set status='expired' where f.order_id=o.id and f.status='pending' and (f.expires_at<=clock_timestamp() or not exists(select 1 from hunkart_dispatch.presence p join public.delivery_boys b on b.id=p.rider_id where p.rider_id=f.rider_id and p.online and b.is_active and p.seen_at>clock_timestamp()-interval '90 seconds'));
+  update hunkart_dispatch.offers f set status='expired' where f.order_id=o.id and f.status='pending' and (f.expires_at<=clock_timestamp() or not exists(select 1 from hunkart_dispatch.presence p join public.delivery_boys b on b.id=p.rider_id where p.rider_id=f.rider_id and p.online and b.is_active and p.seen_at>clock_timestamp()-interval '5 minutes'));
   if exists(select 1 from hunkart_dispatch.offers where order_id=o.id and status='pending') then continue;end if;
   if clock_timestamp()>j.created_at+interval '5 minutes' then update hunkart_dispatch.jobs set state='attention',note='No partner accepted within five minutes. Contact a partner or reassign.' where order_id=o.id;continue;end if;
   select * into s from public.shops where id=o.shop_id;
   if s.location_lat is null or s.location_lng is null then update hunkart_dispatch.jobs set state='attention',note='Shop GPS missing' where order_id=o.id;continue;end if;
   select p.rider_id into rid from hunkart_dispatch.presence p join public.delivery_boys b on b.id=p.rider_id
-  where p.online and b.is_active and p.seen_at>clock_timestamp()-interval '90 seconds' and p.lat is not null and p.lng is not null
+  where p.online and b.is_active and p.seen_at>clock_timestamp()-interval '5 minutes' and p.lat is not null and p.lng is not null
   and not exists(select 1 from hunkart_dispatch.offers f where f.rider_id=p.rider_id and (f.order_id=o.id or f.status='pending'))
   and not exists(select 1 from public.delivery_tracking t join public.orders x on x.id=t.order_id where t.delivery_boy_id=p.rider_id and t.status not in ('delivered','cancelled') and x.status not in ('delivered','cancelled'))
   order by (p.lat-s.location_lat)^2+(cos(radians(s.location_lat))*(p.lng-s.location_lng))^2,p.rider_id for update of p skip locked limit 1;
@@ -145,7 +145,7 @@ begin
   update hunkart_dispatch.jobs set state='searching' where order_id=oid;
   return jsonb_build_object('ok',true,'accepted',false);
  end if;
- if p.rider_id is null or not p.online or p.seen_at<=clock_timestamp()-interval '90 seconds' then raise exception 'Go online with current GPS first';end if;
+ if p.rider_id is null or not p.online or p.seen_at<=clock_timestamp()-interval '5 minutes' then raise exception 'Go online with current GPS first';end if;
  if exists(select 1 from public.delivery_tracking t join public.orders x on x.id=t.order_id where t.delivery_boy_id=rid and t.status not in ('delivered','cancelled') and x.status not in ('delivered','cancelled')) then raise exception 'Finish current delivery first';end if;
  insert into public.delivery_tracking(order_id,delivery_boy_id,status) values(oid,rid,'assigned');
  update hunkart_dispatch.offers set status='accepted' where id=f.id;
@@ -187,7 +187,7 @@ begin
   return new;
  end if;
  if tg_op='UPDATE' and old.status in ('out_for_delivery','delivered') then raise exception 'Delivery has already started';end if;
- perform 1 from hunkart_dispatch.presence p join public.delivery_boys b on b.id=p.rider_id where p.rider_id=new.delivery_boy_id and b.is_active and p.online and p.seen_at>clock_timestamp()-interval '90 seconds' for update of p;
+ perform 1 from hunkart_dispatch.presence p join public.delivery_boys b on b.id=p.rider_id where p.rider_id=new.delivery_boy_id and b.is_active and p.online and p.seen_at>clock_timestamp()-interval '5 minutes' for update of p;
  if not found then raise exception 'Partner must be online with recent GPS';end if;
  if exists(select 1 from public.delivery_tracking t join public.orders x on x.id=t.order_id where t.delivery_boy_id=new.delivery_boy_id and t.order_id<>new.order_id and t.status not in ('delivered','cancelled') and x.status not in ('delivered','cancelled'))
  or exists(select 1 from hunkart_dispatch.offers where rider_id=new.delivery_boy_id and order_id<>new.order_id and status='pending' and expires_at>clock_timestamp()) then raise exception 'Partner already busy or reserved';end if;
