@@ -53,7 +53,7 @@ returns boolean language sql security definer set search_path='' as $$
     join public.delivery_boys b on b.id=f.rider_id
     join hunkart_dispatch.presence pr on pr.rider_id=b.id
     where f.id=n.offer_id and f.order_id=o.id and f.status='pending' and f.expires_at>clock_timestamp()
-    and b.user_id=n.recipient_id and b.is_active and pr.online and pr.seen_at>clock_timestamp()-interval '90 seconds'))
+    and b.user_id=n.recipient_id and b.is_active and pr.online and pr.seen_at>clock_timestamp()-interval '5 minutes'))
   )
  );
 $$;
@@ -81,7 +81,7 @@ begin
  from hunkart_dispatch.offers f join public.delivery_boys b on b.id=f.rider_id and b.is_active
  join hunkart_dispatch.presence pr on pr.rider_id=b.id and pr.online
  join public.orders o on o.id=f.order_id
- where f.status='pending' and f.expires_at>clock_timestamp() and pr.seen_at>clock_timestamp()-interval '90 seconds'
+ where f.status='pending' and f.expires_at>clock_timestamp() and pr.seen_at>clock_timestamp()-interval '5 minutes'
  and o.status in ('confirmed','preparing','packed') and o.payment_status='paid' and not hunkart_cancel.held(o.id)
  and not exists(select 1 from hunkart_dispatch.staff_notification_outbox n where n.event_key='offer:'||f.id and n.recipient_id=b.user_id)
  order by f.expires_at limit 200 on conflict(event_key,recipient_id) do nothing;
