@@ -1,6 +1,11 @@
 name: Build HUNKART production staff APKs
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - work/shop-acceptance-rider-dispatch
+    paths:
+      - .github/workflows/staff-production-apk.yml
 
 jobs:
   build:
