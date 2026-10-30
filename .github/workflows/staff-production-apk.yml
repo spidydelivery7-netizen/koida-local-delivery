@@ -1,0 +1,65 @@
+name: Build HUNKART production staff APKs
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Validate production-only Firebase and permanent signing
+        shell: bash
+        env:
+          FIREBASE_CONFIG: ${{ secrets.HUNKART_PROD_GOOGLE_SERVICES_JSON }}
+          KEYSTORE_BASE64: ${{ secrets.HUNKART_STAFF_KEYSTORE_BASE64 }}
+          HUNKART_STAFF_KEYSTORE_PASSWORD: ${{ secrets.HUNKART_STAFF_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$FIREBASE_CONFIG" && test -n "$KEYSTORE_BASE64" && test -n "$HUNKART_STAFF_KEYSTORE_PASSWORD"
+          printf '%s' "$FIREBASE_CONFIG" > dispatch-update/native-fcm/android-production/app/google-services.json
+          python3 - <<'PY'
+          import json
+          data=json.load(open('dispatch-update/native-fcm/android-production/app/google-services.json'))
+          project=data['project_info']['project_id']
+          packages={c['client_info']['android_client_info']['package_name'] for c in data['client']}
+          assert project != 'hunkart-staging' and project.strip(), 'Staging Firebase forbidden'
+          assert {'com.hunkart.shopkeeper','com.hunkart.deliverypartner'} <= packages, 'Production package IDs missing'
+          PY
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/hunkart-staff.jks"
+          keytool -list -keystore "$RUNNER_TEMP/hunkart-staff.jks" -storepass "$HUNKART_STAFF_KEYSTORE_PASSWORD" -alias hunkart-staff >/dev/null
+      - name: Build signed staff release APKs
+        env:
+          HUNKART_STAFF_KEYSTORE_PATH: ${{ runner.temp }}/hunkart-staff.jks
+          HUNKART_STAFF_KEYSTORE_PASSWORD: ${{ secrets.HUNKART_STAFF_KEYSTORE_PASSWORD }}
+        run: gradle -p dispatch-update/native-fcm/android-production :app:assembleShopkeeperRelease :app:assembleRiderRelease
+      - name: Verify APK identities and signatures
+        shell: bash
+        run: |
+          set -euo pipefail
+          out=dispatch-update/native-fcm/android-production/app/build/outputs/apk
+          for pair in shopkeeper:com.hunkart.shopkeeper rider:com.hunkart.deliverypartner; do
+            flavor="${pair%%:*}"; expected="${pair#*:}"
+            apk="$out/$flavor/release/app-$flavor-release.apk"
+            test -s "$apk"
+            apksigner verify --verbose "$apk"
+            aapt dump badging "$apk" | grep -q "package: name='$expected' versionCode='100'"
+            sha256sum "$apk" >> "$RUNNER_TEMP/hunkart-staff-apks.sha256"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HUNKART_Staff_Production_APKs
+          path: |
+            dispatch-update/native-fcm/android-production/app/build/outputs/apk/*/release/*.apk
+            ${{ runner.temp }}/hunkart-staff-apks.sha256
+          if-no-files-found: error
+          retention-days: 30
