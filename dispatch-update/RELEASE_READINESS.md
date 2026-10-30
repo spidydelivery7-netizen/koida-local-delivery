@@ -1,6 +1,6 @@
 # HUNKART staff flow: release readiness
 
-This is a review plan, not an authorization to change live. Only the isolated staging flow has passed phone testing. Customer app draft and Play Console AAB remain separate.
+The user authorized a live staff release on 30 October 2026. This document records release blockers and test evidence; the customer AAB and Play Console are explicitly out of scope. Do not claim live deployment until checks pass.
 
 ## Evidence and boundaries
 
@@ -9,6 +9,9 @@ This is a review plan, not an authorization to change live. Only the isolated st
 - Staging shopkeeper/rider APKs use `.staging` Android application IDs, staging Firebase, and a fixed Cloudflare preview origin. They are **not** installable production updates to the existing staff packages.
 - Existing production APK workflows generate versionCode 1 debug packages. A production in-place update needs the exact existing package ID and matching signing certificate plus an increased versionCode. If that identity cannot be verified, use an explicit migration/install plan rather than promising a seamless update. Do not reuse the customer Play signing key by assumption.
 - Staging synthetic `paid` orders are not real Razorpay transactions; none of their data, Firebase registrations or cron state should be copied to live.
+- Inspected archive APK certificate fingerprints (SHA-256): old Shopkeeper `1e660122037500fcaf10853c8525762b113f1d371881cdebd2f563924aeb93b0`; old Delivery Partner `50cfa125b04204899959dec0dec30993276a79fbd3e0afbaf4af5965a31c6d24`; staging Shopkeeper `d67ea85b2fd497b72b507ab358351ff88038e44eb261e80f3f168d3666747436`; staging Rider `9a6a404f0a6fa6a155d9c245dd065a5f2dd891f00a9f56440e6cd4d6fd4314ef`. The only stored signing secret named `HUNKART_KEYSTORE_BASE64` is for the customer Play AAB; its certificate fingerprint is `6915d90f544de69d6c3b052da099994bff7158f10719175b01f902b5ff6ce3ea`, which matches neither legacy staff app. Certificates identify identity, not possession of private signing keys. Do not repackage the staging APK as an in-place staff update.
+- Production Firebase registration and server service account for the two staff package IDs have not been verified. Do not point production staff apps at the staging Firebase project.
+- Live has `sync_order_status_from_delivery_trigger` after insert/update of tracking; the isolated staging suite did not include it. An attempted rollback-only compatibility run was interrupted by the staging fixture's role/ownership assumptions. Rebuild that fixture before declaring the legacy trigger regression tested.
 
 ## Controlled rollout sequence to prepare, then review
 
@@ -21,4 +24,4 @@ This is a review plan, not an authorization to change live. Only the isolated st
 
 ## Current status
 
-Staging flow and phone OTP tests passed. Automated JavaScript tests and the staging staff APK build pass. Native long sound/vibration was deferred at the user's request. Production installer, stable signing compatibility, backup/rollback artifacts, and controlled live verification are not complete; do not merge the draft PR yet.
+Staging flow and phone OTP tests passed. Automated JavaScript tests and the staging staff APK build pass. Native long sound/vibration was deferred at the user's request. A disabled production SQL assembly is available, but it has not been executed. Matching staff signing keys, production Firebase setup, a passing live-trigger compatibility test, backup/rollback artifacts, and controlled live verification remain unresolved. Do not merge the draft PR yet.
