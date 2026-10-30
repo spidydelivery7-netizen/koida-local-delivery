@@ -55,7 +55,7 @@ jobs:
           PY
       - name: Build isolated staff APKs
         env:
-          STAGING_URL: ${{ inputs.staging_url }}
+          STAGING_URL: ${{ inputs.staging_url || 'https://25520cd1.koida-local-delivery.pages.dev' }}
         run: |
           gradle -p dispatch-update/native-fcm/android-staging \
             :app:assembleShopkeeperDebug :app:assembleRiderDebug \
