@@ -8,6 +8,8 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.webkit.WebResourceRequest;
+import android.webkit.WebChromeClient;
+import android.webkit.GeolocationPermissions;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -16,6 +18,8 @@ import com.google.firebase.messaging.FirebaseMessaging;
 
 public class MainActivity extends Activity {
  private WebView web;
+ private GeolocationPermissions.Callback pendingLocation;
+ private String pendingLocationOrigin;
  private static final String ORIGIN=BuildConfig.BASE_URL;
  private boolean trustedPage(){
   if(web==null || web.getUrl()==null)return false;
@@ -40,6 +44,20 @@ public class MainActivity extends Activity {
   web=new WebView(this);setContentView(web);
   web.addJavascriptInterface(new TokenBridge(),"HunkartNative");
   WebSettings settings=web.getSettings();settings.setJavaScriptEnabled(true);settings.setDomStorageEnabled(true);settings.setAllowFileAccess(false);settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+  web.setWebChromeClient(new WebChromeClient(){
+   @Override public void onGeolocationPermissionsShowPrompt(String origin,GeolocationPermissions.Callback callback){
+    Uri allowed=Uri.parse(ORIGIN),requested=Uri.parse(origin);
+    if(!trustedPage() || !"https".equals(requested.getScheme()) || !allowed.getAuthority().equals(requested.getAuthority())){
+     callback.invoke(origin,false,false);return;
+    }
+    if(checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED
+       || checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)==PackageManager.PERMISSION_GRANTED){
+     callback.invoke(origin,true,false);return;
+    }
+    pendingLocation=callback;pendingLocationOrigin=origin;
+    requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.ACCESS_COARSE_LOCATION},43);
+   }
+  });
   web.setWebViewClient(new WebViewClient(){
    @Override public boolean shouldOverrideUrlLoading(WebView view,WebResourceRequest request){
     Uri uri=request.getUrl();
@@ -51,6 +69,15 @@ public class MainActivity extends Activity {
    @Override public void onPageFinished(WebView view,String url){if(trustedPage())deliverToken();}
   });
   web.loadUrl(ORIGIN+BuildConfig.PAGE_PATH);
+ }
+ @Override public void onRequestPermissionsResult(int requestCode,String[] permissions,int[] grantResults){
+  super.onRequestPermissionsResult(requestCode,permissions,grantResults);
+  if(requestCode==43 && pendingLocation!=null){
+   boolean granted=false;
+   for(int result:grantResults)if(result==PackageManager.PERMISSION_GRANTED)granted=true;
+   pendingLocation.invoke(pendingLocationOrigin,granted&&trustedPage(),false);
+   pendingLocation=null;pendingLocationOrigin=null;
+  }
  }
  @Override protected void onResume(){super.onResume();if(web!=null)deliverToken();}
  @Override public void onBackPressed(){if(web!=null&&web.canGoBack())web.goBack();else super.onBackPressed();}
