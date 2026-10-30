@@ -51,13 +51,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          build_tools="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+          test -x "$build_tools/apksigner" && test -x "$build_tools/aapt"
           out=dispatch-update/native-fcm/android-production/app/build/outputs/apk
           for pair in shopkeeper:com.hunkart.shopkeeper rider:com.hunkart.deliverypartner; do
             flavor="${pair%%:*}"; expected="${pair#*:}"
             apk="$out/$flavor/release/app-$flavor-release.apk"
             test -s "$apk"
-            apksigner verify --verbose "$apk"
-            aapt dump badging "$apk" | grep -q "package: name='$expected' versionCode='100'"
+            "$build_tools/apksigner" verify --verbose "$apk"
+            "$build_tools/aapt" dump badging "$apk" | grep -q "package: name='$expected' versionCode='100'"
             sha256sum "$apk" >> "$RUNNER_TEMP/hunkart-staff-apks.sha256"
           done
       - uses: actions/upload-artifact@v4
