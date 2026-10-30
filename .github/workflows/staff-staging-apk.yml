@@ -1,5 +1,11 @@
 name: Build HUNKART staff staging APKs
 on:
+  push:
+    branches:
+      - work/shop-acceptance-rider-dispatch
+    paths:
+      - dispatch-update/native-fcm/android-staging/**
+      - .github/workflows/staff-staging-apk.yml
   workflow_dispatch:
     inputs:
       staging_url:
@@ -25,7 +31,7 @@ jobs:
       - name: Validate isolated frontend and stage Firebase client config
         shell: bash
         env:
-          STAGING_URL: ${{ inputs.staging_url }}
+          STAGING_URL: ${{ inputs.staging_url || 'https://25520cd1.koida-local-delivery.pages.dev' }}
           FIREBASE_CONFIG: ${{ secrets.HUNKART_STAGING_GOOGLE_SERVICES_JSON }}
         run: |
           set -euo pipefail
