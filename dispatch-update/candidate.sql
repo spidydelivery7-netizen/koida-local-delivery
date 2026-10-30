@@ -115,7 +115,7 @@ begin
   and not exists(select 1 from public.delivery_tracking t join public.orders x on x.id=t.order_id where t.delivery_boy_id=p.rider_id and t.status not in ('delivered','cancelled') and x.status not in ('delivered','cancelled'))
   order by (p.lat-s.location_lat)^2+(cos(radians(s.location_lat))*(p.lng-s.location_lng))^2,p.rider_id for update of p skip locked limit 1;
   if rid is null then update hunkart_dispatch.jobs set state='searching',note='Waiting for an online available partner' where order_id=o.id;continue;end if;
-  insert into hunkart_dispatch.offers(order_id,rider_id,expires_at) values(o.id,rid,clock_timestamp()+interval '30 seconds');
+  insert into hunkart_dispatch.offers(order_id,rider_id,expires_at) values(o.id,rid,clock_timestamp()+interval '120 seconds');
   update hunkart_dispatch.jobs set state='offered',note=null where order_id=o.id;
  end loop;
 end $$;
