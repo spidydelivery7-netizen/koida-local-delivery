@@ -2,14 +2,15 @@ import {createECDH} from 'node:crypto';
 import {Buffer} from 'node:buffer';
 
 export const PRODUCTION_URL='https://amnqqxgmqciipcortpmi.supabase.co';
+export const PRODUCTION_FIREBASE_PROJECT='hunkart-production';
 // No fallback to staging, client credentials, or an inferred Firebase project.
 export function productionConfig(get) {
  if(get('SUPABASE_URL')!==PRODUCTION_URL)throw Error('Wrong Supabase project');
  if(get('HUNKART_STAFF_WORKER_ENABLED')!=='true')return null;
  const service=get('SUPABASE_SERVICE_ROLE_KEY');
  if(typeof service!=='string'||!service.trim())throw Error('Missing server credential');
- const project=get('HUNKART_FCM_PROJECT_ID');
- if(typeof project!=='string'||!/^[a-z][a-z0-9-]{4,28}[a-z0-9]$/.test(project)||project==='hunkart-staging')throw Error('Invalid production Firebase project');
+ const project=get('FCM_PROJECT_ID');
+ if(project!==PRODUCTION_FIREBASE_PROJECT)throw Error('Invalid production Firebase project');
  let account;
  try{account=JSON.parse(get('FCM_SERVICE_ACCOUNT_JSON')||'');}catch{throw Error('Missing Firebase server configuration');}
  if(account?.project_id!==project||account.type!=='service_account'||

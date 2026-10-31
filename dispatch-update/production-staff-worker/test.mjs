@@ -5,19 +5,21 @@ import {createProductionHandler} from './handler.mjs';
 let checks=0;
 const equal=(a,b)=>{assert.deepEqual(a,b);checks++;};
 const ec=createECDH('prime256v1');ec.generateKeys();
-const base={SUPABASE_URL:PRODUCTION_URL,HUNKART_STAFF_WORKER_ENABLED:'true',SUPABASE_SERVICE_ROLE_KEY:'fixture-only',HUNKART_FCM_PROJECT_ID:'hunkart-fixture',
- FCM_SERVICE_ACCOUNT_JSON:JSON.stringify({type:'service_account',project_id:'hunkart-fixture',client_email:'worker@hunkart-fixture.iam.gserviceaccount.com',private_key:'-----BEGIN PRIVATE KEY----- fixture',token_uri:'https://oauth2.googleapis.com/token'}),
+const base={SUPABASE_URL:PRODUCTION_URL,HUNKART_STAFF_WORKER_ENABLED:'true',SUPABASE_SERVICE_ROLE_KEY:'fixture-only',FCM_PROJECT_ID:'hunkart-production',
+ FCM_SERVICE_ACCOUNT_JSON:JSON.stringify({type:'service_account',project_id:'hunkart-production',client_email:'fixture@hunkart-production.iam.gserviceaccount.com',private_key:'-----BEGIN PRIVATE KEY----- fixture',token_uri:'https://oauth2.googleapis.com/token'}),
  VAPID_PUBLIC_KEY:ec.getPublicKey().toString('base64url'),VAPID_PRIVATE_KEY:ec.getPrivateKey().toString('base64url')};
-equal(productionConfig(k=>base[k]).project,'hunkart-fixture');
+equal(productionConfig(k=>base[k]).project,'hunkart-production');
 for(const flag of [undefined,'false','TRUE','1',''])equal(productionConfig(k=>k==='HUNKART_STAFF_WORKER_ENABLED'?flag:base[k]),null);
 for(const override of [
  {SUPABASE_URL:'https://jjitqihblpubqwbggjpv.supabase.co'},
  {SUPABASE_URL:PRODUCTION_URL+'/'}, {SUPABASE_SERVICE_ROLE_KEY:''},
- {HUNKART_FCM_PROJECT_ID:'hunkart-staging'}, {HUNKART_FCM_PROJECT_ID:undefined},
+ {FCM_PROJECT_ID:'hunkart-staging'}, {FCM_PROJECT_ID:undefined},
+ {FCM_PROJECT_ID:'unrelated-production'},
+ {FCM_PROJECT_ID:undefined,HUNKART_FCM_PROJECT_ID:'hunkart-production'},
  {FCM_SERVICE_ACCOUNT_JSON:'bad'}, {FCM_SERVICE_ACCOUNT_JSON:'null'},
- {FCM_SERVICE_ACCOUNT_JSON:base.FCM_SERVICE_ACCOUNT_JSON.replace('hunkart-fixture','other-project')},
+ {FCM_SERVICE_ACCOUNT_JSON:base.FCM_SERVICE_ACCOUNT_JSON.replace('hunkart-production','other-project')},
  {FCM_SERVICE_ACCOUNT_JSON:base.FCM_SERVICE_ACCOUNT_JSON.replace('oauth2.googleapis.com','evil.test')},
- {FCM_SERVICE_ACCOUNT_JSON:base.FCM_SERVICE_ACCOUNT_JSON.replace('worker@','worker@other-')},
+ {FCM_SERVICE_ACCOUNT_JSON:base.FCM_SERVICE_ACCOUNT_JSON.replace('fixture@','fixture@other-')},
  {VAPID_PUBLIC_KEY:'wrong'}, {VAPID_PRIVATE_KEY:undefined}
 ]){assert.throws(()=>productionConfig(k=>({...base,...override})[k]));checks++;}
 let calls=[],runs=0,consumed=false;

@@ -6,7 +6,7 @@ This separate entrypoint removes the staging-only restriction without changing t
 
 - Runtime URL must be exactly the production Supabase URL encoded in config.mjs.
 - `HUNKART_STAFF_WORKER_ENABLED` defaults OFF; only the literal `true` allows a request to continue. Database dispatch and staff notification flags must also be enabled separately after release review.
-- `HUNKART_FCM_PROJECT_ID` must equal the actual Firebase project used to build both production staff APKs. That value is not inferred or filled in by this draft. The APK google-services JSON is not a Firebase server service-account credential.
+- `FCM_PROJECT_ID` is the existing project secret name confirmed in the earlier chat. Reuse it; do not ask the user to recreate it under a new name. It must match the production APK Firebase project (`hunkart-production`) and server account. The APK google-services JSON is not a Firebase server service-account credential.
 - `FCM_SERVICE_ACCOUNT_JSON` is server-only and must belong to that same production Firebase project. Do not copy staging credentials, commit secrets, or print them.
 - `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` must form a matching pair. Existing subscriptions require their original pair. This draft never generates or replaces keys and never touches Razorpay secrets.
 - Supabase supplies `SUPABASE_URL` and the existing server role credential used by the reviewed SQL RPC role checks. Key migration is outside this change.
@@ -17,13 +17,21 @@ The future function slug is `dispatch-staff-worker`, matching the disabled SQL i
 
 Bundle index.ts, handler.mjs, config.mjs and the imported staff-worker/core.mjs and native-fcm/{oauth,send,core}.mjs preserving relative paths. This entrypoint is not a self-contained single-file deployment. Provider calls have bounded timeouts.
 
-31 October follow-up: Deno 2.9.6 type-check passed for the actual entrypoint and test-entrypoint.ts. Four entrypoint/import response checks passed with no network permission and no listener; 36 configuration/auth tests also passed under Deno. Dependency loading used an isolated npm node_modules directory because direct Deno registry fetching stalled. This confirms local Deno import/runtime behavior, not Supabase-hosted deployment packaging or enabled provider delivery.
+31 October follow-up: Deno 2.9.6 type-check passed for the actual entrypoint and test-entrypoint.ts. Four entrypoint/import response checks passed with no network permission and no listener. Current configuration/auth suite has 38 assertions after compatibility correction. Dependency loading used an isolated npm node_modules directory because direct Deno registry fetching stalled. This confirms local Deno import/runtime behavior, not enabled hosted provider delivery.
 
 Reproduce in an isolated test workspace with the same relative source tree and pinned @supabase/supabase-js 2.57.4, web-push 3.6.7 and @types/node 22.10.2 installed: run Deno from that workspace (its cwd must contain package.json/node_modules), `deno check --no-remote --node-modules-dir=manual dispatch-update/production-staff-worker/index.ts dispatch-update/production-staff-worker/test-entrypoint.ts`, then `deno run --no-remote --node-modules-dir=manual dispatch-update/production-staff-worker/test-entrypoint.ts`. No allow-net/env permissions are used by the smoke test. This procedure does not deploy a function.
 
 ## Firebase Android/server identity comparison
 
 `check-firebase-identity.mjs` accepts two local private input paths: production Android google-services JSON, then production Firebase server service-account JSON. Run only in a trusted private workspace, never commit inputs, and never paste credentials in chat. Success reports only project ID and match flags; failures suppress file paths, raw errors and contents. Eleven generated-fixture tests cover wrong project/packages/account/key and pass. Actual production server account has not been supplied or verified here. Existing APK build run 41085568765 and its non-expired HUNKART_Staff_Production_APKs artifact were rechecked successfully on 31 October; that build does not prove server-side credential readiness.
+
+Earlier-chat reconciliation: the user already confirmed downloading the server-account JSON and saving `FCM_SERVICE_ACCOUNT_JSON` plus `FCM_PROJECT_ID`. Do not repeat creation/provisioning or ask them to upload that JSON. Only the actual runtime identity/match remains unverified from this workspace. Production Android config was read and both package IDs matched `hunkart-production`. The candidate now uses the already-saved `FCM_PROJECT_ID` name and rejects every other project, including unrelated production projects. The newly introduced `HUNKART_FCM_PROJECT_ID` name is not required or used.
+
+## Self-contained deployment source package
+
+`deploymentPackage()` in package.mjs returns the future deployment fields (name, entrypoint_path, verify_jwt and files) without deploying anything or reading environment secrets. It includes exactly seven allowlisted source files, flattens imports deterministically, and rejects changed/missing/escaping local imports. Add the reviewed project_id only at a separately authorized future deployment; never invoke deployment from a test. No test fixture, SQL, APK config, account JSON or keystore is included.
+
+`test-package.mjs` passes 38 checks. The flattened package was actually type-checked in Deno 2.9.6 and passed the four disabled entrypoint tests without network permission. Source manifest SHA-256 values are available through packageManifest(). Hosted gateway configuration and an actual deployed-disabled smoke test remain pending. The package's verify_jwt=false is scoped to this worker because its handler checks a one-time capability; it does not alter any existing function setting.
 
 ## Remaining gates
 

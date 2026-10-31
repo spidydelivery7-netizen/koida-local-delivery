@@ -2,6 +2,14 @@
 
 ## 31 October 2026 — draft-only continuation
 
+### Earlier-chat reconciliation and deployable source packaging
+
+- Corrected the candidate to reuse existing `FCM_PROJECT_ID`, not the newly invented `HUNKART_FCM_PROJECT_ID`. It now requires the exact production Firebase project already identified from the production Android config. No production secret was read or changed. Configuration/auth suite: 38 assertions pass.
+- Added a deterministic seven-file deployment source package with local imports resolved inside the package. Thirty-eight package checks, actual packaged Deno type-check and four disabled/no-network entrypoint tests pass. No deployment was invoked; hosted gateway/provider checks remain pending.
+- Important continuity correction: the earlier chat already inspected a backup screenshot (then latest 29 Oct 22:58 UTC / 30 Oct 04:28 IST, PITR disabled) and the user confirmed downloading the server-account JSON and saving `FCM_SERVICE_ACCOUNT_JSON` and `FCM_PROJECT_ID`. Do not label these steps unstarted or require them to be repeated. The historical backup was not considered fresh enough for rollout; no backup export/restore was established. Secret presence was user-confirmed; runtime Firebase identity matching remains unverified, rather than provisioning being wholly undone.
+- Staging phone flow and signed production staff APK candidates were already completed before this continuation. Additional physical testing must target production release candidates and remaining notifications/rollout cases; do not restart the successful staging walkthrough by default.
+- Customer combined draft is independently saved as version 18 and must remain separate from this staff PR. Latest instruction remains draft-only, no main/live/database setting/Razorpay/Play change.
+
 ### Isolated installer/role/rollback rehearsal
 
 Added `local-rehearsal/` with a pinned/locked PGlite harness accepting protected local schema inputs. Private catalog metadata and function definitions are excluded from repository writes. Forty executable database assertions passed locally: transaction rollback after forced late failure, disabled install/reinstall denial, legacy tracking trigger/function preservation, RLS/private table isolation, real SET ROLE access checks, synthetic shop acceptance/preparation/rider offer/start, rejection/refund queue and non-destructive emergency stop.

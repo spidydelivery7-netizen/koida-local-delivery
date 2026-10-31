@@ -2,6 +2,8 @@
 
 Status: DRAFT. No backup export, restore, migration or production activation was performed in this checkpoint. Catalog compatibility reads are not a recoverable backup. A complete rollback must not be marked ready from these reads alone.
 
+Continuity correction: the earlier chat already inspected the daily-backup screenshot. At that time its latest entry was 29 October 22:58 UTC (30 October 04:28 IST), PITR was disabled, and that snapshot was considered too old for rollout. Do not describe backup inspection as never done. Current freshness/recovery coverage and an actual export/isolated restore remain unverified; no add-on activation or Restore action is authorized here.
+
 ## Evidence to collect before installation
 
 Use a protected location outside the repository and browser assets. Keep database credentials, customer data, push subscriptions, OTPs and private function definitions out of GitHub/Cloudflare/CI logs. Record only a manifest of timestamps, tool/database versions, file sizes, SHA-256 hashes and restore outcomes in the release evidence. A hash alone does not prove a usable backup.
