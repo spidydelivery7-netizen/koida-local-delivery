@@ -1,4 +1,4 @@
-const CACHE_NAME = "hunkart-delivery-v3";
+const CACHE_NAME = "hunkart-delivery-dispatch-v5";
 
 const APP_FILES = [
   "/delivery-app/",
@@ -93,6 +93,13 @@ self.addEventListener("push", (event) => {
     data = event.data ? event.data.json() : {};
   } catch {
     data = { body: event.data ? event.data.text() : "" };
+  }
+
+
+  // Ignore delayed/invalid expiry alerts; legacy payloads remain supported.
+  if (data.expiresAt != null) {
+    const expires = Date.parse(data.expiresAt);
+    if (!Number.isFinite(expires) || expires <= Date.now()) return;
   }
 
   const notification = {

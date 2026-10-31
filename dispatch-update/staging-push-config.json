@@ -1,0 +1,8 @@
+{
+  "environment": "HUNKART-STAGING",
+  "projectRef": "jjitqihblpubqwbggjpv",
+  "vapidPublicKey": "BGFC4eGhVc-3TRqTi6uDZ56XyuD65Et2R_2FEjlAm2Za701dtOEwwe4tHQ6DykvAnuBPrj05Bq8iudR8fJaz2oM",
+  "publicKeySha256": "f34bb0c2f10ee4c5d12119b3c31e60481fb4cd247fec82517e796bb44f66ff8c",
+  "status": "Public key validated as P-256. Both secret names visible in staging dashboard. Private/public pair and real device delivery not yet tested.",
+  "productionUse": false
+}

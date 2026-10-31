@@ -1,3 +1,5 @@
 {
-  "compatibility_date": "2026-09-12"
+  "name": "koida-local-delivery",
+  "compatibility_date": "2026-09-12",
+  "assets": { "directory": "." }
 }

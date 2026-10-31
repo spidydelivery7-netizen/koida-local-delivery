@@ -294,8 +294,17 @@ button{border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:poin
 
 <script src="/config.js"></script>
 <script type="module">
+import { notifyStoredOrder } from "/dispatch-notify.js";
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 import { ensureStaffPushSubscription } from "/staff-push.js";
+import { attachNativeStaffRegistration } from "/dispatch-update/native-fcm/production-registration.mjs";
+import { attachNativeStaffRegistration as attachStagingNativeStaffRegistration } from "/dispatch-update/native-fcm/staff-registration.js";
+
+window.addEventListener('hunkart-native-status',({detail})=>{
+ if(detail?.state==='logout-failed')setStatus('Logout could not finish. Check your internet and tap Logout again.');
+ else if(detail?.state==='unavailable')setStatus('Background order alerts are unavailable. Keep this page open and check your connection.');
+});
+
 
 const cfg=window.SPIDY_CONFIG||{};
 const $=id=>document.getElementById(id);
@@ -496,7 +505,7 @@ function renderOrders(){
     const packed=shopStatus==="packed";
     const confirmed=["confirmed","preparing"].includes(String(o.order_status||"").toLowerCase());
     const stage={
-      new:{badge:"NEW ORDER",badgeClass:"new",button:"Start Packing",buttonClass:"startBtn",next:"preparing",note:confirmed?"Admin confirmed. Start preparing this order.":"Waiting for Admin confirmation."},
+      new:{badge:"NEW ORDER",badgeClass:"new",button:confirmed?"Start Packing":"Accept Order",buttonClass:"startBtn",next:confirmed?"preparing":"accept",note:confirmed?"Order accepted. Start preparing this order.":"Accept only if your shop can fulfil this paid order."},
       confirmed:{badge:"CONFIRMED",badgeClass:"new",button:"Start Packing",buttonClass:"startBtn",next:"preparing",note:"Start preparing this order."},
       preparing:{badge:"PACKING",badgeClass:"preparing",button:"Mark Ready",buttonClass:"readyBtn",next:"ready",note:"Preparation is in progress."},
       ready:{badge:"READY",badgeClass:"ready",button:"Mark Packed",buttonClass:"",next:"packed",note:"Pack the order before delivery pickup."},
@@ -527,19 +536,40 @@ function renderOrders(){
       <button class="packBtn ${stage.buttonClass}" ${packed || (!confirmed && stage.next==="preparing") ?"disabled":""}>
         ${stage.button}
       </button>
+      ${o.order_status==="new"?'<label>Cannot fulfil this order?<select class="rejectReason"><option value="">Choose reason</option><option>Item unavailable</option><option>Shop cannot fulfil order</option></select></label><button type="button" class="rejectOrder red">Reject Order</button>':""}
       <div class="stageNote">${stage.note}</div>`;
     const btn=card.querySelector(".packBtn");
     if(!packed){
-      if(stage.next==="packed")btn.onclick=()=>markOrderPacked(o,btn);
+      if(stage.next==="accept")btn.onclick=()=>decideShopOrder(o,true,"",card);
+      else if(stage.next==="packed")btn.onclick=()=>markOrderPacked(o,btn);
       else if(stage.next)btn.onclick=()=>updateShopOrderStatus(o,stage.next,btn);
     }
+    const reject=card.querySelector(".rejectOrder");
+    if(reject)reject.onclick=()=>decideShopOrder(o,false,card.querySelector(".rejectReason").value,card);
     box.appendChild(card);
   });
 }
 
+async function decideShopOrder(order,accept,reason,card){
+  if(card.dataset.saving==="yes")return;
+  if(!accept&&!reason){setStatus("Choose a rejection reason first.");return;}
+  if(!confirm(accept?"Accept this paid order for your shop?":"Reject this order and queue its remaining paid amount for refund?"))return;
+  card.dataset.saving="yes";
+  card.querySelectorAll("button,select").forEach(b=>b.disabled=true);
+  try{
+    const {data,error}=await sb.rpc(accept?"hd_accept_shop_order":"hd_reject_shop_order",accept?{p_order_id:order.order_id}:{p_order_id:order.order_id,p_reason:reason});
+    if(error)throw error;
+    if(!data?.ok)throw new Error("Order decision could not be confirmed. Refresh before retrying.");
+    setStatus(accept?"Order accepted. Preparing can now start; delivery partner search is queued.":"Order rejected. Refund queued; it is not yet confirmed by the bank.");
+    await loadShopOrders({alertNew:false});
+    const notice=await notifyStoredOrder({sb,supabaseUrl:cfg.supabaseUrl,orderId:order.order_id});
+    if(!notice.ok)setStatus((accept?"Order acceptance":"Order rejection")+" saved. Customer notification is pending; do not repeat the order decision.");
+  }catch(error){setStatus("Order decision failed: "+error.message);delete card.dataset.saving;card.querySelectorAll("button,select").forEach(b=>b.disabled=false);}
+}
+
 async function loadShopOrders({alertNew=true}={}){
   if(!sb||!sessionUser||!shopId)return;
-  const {data,error}=await sb.rpc("get_my_shop_orders");
+  const {data,error}=await sb.rpc("hd_my_shop_orders");
   if(error){
     setStatus("Orders load error: "+error.message);
     return;
@@ -563,7 +593,7 @@ async function markOrderPacked(order,btn){
   if(!confirm(`Mark ${order.order_number||"this order"} as packed?`))return;
   btn.disabled=true;
   btn.textContent="Saving...";
-  const {data,error}=await sb.rpc("mark_my_shop_order_packed",{p_order_id:order.order_id});
+  const {data,error}=await sb.rpc("hd_set_shop_stage",{p_order_id:order.order_id,p_status:"packed"});
   if(error){
     setStatus("Packed update failed: "+error.message);
     btn.disabled=false;
@@ -582,7 +612,7 @@ async function updateShopOrderStatus(order,nextStatus,btn){
   if(!confirm(`Do you want to ${label} for ${order.order_number||"this order"}?`))return;
   btn.disabled=true;
   btn.textContent="Saving...";
-  const {data,error}=await sb.rpc("set_my_shop_order_status",{
+  const {data,error}=await sb.rpc("hd_set_shop_stage",{
     p_order_id:order.order_id,
     p_status:nextStatus
   });
@@ -616,21 +646,18 @@ function startShopRealtime(){if(!sb||!sessionUser||!shopId)return;stopShopRealti
 async function loadShopAndProducts(){
   if(!sessionUser)return;
   setStatus("Loading your shop...");
-  const {data:map,error:mapErr}=await sb.from("shopkeepers").select("shop_id").eq("user_id",sessionUser.id).maybeSingle();
-  if(mapErr){setStatus("Shop mapping error: "+mapErr.message);return}
-  if(!map||!map.shop_id){
+  const {data:profile,error}=await sb.rpc("hd_staff_profile",{p_kind:"keeper"});
+  if(error){setStatus("Shop details could not be loaded: "+error.message);return}
+  if(!profile?.shop){
     showLoggedOut();
     await sb.auth.signOut();
-    setStatus("This login is not assigned to a shop. Contact HUNKART admin.");
+    setStatus("This login is not assigned to an active shop. Contact HUNKART admin.");
     return;
   }
-  shopId=map.shop_id;
-  const {data:shop,error:shopErr}=await sb.from("shops").select("id,name,active,is_open,reopens_at,location_lat,location_lng,location_updated_at").eq("id",shopId).maybeSingle();
-  if(shopErr||!shop){setStatus("Shop details could not be loaded.");return}
+  const shop=profile.shop;
+  shopId=shop.id;
   shopName=shop.name||"My Shop";shopIsOpen=shop.is_open!==false;shopReopensAt=shop.reopens_at||null;shopLocation=shop;$("shopName").textContent=shopName;renderShopOpenState();renderShopLocation();
-  const {data,error}=await sb.from("products").select("id,shop_id,name,category,available,is_available").eq("shop_id",shopId).order("category",{ascending:true}).order("name",{ascending:true});
-  if(error){setStatus("Products load error: "+error.message);return}
-  products=data||[];
+  products=profile.products||[];
   setStatus(`${shopName}: ${products.length} products loaded.`);
   render();
   startOrderPolling();
@@ -746,6 +773,8 @@ if(!configured()){
 }else{
   // Keep shopkeeper confirmation links and sessions inside the shopkeeper panel.
   sb=createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{storageKey:"kld-shopkeeper-auth",persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+  attachNativeStaffRegistration({sb,role:"shopkeeper",supabaseUrl:cfg.supabaseUrl});
+  attachStagingNativeStaffRegistration({sb,role:"shopkeeper",supabaseUrl:cfg.supabaseUrl});
   await checkSession();
   sb.auth.onAuthStateChange(async(_event,session)=>{sessionUser=session?.user||null;if(sessionUser){showLoggedIn();await loadShopAndProducts();ensureStaffPushSubscription({sb,user:sessionUser,role:"shopkeeper",serviceWorkerUrl:"/shopkeeper-app/sw.js",scope:"/shopkeeper-app/"}).catch(error=>console.warn("Shopkeeper push subscription:",error))}else showLoggedOut()});
 }
@@ -834,7 +863,7 @@ $("signupBackBtn").onclick = () => {
           requested_category: category,
           account_type: "shopkeeper"
         },
-        emailRedirectTo: "https://hunkart.com/shopkeeper-app/"
+        emailRedirectTo: window.location.origin + "/shopkeeper-app/"
       }
     });
 
@@ -873,7 +902,7 @@ $("forgotPasswordBtn").onclick=async()=>{
   $("forgotPasswordBtn").textContent="Sending reset link...";
   try{
     const {error}=await sb.auth.resetPasswordForEmail(email,{
-      redirectTo:"https://hunkart.com/shopkeeper-reset-password.html"
+      redirectTo:window.location.origin+"/shopkeeper-reset-password.html"
     });
     if(error)throw error;
     setStatus("Password reset link sent. Check your email.");

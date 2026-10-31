@@ -1,0 +1,20 @@
+import assert from 'node:assert/strict';
+import {generateKeyPairSync,createVerify} from 'node:crypto';
+import {firebaseAccessToken} from './oauth.mjs';
+const {privateKey,publicKey}=generateKeyPairSync('rsa',{modulusLength:2048,publicKeyEncoding:{type:'spki',format:'pem'},privateKeyEncoding:{type:'pkcs8',format:'pem'}});
+const account={client_email:'test@hunkart-staging.iam.gserviceaccount.com',private_key:privateKey,token_uri:'https://oauth2.googleapis.com/token'};
+const token=await firebaseAccessToken(account,async (url,init)=>{
+ assert.equal(url,account.token_uri);
+ const jwt=new URLSearchParams(init.body).get('assertion');
+ const [header,claims,signature]=jwt.split('.');
+ assert.equal(JSON.parse(Buffer.from(header,'base64url')).alg,'RS256');
+ const data=JSON.parse(Buffer.from(claims,'base64url'));
+ assert.equal(data.scope,'https://www.googleapis.com/auth/firebase.messaging');
+ assert.equal(data.exp-data.iat,3000);
+ const verifier=createVerify('RSA-SHA256');verifier.update(header+'.'+claims);verifier.end();
+ assert.ok(verifier.verify(publicKey,Buffer.from(signature,'base64url')));
+ return {ok:true,json:async()=>({access_token:'mock-oauth-token'})};
+},Date.parse('2026-10-29T00:00:00Z'));
+assert.equal(token,'mock-oauth-token');
+await assert.rejects(()=>firebaseAccessToken({...account,token_uri:'https://evil.example/token'}));
+console.log('FCM OAuth checks passed');

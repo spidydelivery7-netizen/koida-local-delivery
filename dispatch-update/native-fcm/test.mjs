@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import {fcmMessage, classifyFcm} from './core.mjs';
+const now=Date.parse('2026-01-01T00:00:00Z');
+const token='A'.repeat(50);
+const m=fcmMessage(token,{kind:'rider_offer',expiresAt:'2026-01-01T00:00:30Z'},now);
+assert.equal(m.message.android.ttl,'30s');
+assert.equal(m.message.data.kind,'rider_offer');
+assert.equal(fcmMessage(token,{kind:'rider_offer',expiresAt:'2026-01-01T00:00:00Z'},now),null);
+assert.equal(fcmMessage(token,{kind:'shop_order_ready',expiresAt:'bad'},now),null);
+assert.throws(()=>fcmMessage('bad',{kind:'shop_order_ready',expiresAt:'2026-01-02T00:00:00Z'},now));
+assert.throws(()=>fcmMessage(token,{kind:'other',expiresAt:'2026-01-02T00:00:00Z'},now));
+assert.equal(fcmMessage(token,{kind:'shop_order_ready',expiresAt:'2026-01-02T00:00:00Z'},now).message.android.ttl,'3600s');
+assert.equal(classifyFcm(200),'sent');
+assert.equal(classifyFcm(404,'UNREGISTERED'),'invalid_token');
+assert.equal(classifyFcm(429),'retry');
+assert.equal(classifyFcm(503),'retry');
+assert.equal(classifyFcm(403),'failed');
+console.log('11 checks passed');

@@ -1,4 +1,4 @@
-const CACHE_NAME = "hunkart-shopkeeper-v5";
+const CACHE_NAME = "hunkart-shopkeeper-v5-dispatch-v2";
 
 const APP_FILES = [
   "/shopkeeper-app/",
@@ -60,6 +60,12 @@ self.addEventListener("fetch", (event) => {
 self.addEventListener("push", event => {
   let data = {};
   try { data = event.data?.json() || {}; } catch { data = { body: event.data?.text() }; }
+
+  // Ignore delayed/invalid expiry alerts; legacy payloads remain supported.
+  if (data.expiresAt != null) {
+    const expires = Date.parse(data.expiresAt);
+    if (!Number.isFinite(expires) || expires <= Date.now()) return;
+  }
   event.waitUntil(self.registration.showNotification(data.title || "HUNKART • New Order", {
     body: data.body || "A new order needs your attention.",
     icon: "/icons/icon-192.png",

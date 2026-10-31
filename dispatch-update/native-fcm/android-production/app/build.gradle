@@ -1,0 +1,23 @@
+plugins { id 'com.android.application'; id 'com.google.gms.google-services' }
+android {
+ namespace 'com.hunkart.staff.staging'
+ compileSdk 35
+ compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17; coreLibraryDesugaringEnabled true }
+ signingConfigs {
+  release {
+   storeFile file(System.getenv('HUNKART_STAFF_KEYSTORE_PATH'))
+   storePassword System.getenv('HUNKART_STAFF_KEYSTORE_PASSWORD')
+   keyAlias 'hunkart-staff'
+   keyPassword System.getenv('HUNKART_STAFF_KEYSTORE_PASSWORD')
+  }
+ }
+ defaultConfig { minSdk 24; targetSdk 35; versionCode 101; versionName '1.1.1'; buildConfigField 'String','BASE_URL','"https://hunkart.com"' }
+ buildFeatures { buildConfig true }
+ flavorDimensions 'role'
+ productFlavors {
+  shopkeeper { dimension 'role'; applicationId 'com.hunkart.shopkeeper'; buildConfigField 'String','PAGE_PATH','"/shopkeeper-app/"'; manifestPlaceholders=[staffLabel:'HUNKART Shopkeeper'] }
+  rider { dimension 'role'; applicationId 'com.hunkart.deliverypartner'; buildConfigField 'String','PAGE_PATH','"/delivery-app/"'; manifestPlaceholders=[staffLabel:'HUNKART Delivery Partner'] }
+ }
+ buildTypes { release { signingConfig signingConfigs.release; minifyEnabled false } }
+}
+dependencies { coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.3'; implementation platform('com.google.firebase:firebase-bom:34.5.0'); implementation 'com.google.firebase:firebase-messaging' }

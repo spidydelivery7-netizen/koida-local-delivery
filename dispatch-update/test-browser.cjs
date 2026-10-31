@@ -1,0 +1,35 @@
+const http=require('http'),fs=require('fs'),path=require('path'),assert=require('node:assert/strict');
+const {chromium}=require('../../HUNKART_Back_Test_20261021/node_modules/playwright');
+const root=path.resolve(__dirname,'..');let stage='new',status='new',assigned=false,online=false;
+const base={order_id:'order-fixture',order_number:'HK-UI-1042',created_at:new Date().toISOString(),customer_cancel_until:new Date(Date.now()-60000).toISOString(),customer_name:'Test customer',phone:'0000000000',address:'Test address',area:'Koida',payment_status:'paid',distance_km:2,total:100,delivery_lat:21.91,delivery_lng:85.23,items:[{product_name:'Test item',variant_label:'Full',qty:1,line_total:100}]};
+const order=()=>({...base,shop_status:stage,order_status:status,delivery_status:status==='out_for_delivery'?'out_for_delivery':'assigned',shop_name:'Test shop',shop_lat:21.91,shop_lng:85.23});
+const sdk=`export function createClient(){const user={id:window.__role==='shop'?'shop-user':'rider-user'};return {auth:{getSession:async()=>({data:{session:{user,access_token:'fixture-token'}}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),signOut:async()=>({error:null})},rpc:async(name,args)=>fetch('/__rpc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,args,role:window.__role})}).then(r=>r.json()),from(table){let single=false;const q={select(){return q},eq(){return q},order(){return q},maybeSingle(){single=true;return q},single(){single=true;return q},then(resolve,reject){let data=table==='shopkeepers'?{shop_id:'shop-fixture'}:table==='shops'?{id:'shop-fixture',name:'Test shop',active:true,is_open:true,location_lat:21.91,location_lng:85.23}:table==='delivery_boys'?{id:'rider-fixture',full_name:'Test rider',phone:'0000000000',is_active:true}:[];return Promise.resolve({data:single?data:(Array.isArray(data)?data:[data]),error:null}).then(resolve,reject)}};return q},channel(){const q={on(){return q},subscribe(){return q},unsubscribe:async()=>{}};return q},removeChannel:async()=>{}}}`;
+const server=http.createServer(async(req,res)=>{
+ if(req.url==='/__rpc'){let raw='';for await(const c of req)raw+=c;const {name,args}=JSON.parse(raw);let data={ok:true,success:true};
+ if(name==='hd_my_shop_orders')data=status==='cancelled'?[]:[order()];
+ else if(name==='hd_accept_shop_order'){status='confirmed';stage='confirmed';}
+ else if(name==='hd_set_shop_stage'){stage=args.p_status;status=stage==='packed'?'packed':'preparing';data={ok:true,shop_status:stage,all_shops_packed:stage==='packed'};}
+ else if(name==='hd_my_deliveries')data=assigned?[order()]:[];
+ else if(name==='hd_heartbeat')online=args.p_online;
+ else if(name==='hd_my_offers')data=online&&status!=='new'&&!assigned?[{id:'offer-fixture',order_id:base.order_id,order_number:base.order_number,shop_name:'Test shop',distance_km:2,expires_at:new Date(Date.now()+30000).toISOString(),server_now:new Date().toISOString()}]:[];
+ else if(name==='hd_respond_offer')assigned=args.p_accept;
+ else if(name==='hd_start_delivery')status='out_for_delivery';
+ res.setHeader('Content-Type','application/json');res.end(JSON.stringify({data,error:null}));return;}
+ if(req.url==='/config.js'){res.setHeader('Content-Type','text/javascript');res.end("window.SPIDY_CONFIG={supabaseUrl:'https://fixture.invalid',supabaseAnonKey:'fixture-key'};");return;}
+ if(req.url.startsWith('/staff-push.js')){res.setHeader('Content-Type','text/javascript');res.end('export async function ensureStaffPushSubscription(){return false}');return;}
+ let filename=path.join(root,req.url.split('?')[0]);if(req.url.endsWith('/'))filename=path.join(filename,'index.html');if(!filename.startsWith(root+path.sep)){res.writeHead(403);res.end();return;}
+ try{res.setHeader('Content-Type',filename.endsWith('.html')?'text/html':filename.endsWith('.js')?'text/javascript':'application/octet-stream');res.end(fs.readFileSync(filename));}catch{res.writeHead(404);res.end();}
+});
+(async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));const url='http://127.0.0.1:'+server.address().port;const ch=require('/tmp/hunkart-browser/node_modules/@sparticuz/chromium');const browser=await chromium.launch({executablePath:path.resolve('browser-test-bin/chromium'),args:ch.args,headless:true});let count=0;const errors=[];
+ const context=await browser.newContext({viewport:{width:390,height:844},permissions:['geolocation'],geolocation:{latitude:21.91,longitude:85.23},serviceWorkers:'block'});
+ await context.route('https://fixture.invalid/functions/v1/dispatch-notification-worker',r=>r.fulfill({contentType:'application/json',headers:{'Access-Control-Allow-Origin':'*'},body:JSON.stringify({sent:1,pending:0})}));
+ await context.route('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm',r=>r.fulfill({contentType:'text/javascript',body:sdk}));
+ const shop=await context.newPage();await shop.addInitScript(()=>window.__role='shop');shop.on('dialog',d=>d.accept());shop.on('pageerror',e=>errors.push(e.message));await shop.goto(url+'/shopkeeper.html');await shop.getByRole('button',{name:'Accept Order',exact:true}).click();await shop.getByRole('button',{name:'Start Packing',exact:true}).waitFor();count++;
+ const rider=await context.newPage();await rider.addInitScript(()=>window.__role='rider');rider.on('dialog',d=>d.accept());rider.on('pageerror',e=>errors.push(e.message));await rider.goto(url+'/delivery-app/');await rider.getByRole('button',{name:'Go online',exact:true}).click();await rider.getByRole('button',{name:'Accept delivery',exact:true}).click();await rider.getByText('HK-UI-1042',{exact:true}).waitFor();assert.equal(await rider.getByRole('button',{name:/Start Delivery/}).count(),0);count++;
+ await shop.bringToFront();await shop.getByRole('button',{name:'Start Packing',exact:true}).click();await shop.getByRole('button',{name:'Mark Ready',exact:true}).click();await shop.getByRole('button',{name:'Mark Packed',exact:true}).click();await shop.getByRole('button',{name:/Order Packed/}).waitFor();count++;
+ await rider.bringToFront();await rider.getByRole('button',{name:'Refresh',exact:true}).click();await rider.getByRole('button',{name:/Start Delivery/}).click();await rider.getByText('out for delivery',{exact:true}).waitFor();count++;
+ for(const p of [shop,rider])for(const width of [390,1280]){await p.setViewportSize({width,height:844});const fits=await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1);assert.ok(fits,'horizontal overflow at '+width+' on '+p.url());count++;}
+ assert.deepEqual(errors,[]);count++;
+ await rider.getByRole('button',{name:'Go offline',exact:true}).click();await rider.getByText('Offline · No new delivery requests',{exact:true}).waitFor();count++;
+ fs.writeFileSync(path.join(__dirname,'browser-results.json'),JSON.stringify({checks:count,transport:'mock SDK/HTTP fixture, not staging API E2E',widths:[390,1280],errors},null,2));console.log(count+' browser UI checks passed with mocked transport; not live or staging E2E.');await browser.close();server.close();
+})().catch(e=>{console.error(e);server.close();process.exit(1)});

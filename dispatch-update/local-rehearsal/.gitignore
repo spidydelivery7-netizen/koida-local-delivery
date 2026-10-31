@@ -1,0 +1,4 @@
+node_modules/
+*.log
+catalog-fixture.json
+baseline-functions.json

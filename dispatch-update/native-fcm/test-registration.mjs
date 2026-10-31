@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {attachNativeStaffRegistration} from './staff-registration.js';
+const listeners=new Map(), calls=[];
+let requests=0;
+const host={addEventListener:(name,fn)=>listeners.set(name,fn),removeEventListener:name=>listeners.delete(name),HunkartNative:{requestToken:()=>{requests++}}};
+let callback;
+const sb={auth:{getSession:async()=>({data:{session:{user:{id:'staff-1'}}}}),onAuthStateChange:fn=>{callback=fn;return {data:{subscription:{unsubscribe(){}}}}},signOut:async()=>{calls.push('signout')}},rpc:async(name,args)=>{calls.push([name,args]);return {data:true}}};
+attachNativeStaffRegistration({sb,role:'shopkeeper',supabaseUrl:'https://jjitqihblpubqwbggjpv.supabase.co',host});
+assert.equal(requests,1,'page requests a fresh token after listener installation');
+listeners.get('hunkart-native-token')({detail:{token:'a'.repeat(64)}});
+await new Promise(resolve=>setTimeout(resolve,0));
+assert.deepEqual(calls[0],['hd_save_native_device',{p_role:'shopkeeper',p_token:'a'.repeat(64)}]);
+callback('TOKEN_REFRESHED');await new Promise(resolve=>setTimeout(resolve,0));
+assert.equal(calls.length,1);
+await sb.auth.signOut();
+assert.equal(calls[1][0],'hd_remove_native_device');assert.equal(calls[2],'signout');
+console.log('Native registration checks passed');
