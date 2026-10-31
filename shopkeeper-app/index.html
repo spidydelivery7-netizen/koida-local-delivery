@@ -299,6 +299,12 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import { ensureStaffPushSubscription } from "/staff-push.js";
 import { attachNativeStaffRegistration } from "/dispatch-update/native-fcm/production-registration.mjs";
 
+window.addEventListener('hunkart-native-status',({detail})=>{
+ if(detail?.state==='logout-failed')setStatus('Logout could not finish. Check your internet and tap Logout again.');
+ else if(detail?.state==='unavailable')setStatus('Background order alerts are unavailable. Keep this page open and check your connection.');
+});
+
+
 const cfg=window.SPIDY_CONFIG||{};
 const $=id=>document.getElementById(id);
 let sb=null, sessionUser=null, shopId=null, shopName="", shopIsOpen=true, shopReopensAt=null, shopLocation=null, products=[], shopOrders=[], orderPollTimer=null, shopRealtimeChannel=null, shopRealtimeTimer=null, audioCtx=null;
