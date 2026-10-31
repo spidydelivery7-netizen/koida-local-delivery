@@ -297,7 +297,7 @@ button{border:0;border-radius:10px;padding:11px 14px;font-weight:800;cursor:poin
 import { notifyStoredOrder } from "/dispatch-notify.js";
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 import { ensureStaffPushSubscription } from "/staff-push.js";
-import { attachNativeStaffRegistration } from "/dispatch-update/native-fcm/staff-registration.js";
+import { attachNativeStaffRegistration } from "/dispatch-update/native-fcm/production-registration.mjs";
 
 const cfg=window.SPIDY_CONFIG||{};
 const $=id=>document.getElementById(id);
