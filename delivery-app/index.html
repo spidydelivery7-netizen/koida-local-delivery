@@ -615,7 +615,7 @@ import {
   createClient
 } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 import { ensureStaffPushSubscription } from "/staff-push.js?v=staff-rpc-v3";
-import { attachNativeStaffRegistration } from "/dispatch-update/native-fcm/staff-registration.js";
+import { attachNativeStaffRegistration } from "/dispatch-update/native-fcm/production-registration.mjs";
 
 const cfg = window.SPIDY_CONFIG || {};
 
