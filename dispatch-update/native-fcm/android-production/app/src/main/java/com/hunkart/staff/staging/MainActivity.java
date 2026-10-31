@@ -8,6 +8,9 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.webkit.WebResourceRequest;
+import android.widget.FrameLayout;
+import android.view.WindowInsets;
+import android.graphics.Insets;
 import android.webkit.WebChromeClient;
 import android.webkit.GeolocationPermissions;
 import android.webkit.WebSettings;
@@ -41,7 +44,25 @@ public class MainActivity extends Activity {
   super.onCreate(state);
   if(Build.VERSION.SDK_INT>=33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)
    requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},42);
-  web=new WebView(this);setContentView(web);
+  web=new WebView(this);
+  FrameLayout content=new FrameLayout(this);
+  content.setBackgroundColor(0xff111827);
+  content.addView(web,new FrameLayout.LayoutParams(-1,-1));
+  setContentView(content);
+  // Android 15 enforces edge-to-edge for target 35. Inset the WebView itself
+  // so fixed HTML headers and bottom controls stay outside bars and cutouts.
+  if(Build.VERSION.SDK_INT>=30){
+   getWindow().setDecorFitsSystemWindows(false);
+   content.setOnApplyWindowInsetsListener((view,insets)->{
+    Insets safe=insets.getInsets(WindowInsets.Type.systemBars()
+     | WindowInsets.Type.displayCutout() | WindowInsets.Type.ime());
+    FrameLayout.LayoutParams layout=(FrameLayout.LayoutParams)web.getLayoutParams();
+    layout.setMargins(safe.left,safe.top,safe.right,safe.bottom);
+    web.setLayoutParams(layout);
+    return WindowInsets.CONSUMED;
+   });
+   content.requestApplyInsets();
+  }
   web.addJavascriptInterface(new TokenBridge(),"HunkartNative");
   WebSettings settings=web.getSettings();settings.setJavaScriptEnabled(true);settings.setDomStorageEnabled(true);settings.setAllowFileAccess(false);settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
   web.setWebChromeClient(new WebChromeClient(){
