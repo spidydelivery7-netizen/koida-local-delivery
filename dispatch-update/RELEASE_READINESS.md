@@ -2,6 +2,14 @@
 
 ## 31 October 2026 — draft-only continuation
 
+### Installer and backup preparation follow-up
+
+- Offline assembler now only accepts the reviewed production ref; it rejects staging/arbitrary refs. The generated installer checks 14 existing relations, 6 function signatures, pg_net and public API/trigger/index naming collisions before its first shared-object change. Missing dependencies or collisions stop the transaction. This is a fresh-install candidate, NOT an idempotent upgrade/reinstall script.
+- Read-only production checks found all 14 required relations and all 6 signatures present, pg_net present, zero public hd_ APIs, zero matching dispatch trigger collisions, and no matching dispatch index. Cancellation actor constraint and both existing tracking triggers remain as recorded. No DDL/DML, jobs, secrets, provider notifications or payment calls were executed.
+- `test-production-draft.mjs`: 23 offline assembly/boundary checks pass, including deterministic regeneration, wrong project rejection, unexpected cron change, extra cron injection, staging ref leakage and activation injection. These tests do not execute SQL, prove grant behavior, or replace a restore rehearsal.
+- Backup/restore procedure is in `BACKUP_RESTORE_PLAN.md`. No complete backup or restore drill was possible with the available tool surface; the connected tools expose no backup-list/export operation, and a protected database export/restore route is not configured locally. The restore-project tool is not a backup verifier and must not be invoked on production for this purpose.
+- Remaining: protected backup + isolated restore evidence; full schema/ACL drift comparison and transactional installer rehearsal; actual production Firebase server credential/project verification; Deno runtime and phone tests; authorized rollout. Do not claim release-ready or ask to deploy while these remain unresolved.
+
 Current user instruction supersedes earlier release authorization: continue preparation in draft only. No live SQL, secrets, Edge deployment, cron, main merge, APK distribution or Play change is authorized by this continuation.
 
 Added `production-staff-worker/` as a separate disabled candidate. It validates the exact Supabase URL, an explicitly configured production Firebase project and matching server account, a matching existing VAPID pair, and an explicit OFF-by-default worker flag. Single-use scheduler capability is consumed before job claims/provider calls. The tested staging entrypoint is unchanged. Production server credentials were not read, created or modified.

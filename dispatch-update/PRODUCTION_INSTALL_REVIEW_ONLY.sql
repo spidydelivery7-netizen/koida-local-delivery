@@ -11,6 +11,40 @@ DO $guard$ BEGIN
  END IF;
 END $guard$;
 
+DO $dependencies$
+DECLARE item text;
+BEGIN
+ FOREACH item IN ARRAY ARRAY[
+ 'public.orders','public.order_items','public.products','public.shops',
+ 'public.shopkeepers','public.delivery_boys','public.delivery_tracking',
+ 'public.shop_order_status','public.staff_push_subscriptions',
+ 'public.customer_push_subscriptions','public.app_admins',
+ 'hunkart_cancel.cases','hunkart_cancel.settings','hunkart_cancel.refunds'
+ ] LOOP
+  IF to_regclass(item) IS NULL THEN RAISE EXCEPTION 'Missing required relation: %',item; END IF;
+ END LOOP;
+ FOREACH item IN ARRAY ARRAY['auth.uid()','auth.jwt()',
+ 'hunkart_cancel.held(uuid)','hunkart_cancel.order_kind(uuid)',
+ 'extensions.gen_random_bytes(integer)','extensions.digest(text,text)'] LOOP
+  IF to_regprocedure(item) IS NULL THEN RAISE EXCEPTION 'Missing required function: %',item; END IF;
+ END LOOP;
+ IF NOT EXISTS(SELECT 1 FROM pg_extension WHERE extname='pg_net') THEN
+  RAISE EXCEPTION 'Required pg_net extension missing';
+ END IF;
+ IF EXISTS(SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+ WHERE n.nspname='public' AND left(p.proname,3)='hd_') THEN
+  RAISE EXCEPTION 'Existing hd_ API names require manual collision review';
+ END IF;
+ IF EXISTS(SELECT 1 FROM pg_trigger WHERE NOT tgisinternal
+ AND tgrelid IN ('public.orders'::regclass,'public.shop_order_status'::regclass,'public.delivery_tracking'::regclass)
+ AND tgname IN ('hd_guard_tracking','hd_guard_shop','hd_guard_confirmation','hd_queue_customer_notification')) THEN
+  RAISE EXCEPTION 'Existing dispatch trigger names require manual collision review';
+ END IF;
+ IF to_regclass('public.hd_paid_unaccepted_orders') IS NOT NULL THEN
+  RAISE EXCEPTION 'Existing dispatch index requires manual collision review';
+ END IF;
+END $dependencies$;
+
 -- The existing live actor constraint permits customer and admin only.
 -- Extend it for shopkeeper rejection while retaining both existing actors.
 DO $actor$ BEGIN
