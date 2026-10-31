@@ -616,6 +616,7 @@ import {
 } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 import { ensureStaffPushSubscription } from "/staff-push.js?v=staff-rpc-v3";
 import { attachNativeStaffRegistration } from "/dispatch-update/native-fcm/production-registration.mjs";
+import { attachNativeStaffRegistration as attachStagingNativeStaffRegistration } from "/dispatch-update/native-fcm/staff-registration.js";
 
 window.addEventListener('hunkart-native-status',({detail})=>{
  if(detail?.state==='logout-failed')setStatus('Logout could not finish. Check your internet and tap Logout again.');
@@ -2333,6 +2334,7 @@ async function boot(){
 
 
   attachNativeStaffRegistration({sb,role:"delivery_boy",supabaseUrl:cfg.supabaseUrl});
+  attachStagingNativeStaffRegistration({sb,role:"delivery_boy",supabaseUrl:cfg.supabaseUrl});
   sb.auth.onAuthStateChange(
     async (
       event,
