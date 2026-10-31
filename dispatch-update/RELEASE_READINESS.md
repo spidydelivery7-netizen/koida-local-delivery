@@ -1,5 +1,17 @@
 # HUNKART staff flow: release readiness
 
+## 31 October 2026 — draft-only continuation
+
+Current user instruction supersedes earlier release authorization: continue preparation in draft only. No live SQL, secrets, Edge deployment, cron, main merge, APK distribution or Play change is authorized by this continuation.
+
+Added `production-staff-worker/` as a separate disabled candidate. It validates the exact Supabase URL, an explicitly configured production Firebase project and matching server account, a matching existing VAPID pair, and an explicit OFF-by-default worker flag. Single-use scheduler capability is consumed before job claims/provider calls. The tested staging entrypoint is unchanged. Production server credentials were not read, created or modified.
+
+Offline checks on 31 October: 36 production configuration/authorization assertions; 41 existing worker/service-worker assertions; 11 FCM helper checks; FCM send and OAuth suites passed. No actual push sent; Deno deployment/bundling, real server Firebase identity, phone install and production E2E remain unverified.
+
+Read-only live recheck: dispatch schema remains absent; cancellation actor constraint remains customer/admin only; delivery tracking still has both cancellation fulfilment guard and order-status sync triggers. Edge Function inventory has no dispatch-staff-worker. This is a compatibility inventory, NOT a schema/data backup or restore verification.
+
+Next checkpoint: complete reviewed backup/restore artifacts and installer dependency/grant comparison, verify production Firebase APK/server identity, then validate Deno bundle in isolation. Preserve the earlier automatic-review rejection: do not execute the broad production installer or split it to bypass that rejection. Release activation remains blocked and outside this draft-only instruction.
+
 The user authorized a live staff release on 30 October 2026. This document records release blockers and test evidence; the customer AAB and Play Console are explicitly out of scope. Do not claim live deployment until checks pass.
 
 ## Evidence and boundaries
@@ -30,3 +42,4 @@ The branch now contains `.github/workflows/staff-production-apk.yml` and a separ
 ## Current status
 
 Staging flow and phone OTP tests passed. Automated JavaScript tests and the staging staff APK build pass. Native long sound/vibration was deferred at the user's request. A non-destructive flag-only rollback is in `PRODUCTION_EMERGENCY_STOP.sql`. A disabled production SQL assembly is available, but its live execution was rejected by automatic approval review as too broad while backup, worker, signing and rollback gates remain unresolved. Do not split it into smaller live calls to bypass that rejection. Read-only verification confirmed the production `hunkart_dispatch` schema is still absent. The staging suite passed 86 assertions with the live tracking trigger reproduced. Production Firebase Android registration and staff signing secrets are configured and CI verified. A complete production backup, server-side notification configuration, approved backend installation, and controlled live verification remain unresolved. Do not merge the draft PR yet.
+
