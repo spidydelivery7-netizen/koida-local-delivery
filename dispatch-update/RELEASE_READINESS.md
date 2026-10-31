@@ -2,6 +2,13 @@
 
 ## 31 October 2026 — draft-only continuation
 
+### Deno runtime and Firebase identity follow-up
+
+- Local Deno 2.9.6 type-check passed for the production worker and actual entrypoint smoke harness. Four actual import/handler tests passed without network permission, real secrets, listener or provider sends. The 36 configuration/authorization checks passed under Deno too. Type-check ran in an isolated npm dependency workspace with pinned Supabase 2.57.4, web-push 3.6.7 and Node types 22.10.2 after direct Deno package downloads stalled. Hosted packaging/deployment remains untested.
+- Added a private-input Firebase identity comparison tool and 11 generated-fixture checks. It checks both production Android packages, project/account match, token endpoint and RSA key parsing; it never prints credentials. Actual server configuration remains unavailable/unverified.
+- Rechecked successful production staff APK run 41085568765: build, Firebase/signing validation, APK identity verification and upload steps all succeeded; artifact 12992330649 is present and not expired. No new APK was built, installed or distributed.
+- No live/staging deployments, database writes, secret edits, worker activation, main merge or Play changes in this follow-up. Backup/restore and actual production server identity remain release blockers.
+
 ### Installer and backup preparation follow-up
 
 - Offline assembler now only accepts the reviewed production ref; it rejects staging/arbitrary refs. The generated installer checks 14 existing relations, 6 function signatures, pg_net and public API/trigger/index naming collisions before its first shared-object change. Missing dependencies or collisions stop the transaction. This is a fresh-install candidate, NOT an idempotent upgrade/reinstall script.
