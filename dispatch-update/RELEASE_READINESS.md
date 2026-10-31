@@ -2,6 +2,12 @@
 
 ## 31 October 2026 — draft-only continuation
 
+### Isolated installer/role/rollback rehearsal
+
+Added `local-rehearsal/` with a pinned/locked PGlite harness accepting protected local schema inputs. Private catalog metadata and function definitions are excluded from repository writes. Forty executable database assertions passed locally: transaction rollback after forced late failure, disabled install/reinstall denial, legacy tracking trigger/function preservation, RLS/private table isolation, real SET ROLE access checks, synthetic shop acceptance/preparation/rider offer/start, rejection/refund queue and non-destructive emergency stop.
+
+Limits are explicit in local-rehearsal/README.md: PGlite is PostgreSQL 18.6 while production reports 17.6; pg_net is adapted in memory to a no-network fixture, auth/category/lifecycle are partial adapters, other production triggers/policies are not fully reproduced, and there is no OTP/provider/concurrency/backup-restore test. This advances the installer rehearsal gate partially; do not mark the full production-clone rehearsal, backup, server Firebase match or phone/E2E gates complete. No hosted SQL mutation, deployment or credential access occurred.
+
 ### Deno runtime and Firebase identity follow-up
 
 - Local Deno 2.9.6 type-check passed for the production worker and actual entrypoint smoke harness. Four actual import/handler tests passed without network permission, real secrets, listener or provider sends. The 36 configuration/authorization checks passed under Deno too. Type-check ran in an isolated npm dependency workspace with pinned Supabase 2.57.4, web-push 3.6.7 and Node types 22.10.2 after direct Deno package downloads stalled. Hosted packaging/deployment remains untested.
