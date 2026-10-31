@@ -6,6 +6,9 @@ on:
       - work/shop-acceptance-rider-dispatch
     paths:
       - .github/workflows/staff-production-apk.yml
+      - dispatch-update/native-fcm/android-production/**
+      - dispatch-update/native-fcm/production-registration.mjs
+      - dispatch-update/native-fcm/test-production-registration.mjs
 
 jobs:
   build:
@@ -37,11 +40,13 @@ jobs:
           data=json.load(open('dispatch-update/native-fcm/android-production/app/google-services.json'))
           project=data['project_info']['project_id']
           packages={c['client_info']['android_client_info']['package_name'] for c in data['client']}
-          assert project != 'hunkart-staging' and project.strip(), 'Staging Firebase forbidden'
+          assert project == 'hunkart-production', 'Unexpected Firebase project'
           assert {'com.hunkart.shopkeeper','com.hunkart.deliverypartner'} <= packages, 'Production package IDs missing'
           PY
           printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/hunkart-staff.jks"
           keytool -list -keystore "$RUNNER_TEMP/hunkart-staff.jks" -storepass "$HUNKART_STAFF_KEYSTORE_PASSWORD" -alias hunkart-staff >/dev/null
+      - name: Verify production native registration lifecycle
+        run: node dispatch-update/native-fcm/test-production-registration.mjs
       - name: Build signed staff release APKs
         env:
           HUNKART_STAFF_KEYSTORE_PATH: ${{ runner.temp }}/hunkart-staff.jks
@@ -59,7 +64,7 @@ jobs:
             apk="$out/$flavor/release/app-$flavor-release.apk"
             test -s "$apk"
             "$build_tools/apksigner" verify --verbose "$apk"
-            "$build_tools/aapt" dump badging "$apk" | grep -q "package: name='$expected' versionCode='100'"
+            "$build_tools/aapt" dump badging "$apk" | grep -q "package: name='$expected' versionCode='101'"
             sha256sum "$apk" >> "$RUNNER_TEMP/hunkart-staff-apks.sha256"
           done
       - uses: actions/upload-artifact@v4
