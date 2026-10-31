@@ -2,6 +2,12 @@
 
 ## 31 October 2026 — draft-only continuation
 
+### Enabled packaged-worker integration checkpoint
+
+The actual seven-file worker package passed 19 enabled-entrypoint integration assertions in Deno with intercepted Supabase/OAuth/FCM transport, generated credentials, no listener and no network/environment permissions. Verified consume-before-claim/send ordering, native event/priority, lease acknowledgement, replay refusal, retry on provider failure, and OFF gating. No production/staging deployment, SQL, real provider call or secret read occurred.
+
+This completes an additional local integration layer only. Hosted gateway/deployment, current backup recovery coverage and existing server-secret metadata need read-only dashboard verification because available connected tools do not expose backup listing or Edge secret metadata. Any browser fallback requires separate user approval. Do not keep adding local tests as a substitute for these external blockers, and do not mark the release complete.
+
 ### Earlier-chat reconciliation and deployable source packaging
 
 - Corrected the candidate to reuse existing `FCM_PROJECT_ID`, not the newly invented `HUNKART_FCM_PROJECT_ID`. It now requires the exact production Firebase project already identified from the production Android config. No production secret was read or changed. Configuration/auth suite: 38 assertions pass.

@@ -33,6 +33,8 @@ Earlier-chat reconciliation: the user already confirmed downloading the server-a
 
 `test-package.mjs` passes 38 checks. The flattened package was actually type-checked in Deno 2.9.6 and passed the four disabled entrypoint tests without network permission. Source manifest SHA-256 values are available through packageManifest(). Hosted gateway configuration and an actual deployed-disabled smoke test remain pending. The package's verify_jwt=false is scoped to this worker because its handler checks a one-time capability; it does not alter any existing function setting.
 
+Enabled-path follow-up: test-enabled-entrypoint.ts passed Deno type-check and 19 integration assertions against the actual flattened worker entrypoint and Supabase/OAuth/FCM modules. All transport is intercepted and credentials are generated fixtures. It verifies capability consumption before claims/sends, native payload/priority, correct lease acknowledgement, replay denial, transient provider failure/retry and disabled gating. Run without network/environment permissions; no hosted service or real notification is contacted. This is transport-mocked integration, not a live E2E or service-account validation.
+
 ## Remaining gates
 
 Full backup and restore evidence; reviewed installer and grants/trigger comparison; exact Firebase APK/server project match; server credential provisioning; Supabase deployment bundle verification; deployed disabled-function smoke test; enabled staging-equivalent provider test; cancellation/refund/order E2E; controlled activation authorization. None of these is implied by local tests. No schedules are added by this draft.
