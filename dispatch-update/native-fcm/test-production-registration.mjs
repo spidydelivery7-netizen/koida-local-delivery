@@ -29,3 +29,21 @@ for(const overrides of [{supabaseUrl:'https://other.supabase.co'},{role:'admin'}
  f=fixture(overrides);assert.equal(f.calls.length,0);
 }
 console.log('PASS: production registration, deduplication, rotation, login, logout failure/retry, cleanup and origin/role gates');
+// Logout waits for a save already in flight, then removes that token before auth signout.
+f=fixture();let finish;
+const rpc=f.sb.rpc;
+f.sb.rpc=async(name,args)=>{
+ if(name==='hd_save_native_device')await new Promise(resolve=>{finish=resolve;});
+ return rpc(name,args);
+};
+f.emit(a);await pause();const leaving=f.sb.auth.signOut();
+assert.ok(!f.calls.includes('logout'));finish();await leaving;
+assert.deepEqual(f.calls.slice(1).map(x=>typeof x==='string'?x:x[0]),['hd_save_native_device','hd_remove_native_device','logout']);
+// A failed old-token cleanup remains queued and is retried even when the new token is unchanged.
+f=fixture();f.emit(a);await pause();
+const realRpc=f.sb.rpc;let removeFails=true;
+f.sb.rpc=async(name,args)=>name==='hd_remove_native_device'&&removeFails?{error:{message:'offline'}}:realRpc(name,args);
+f.emit(b);await pause();assert.equal(f.states.at(-1),'unavailable');
+removeFails=false;f.emit(b);await pause();assert.equal(f.states.at(-1),'registered');
+assert.equal(f.calls.at(-1)[0],'hd_remove_native_device');assert.equal(f.calls.at(-1)[1].p_token,a);
+console.log('PASS: in-flight save/logout serialization and failed rotation cleanup retry');
